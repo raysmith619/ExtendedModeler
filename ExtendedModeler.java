@@ -100,6 +100,7 @@ public class ExtendedModeler implements ActionListener {
 	JButton deleteSelectionButton;
 	JButton lookAtSelectionButton;
 	JButton resetCameraButton;
+	JCheckBox displayAddControlCheckBox;
 	JCheckBox displayPositionControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
 	JCheckBox displayWorldAxesCheckBox;
@@ -204,8 +205,13 @@ public class ExtendedModeler implements ActionListener {
 			sceneViewer.resetCamera();
 			sceneViewer.repaint();
 		}
+		else if ( source == displayAddControlCheckBox ) {
+			sceneViewer.displayAddControl = ! sceneViewer.displayAddControl;
+			sceneViewer.repaint();
+		}
 		else if ( source == displayPositionControlCheckBox ) {
 			sceneViewer.displayPositionControl = ! sceneViewer.displayPositionControl;
+			sceneViewer.positionControlSet(sceneViewer.displayPositionControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayColorControlCheckBox ) {
@@ -360,6 +366,11 @@ public class ExtendedModeler implements ActionListener {
 		resetCameraButton.setAlignmentX( Component.LEFT_ALIGNMENT );
 		resetCameraButton.addActionListener(this);
 		toolPanel.add( resetCameraButton );
+
+		displayAddControlCheckBox = new JCheckBox("Display Add Control", sceneViewer.displayAddControl);
+		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayAddControlCheckBox.addActionListener(this);
+		toolPanel.add(displayAddControlCheckBox);
 
 		displayPositionControlCheckBox = new JCheckBox("Display Position Control", sceneViewer.displayPositionControl);
 		displayPositionControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );

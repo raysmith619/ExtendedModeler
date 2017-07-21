@@ -8,6 +8,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -79,6 +82,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	private static final int COMMAND_COLOR_BLUE = 4;
 	private static final int COMMAND_DELETE = 5;
 
+	public boolean displayAddControl = true;
 	public boolean displayColorControl = true;
 	public boolean displayPositionControl = true;
 	public boolean displayWorldAxes = false;
@@ -87,9 +91,23 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public boolean enableCompositing = false;
 
 	int mouse_x, mouse_y, old_mouse_x, old_mouse_y;
-
-	JDialog posDialog; // Positioning dialog box
-						// text fields, if set
+										 // Controls dictionary
+	public class ControlEntry {
+		public String name;				// Unique control name
+		public boolean active;			// presently active
+		public Object control;			// Control object, if active
+		public java.lang.reflect.Method controlDispose;	// dispose method reference
+		
+		ControlEntry(String name, Object control) {
+			this.name = name;
+			this.control = control;
+			active = false;				// Not yet activated
+		}
+	}
+	Map<String, ControlEntry> controls = new HashMap();
+	SceneControlDialog controlDialog; 	// Adding new blocks
+	JDialog posDialog; 					// Positioning dialog box
+										// text fields, if set
 	boolean pos_size_position = true; // position / size choice
 	boolean pos_move_duplicate = true; // Move / Duplicate choice
 	JTextField posXfield;
@@ -347,10 +365,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Dispose of dialog
 	 */
 	public void colorControlDispose() {
-		if (colorDialog != null) {
-			colorDialog.dispose();
-			colorDialog = null;
-		}
+		clearControlPosition("colorControl");
 	}
 	
 	
@@ -457,27 +472,155 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		adjcolor_panel.add(adjcolorUpButton);
 		adjcolor_panel.add(adjcolorDownButton);
 		colorDialog.pack();
-		int yloc = frame.getHeight();
-		if (posDialog != null)
-			yloc += posDialog.getHeight();
-		colorDialog.setLocation(new Point(0, yloc));
-			
-		colorDialog.setVisible(true);
-		boolean done = false;
-		// int result = JOptionPane.showConfirmDialog(null, colorPanel,
-		// "Set/Adjust color", JOptionPane.OK_CANCEL_OPTION);
+		setControlPosition(colorDialog, "colorControl");
+	}
 
+	/**
+	 * Control Add block
+	 */
+	public void addControlDispose() {
+		clearControlPosition("addControl");
+	}
+
+	public void addControlSetup() {
+		if (controlDialog == null)
+			controlDialog = new SceneControlDialog(this);
 	}
 
 	
 	/**
+	 * Setup controls position
+	 * Based on currently displayed controls
+	 * Uses/Updates local controls dictionary
+	 * 1. if control is active return with no action
+	 * 2. Calculate next position based on all active controls
+	 * 3. Update control's active.
+	 */
+	void setControlPosition(Object control, String controlName) {
+		if (!controls.containsKey(controlName)) {
+			controls.put(controlName, new ControlEntry(controlName, control));
+		}
+		ControlEntry control_entry = controls.get(controlName);
+		if (control_entry.active)
+			return;						// Already active
+
+										// Get required methods
+		Object control_obj = control_entry.control;
+		java.lang.reflect.Method control_setLocation = null;
+		java.lang.reflect.Method control_setVisible = null;
+		java.lang.reflect.Method control_dispose = null;		// Stored to dispose
+		try {
+			  control_setVisible = control_obj.getClass().getMethod("setVisible", boolean.class);
+			  control_dispose = control_obj.getClass().getMethod("dispose");
+			  control_setLocation = control_obj.getClass().getMethod("setLocation", Point.class);
+		} catch (SecurityException e) {
+			System.out.println(String.format("Reflection(%s) : %s", controlName, e));
+		} catch (NoSuchMethodException e) {
+			System.out.println(String.format("Reflection(%s) : %s", controlName, e));
+		}
+		control_entry.controlDispose = control_dispose;
+		
+		/**
+		 * Place controls in order below initial frame
+		 */
+		int yloc = frame.getHeight();
+		for (Map.Entry<String, ControlEntry> entry : controls.entrySet()) {
+			ControlEntry ctl_entry = entry.getValue();
+			String name = ctl_entry.name;
+			
+			if (name.equals(controlName))
+				continue;					// Skip us
+			if (!ctl_entry.active)
+				continue;					// Ignore if not active
+			
+			Object ctl_obj = ctl_entry.control;
+			java.lang.reflect.Method control_getHeight = null;
+			try {
+				  control_getHeight = ctl_obj.getClass().getMethod("getHeight");
+			} catch (SecurityException e) {
+				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
+			} catch (NoSuchMethodException e) {
+				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
+			}
+			try {
+				yloc +=  (int)control_getHeight.invoke(ctl_obj);
+			} catch (IllegalAccessException e) {
+				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {
+				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
+				e.printStackTrace();
+			}
+		}
+		
+			
+		try {
+			control_setLocation.invoke(control_obj, new Point(0, yloc));
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		try {
+			control_setVisible.invoke(control_obj, true);
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	control_entry.active = true;		// Set as in action and displayed
+	}
+
+	/**
+	 * Clear controls entry's active - Currently does not dispose
+	 * @param controlName
+	 */
+	void clearControlPosition(String controlName) {
+		if (controls.containsKey(controlName)) {		
+			ControlEntry control_entry = controls.get(controlName);
+			try {
+				control_entry.controlDispose.invoke(control_entry.control);
+			} catch (IllegalAccessException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+				control_entry.active = false;
+		}
+		
+	}
+	
+	/**
 	 * Remove Control/Display of position
 	 */
+	public void positionControlSet(boolean on) {
+		if (on)
+			positionControlSetup();
+		else
+			positionControlDispose();
+	}
+	
+	
 	public void positionControlDispose() {
-		if (posDialog != null) {
-			posDialog.dispose();
-			posDialog = null;
-		}
+			clearControlPosition("positionControl");
 	}
 	
 	/**
@@ -594,15 +737,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		adjpos_panel.add(adjposUpButton);
 		adjpos_panel.add(adjposDownButton);
 		posDialog.pack();
-		int yloc = frame.getHeight();
-		if (colorDialog != null)
-			yloc += colorDialog.getHeight();
-		posDialog.setLocation(new Point(0, yloc));
-		posDialog.setVisible(true);
-		boolean done = false;
-		// int result = JOptionPane.showConfirmDialog(null, posPanel,
-		// "Set/Adjust Position", JOptionPane.OK_CANCEL_OPTION);
-
+		setControlPosition(posDialog, "positionContol");
 	}
 
 	public void setColorOfSelection(float r, float g, float b) {
@@ -734,6 +869,21 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			gl.glGetIntegerv(GL2.GL_VIEWPORT, viewport, 0);
 			System.out.println(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1],
 					viewport[2], viewport[3]));
+		}
+		if (displayAddControl) {
+			if (controlDialog == null) {
+				controlDialog = new SceneControlDialog(this);
+			}
+		} else {
+			if (controlDialog != null) {
+				controlDialog.controlDispose();
+				controlDialog = null;
+			}
+		}
+		if (displayAddControl) {
+			addControlSetup();
+		} else {
+			addControlDispose();
 		}
 		if (displayPositionControl) {
 			positionControlSetup();
@@ -1062,38 +1212,118 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public void actionPerformed(ActionEvent ae) {
 		String action = ae.getActionCommand();
 		System.out.println(String.format("action: %s", action));
-		if (action.equals("md_move")) {
-			pos_move_duplicate = true;
-		} else if (action.equals("md_duplicate")) {
-			pos_move_duplicate = false;
-		} else if (action.equals("ps_position")) {
-			pos_size_position = true;
-		} else if (action.equals("ps_size")) {
-			pos_size_position = false;
-		} else if (action.equals("moveToButton")) {
-			moveToPosition();
-		} else if (action.equals("ENTER")) {
-			moveToPosition();
-		} else if (action.equals("adjposUpButton")) {
-			adjustPosition(1);
-		} else if (action.equals("adjposENTER")) {
-			adjustPosition(1);
-		} else if (action.equals("adjposDownButton")) {
-			adjustPosition(-1);
-		} else if (action.equals("moveToColorButton")) {
-			moveToColor();
-		} else if (action.equals("moveToColorENTER")) {
-			moveToColor();
-		} else if (action.equals("adjcolorUpButton")) {
-			adjustColor(1);
-		} else if (action.equals("adjcolorENTER")) {
-			adjustColor(1);
-		} else if (action.equals("adjcolorDownButton")) {
-			adjustColor(-1);
-		}
+		switch (action) {
+			case"md_move":
+				pos_move_duplicate = true;
+				break;
+				
+			case "md_duplicate":
+				pos_move_duplicate = false;
+				break;
+				
+			case "ps_position":
+				pos_size_position = true;
+				break;
+				
+			case "ps_size":
+				pos_size_position = false;
+				break;
+				
+			case "moveToButton":
+				moveToPosition();
+				break;
+				
+			case "ENTER":
+				moveToPosition();
+				break;
+				
+			case "adjposUpButton":
+				adjustPosition(1);
+				break;
+				
+			case "adjposENTER":
+				adjustPosition(1);
+				break;
 
+			case "adjposDownButton":
+				adjustPosition(-1);
+				break;
+				
+			case "moveToColorButton":
+				moveToColor();
+				break;
+					
+			case "moveToColorENTER":
+				moveToColor();
+				break;
+			
+			case "adjcolorUpButton":
+				adjustColor(1);
+				break;
+				
+			case "adjcolorENTER":
+				adjustColor(1);
+				break;
+				
+			case "adjcolorDownButton":
+				adjustColor(-1);
+				break;
+
+			case "deleteBlockButton":
+			case "duplicateBlockButton":
+			case "addBoxButton":
+			case "addBallButton":
+			case "addConeButton":
+			case "addCylinderButton":
+				addBlockButton(action);
+				break;
+			
+				default:
+					break;
+		}
 	}
 
+	
+	/**
+	 * Add component control
+	 */
+	public void addBlockButton(String action) {
+		OurBlock cb = getSelected();
+		
+		switch(action) {
+			case "duplicateBlockButton":
+				duplicateBlock(); 			// Duplicate selected block
+				break;
+				
+			case "deleteBlockButton":
+				deleteSelection();
+				break;
+			
+			case "addBoxButton":
+				createNewBlock("box");
+				break;
+				
+			case "addBallButton":
+				createNewBlock("ball");
+				break;
+				
+			case "addConeButton":
+				createNewBlock("cone");
+				break;
+				
+			case "addCylinderButton":
+				createNewBlock("cylinder");
+				break;
+				
+			default:
+				System.out.println(String.format(
+						"Unrecognized addBlockButton: %s - ignored", action));
+				return;
+		}
+		repaint();
+	}
+	
+	
 	/**
 	 * Color Control / Display
 	 * 
