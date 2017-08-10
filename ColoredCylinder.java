@@ -1,10 +1,8 @@
-import java.awt.Canvas;
 import java.awt.Color;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.glu.GLUquadric;
-import com.jogamp.opengl.util.gl2.GLUT;
 import com.jogamp.opengl.glu.GLU;
 
 public class ColoredCylinder extends OurBlock {

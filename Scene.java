@@ -219,7 +219,6 @@ class Scene {
 		}
 	}
 
-	@SuppressWarnings("serial")
 	public void drawBoundingBoxOfScene( GL2 gl ) {
 		AlignedBox3D box = getBoundingBoxOfScene();
 		if ( ! box.isEmpty() )

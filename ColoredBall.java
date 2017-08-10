@@ -2,7 +2,6 @@ import java.awt.Color;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
-import com.jogamp.opengl.GL;
 
 import com.jogamp.opengl.util.gl2.GLUT;
 

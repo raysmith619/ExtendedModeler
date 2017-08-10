@@ -47,7 +47,6 @@ public class OurBlock {
 	 * Vector adjust color
 	 */
 	public Color colorAdj(float red, float green, float blue, float alpha) {
-		Color cl = getColor();
 		float cc[] = getColorComponents();
 		cc[0] += red;
 		cc[1] += green;
@@ -176,7 +175,6 @@ public class OurBlock {
 	) {
 		Point3D min = getMin();
 		Point3D max = getMax();
-		Vector3D old_size = Point3D.diff(max, min);
 		Point3D new_max = Point3D.sum(max, adj_size);
 		box = new AlignedBox3D(min, new_max);
 	}
@@ -277,6 +275,19 @@ public class OurBlock {
 		return color;
 	}
 
+	/**
+	 * set color via components
+	 * @param red
+	 * @param green
+	 * @param blue
+	 * @retur color
+	 */
+	public Color setColor(float red, float green, float blue) {
+		Color new_color = new Color(red, green, blue);
+		return setColor(new_color);
+	}
+	
+	
 	//base function for blocks
 	public float setRed(float value) {
 		color = new Color(value, color.getGreen(), color.getBlue(), color.getAlpha());
@@ -321,18 +332,6 @@ public class OurBlock {
 	// Overridden by all nontrivial blocks
 	public Vector3D getDiagonal() {
 		return box.getDiagonal();
-	}
-	
-	
-		// Overridden by all nontrivial blocks
-	public void setColor(float red, float green, float blue,
-		float alpha) {
-		System.out.print("setColor4 ignored\n");
-		}
-
-								// Overridden by all nontrivial blocks
-	public void setColor(float red, float green, float blue) {
-		System.out.print("setColor3 ignored\n");
 	}
 
 }

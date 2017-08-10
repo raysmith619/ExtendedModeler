@@ -1,6 +1,4 @@
 
-import com.jogamp.opengl.GL;
-
 import com.jogamp.opengl.GL2;
 
 public class Camera3D {

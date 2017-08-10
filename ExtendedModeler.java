@@ -2,49 +2,25 @@
  * ExtendedModeler - Adapted from SimpleModeller-3D_JavaApplication-JOGL
    Still trying to work with GitHub.
  */
-import java.lang.Math;
-import java.util.Vector;
 
 import java.awt.Container;
 import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.GridLayout;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
-import java.awt.geom.Point2D;
-import java.awt.event.MouseEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.BorderLayout;
 
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.SwingConstants;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 
-import com.jogamp.newt.event.KeyEvent;
-import com.jogamp.opengl.GL;
-import com.jogamp.opengl.GL2;
-//import com.jogamp.opengl.GLCanvas;
 import com.jogamp.opengl.GLCapabilities;
-import com.jogamp.opengl.GLAutoDrawable;
-// import com.jogamp.opengl.GLDrawableFactory;
-import com.jogamp.opengl.GLEventListener;
-import com.jogamp.opengl.awt.GLCanvas;
-import com.jogamp.opengl.glu.GLU;
-import com.jogamp.opengl.util.gl2.GLUT;
 
 import smTrace.SmTrace;		// Execution Trace support
 
@@ -65,10 +41,10 @@ public class ExtendedModeler implements ActionListener {
 	
 	public enum AutoAddType {	// Auto add block type
 		NONE,					// none added
-		POSITION_COMPUTE,		// Block positioning
-		POSITION_DRAG,
-		POSITION_PUSH,
-		POSITION_ROTATE,
+		PLACEMENT_COMPUTE,		// Block placement
+		PLACEMENT_DRAG,
+		PLACEMENT_PUSH,
+		PLACEMENT_ROTATE,
 		DUPLICATE,
 		BOX,
 		BALL,
@@ -78,11 +54,11 @@ public class ExtendedModeler implements ActionListener {
 	
 	JMenuItem deleteAllMenuItem, quitMenuItem, aboutMenuItem;
 	
-	JMenuItem positionMenuItem;
-	JMenuItem positionComputeMenuItem;
-	JMenuItem positionDragMenuItem;
-	JMenuItem positionPushMenuItem;
-	JMenuItem positionRotateMenuItem;
+	JMenuItem placementMenuItem;
+	JMenuItem placementComputeMenuItem;
+	JMenuItem placementDragMenuItem;
+	JMenuItem placementPushMenuItem;
+	JMenuItem placementRotateMenuItem;
 
 	JMenuItem colorMenuItem;
 	JMenuItem colorComputeMenuItem;
@@ -101,7 +77,7 @@ public class ExtendedModeler implements ActionListener {
 	JButton lookAtSelectionButton;
 	JButton resetCameraButton;
 	JCheckBox displayAddControlCheckBox;
-	JCheckBox displayPositionControlCheckBox;
+	JCheckBox displayPlacementControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
 	JCheckBox displayWorldAxesCheckBox;
 	JCheckBox displayCameraTargetCheckBox;
@@ -123,14 +99,14 @@ public class ExtendedModeler implements ActionListener {
 				sceneViewer.repaint();
 			}
 		}
-		else if (source == positionComputeMenuItem) {
-			sceneViewer.positionControlSetup();			
+		else if (source == placementComputeMenuItem) {
+			sceneViewer.controls.setControl("addControl", true);
 		}
 		else if (source == colorComputeMenuItem) {
-			sceneViewer.colorControlSetup();			
+			sceneViewer.controls.setControl("colorControl", true);			
 		}
 		else if ( source == duplicateMenuItem ) {
-			System.out.println(String.format("chose %s", "duplicate"));
+			System.out.println(String.format("choose %s", "duplicate"));
 			sceneViewer.setAutoAdd(AutoAddType.DUPLICATE);
 		}
 		else if ( source == cancelAddMenuItem ) {
@@ -207,15 +183,17 @@ public class ExtendedModeler implements ActionListener {
 		}
 		else if ( source == displayAddControlCheckBox ) {
 			sceneViewer.displayAddControl = ! sceneViewer.displayAddControl;
+			sceneViewer.setControl("addControl", sceneViewer.displayAddControl);
 			sceneViewer.repaint();
 		}
-		else if ( source == displayPositionControlCheckBox ) {
-			sceneViewer.displayPositionControl = ! sceneViewer.displayPositionControl;
-			sceneViewer.positionControlSet(sceneViewer.displayPositionControl);
+		else if ( source == displayPlacementControlCheckBox ) {
+			sceneViewer.displayPlacementControl = ! sceneViewer.displayPlacementControl;
+			sceneViewer.setControl("placementControl", sceneViewer.displayPlacementControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayColorControlCheckBox ) {
 			sceneViewer.displayColorControl = ! sceneViewer.displayColorControl;
+			sceneViewer.setControl("colorControl", sceneViewer.displayColorControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayWorldAxesCheckBox ) {
@@ -289,19 +267,19 @@ public class ExtendedModeler implements ActionListener {
 			menu.add(colorComputeMenuItem);
 			menuBar.add(menu);
 
-			menu = new JMenu("positionBlock");
-			positionComputeMenuItem = new JMenuItem("Computed");
-			positionComputeMenuItem.addActionListener(this);
-			menu.add(positionComputeMenuItem);
-			positionDragMenuItem = new JMenuItem("Drag");
-			positionDragMenuItem.addActionListener(this);
-			menu.add(positionDragMenuItem);
-			positionPushMenuItem = new JMenuItem("Push");
-			positionPushMenuItem.addActionListener(this);
-			menu.add(positionPushMenuItem);
-			positionRotateMenuItem = new JMenuItem("Rotate");
-			positionRotateMenuItem.addActionListener(this);
-			menu.add(positionRotateMenuItem);
+			menu = new JMenu("placementBlock");
+			placementComputeMenuItem = new JMenuItem("Computed");
+			placementComputeMenuItem.addActionListener(this);
+			menu.add(placementComputeMenuItem);
+			placementDragMenuItem = new JMenuItem("Drag");
+			placementDragMenuItem.addActionListener(this);
+			menu.add(placementDragMenuItem);
+			placementPushMenuItem = new JMenuItem("Push");
+			placementPushMenuItem.addActionListener(this);
+			menu.add(placementPushMenuItem);
+			placementRotateMenuItem = new JMenuItem("Rotate");
+			placementRotateMenuItem.addActionListener(this);
+			menu.add(placementRotateMenuItem);
 			menuBar.add(menu);
 		
 			menu = new JMenu("Help");
@@ -322,7 +300,7 @@ public class ExtendedModeler implements ActionListener {
 		GLCapabilities caps = new GLCapabilities(null);
 		caps.setDoubleBuffered(true);
 		caps.setHardwareAccelerated(true);
-		sceneViewer = new SceneViewer(caps, frame, this.smTrace);
+		sceneViewer = new SceneViewer(caps, this, frame, this.smTrace);
 
 		Container pane = frame.getContentPane();
 		// We used to use a BoxLayout as the layout manager here,
@@ -372,10 +350,10 @@ public class ExtendedModeler implements ActionListener {
 		displayAddControlCheckBox.addActionListener(this);
 		toolPanel.add(displayAddControlCheckBox);
 
-		displayPositionControlCheckBox = new JCheckBox("Display Position Control", sceneViewer.displayPositionControl);
-		displayPositionControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayPositionControlCheckBox.addActionListener(this);
-		toolPanel.add(displayPositionControlCheckBox);
+		displayPlacementControlCheckBox = new JCheckBox("Display Placement Control", sceneViewer.displayPlacementControl);
+		displayPlacementControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayPlacementControlCheckBox.addActionListener(this);
+		toolPanel.add(displayPlacementControlCheckBox);
 
 		displayColorControlCheckBox = new JCheckBox("Display Color Control", sceneViewer.displayColorControl);
 		displayColorControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
@@ -405,6 +383,35 @@ public class ExtendedModeler implements ActionListener {
 		frame.pack();
 		frame.setVisible( true );
 	}
+
+	/**
+	 * Set/Clear check box
+	 * and associated indicator variable
+	 * 
+	 */
+	public void setCheckBox(String name, boolean checked) {
+		System.out.println(String.format("setCheckBox(%s, %b)", name, checked));
+		switch (name) {
+			case "addControl":
+				displayAddControlCheckBox.setSelected(checked);
+				sceneViewer.displayAddControl = checked;
+				break;
+				
+			case "placementControl":
+				displayPlacementControlCheckBox.setSelected(checked);
+				sceneViewer.displayPlacementControl = checked;
+				break;
+				
+			case "colorControl":
+				displayColorControlCheckBox.setSelected(checked);
+				sceneViewer.displayColorControl = checked;
+				break;
+			
+			default:
+				System.out.println(String.format("Unrecognized button name: %s - ignored", name));
+		}
+	}
+	
 	
 	public static void main( String[] args ) {
 		SmTrace.setFlags(args[0]);		// Use first arg

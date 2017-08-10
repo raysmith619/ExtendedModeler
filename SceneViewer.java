@@ -39,15 +39,17 @@ import smTrace.SmTrace;
 
 class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener, GLEventListener, ActionListener {
 	/**
-	 * Position action types
+	 * Placement action types
 	 *
 	 */
-	public enum PositionActionType { // positioning
+	public enum PlacementActionType { // Placementing
 		NONE, // none added
-		POSITION_MOVE, POSITION_OK, POSITION_CANCEL,
+		PLACEMENT_MOVE, PLACEMENT_OK, PLACEMENT_CANCEL,
 	}
+	ExtendedModeler modeler;		// Main class - currently only for check button access
 	JFrame frame;					// Access to main frame
 	SmTrace smTrace; 				// Trace support
+	ControlsOfView controls;	// Control boxes
 	GLAutoDrawable drawable; 		// Save base
 	GLU glu; // Needed for scene2WorldCoord
 	GLUT glut;
@@ -55,7 +57,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	int viewport[] = new int[4];
 	double mvmatrix[] = new double[16];
 	double projmatrix[] = new double[16];
-	private PositionActionType positionAction = PositionActionType.NONE;
+	private PlacementActionType PlacementAction = PlacementActionType.NONE;
 	public Scene scene = new Scene();
 	public int indexOfSelectedBlock = -1; // -1 for none
 	private Point3D selectedPoint = new Point3D();
@@ -84,64 +86,28 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 	public boolean displayAddControl = true;
 	public boolean displayColorControl = true;
-	public boolean displayPositionControl = true;
+	public boolean displayPlacementControl = true;
 	public boolean displayWorldAxes = false;
 	public boolean displayCameraTarget = false;
 	public boolean displayBoundingBox = false;
 	public boolean enableCompositing = false;
 
 	int mouse_x, mouse_y, old_mouse_x, old_mouse_y;
-										 // Controls dictionary
-	public class ControlEntry {
-		public String name;				// Unique control name
-		public boolean active;			// presently active
-		public Object control;			// Control object, if active
-		public java.lang.reflect.Method controlDispose;	// dispose method reference
-		
-		ControlEntry(String name, Object control) {
-			this.name = name;
-			this.control = control;
-			active = false;				// Not yet activated
-		}
-	}
-	Map<String, ControlEntry> controls = new HashMap();
-	SceneControlDialog controlDialog; 	// Adding new blocks
-	JDialog posDialog; 					// Positioning dialog box
-										// text fields, if set
-	boolean pos_size_position = true; // position / size choice
-	boolean pos_move_duplicate = true; // Move / Duplicate choice
-	JTextField posXfield;
-	JTextField posYfield;
-	JTextField posZfield;
-
-	JTextField adjposXfield;
-	JTextField adjposYfield;
-	JTextField adjposZfield;
-
-	JDialog colorDialog; // Coloring dialog box
-	// text fields, if set
-	boolean color_move_duplicate = true; // Move/Duplicate choice
-	JTextField colorRedField;
-	JTextField colorGreenField;
-	JTextField colorBlueField;
-	JTextField colorAlphaField;
-
-	JTextField adjcolorRedField;
-	JTextField adjcolorGreenField;
-	JTextField adjcolorBlueField;
-	JTextField adjcolorAlphaField;
-
+	
 	public SceneViewer(GLCapabilities caps,
+			ExtendedModeler modeler,
 			JFrame frame,
 			SmTrace trace) {
 
 		super(caps);
+		this.modeler = modeler;
 		this.frame = frame;
 		this.smTrace = trace; // Passed in
 		addGLEventListener(this);
 
 		addMouseListener(this);
 		addMouseMotionListener(this);
+		this.controls = new ControlsOfView(this, trace);
 
 		radialMenu.setItemLabelAndID(RadialMenuWidget.CENTRAL_ITEM, "", COMMAND_DUPLICATE_BLOCK);
 		radialMenu.setItemLabelAndID(1, "Duplicate Block", COMMAND_DUPLICATE_BLOCK);
@@ -199,7 +165,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		scene.setSelectionStateOfBox(bindex, true);
 		indexOfSelectedBlock = bindex;
 		indexOfHilitedBox = indexOfSelectedBlock;
-		adjustControls();
+		controls.adjustControls();
 		return bindex;
 	}
 
@@ -357,389 +323,6 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		createNewBlock(blockType);
 	}
 
-	/**
-	 * Adjust/Report color
-	 */
-	
-	/**
-	 * Dispose of dialog
-	 */
-	public void colorControlDispose() {
-		clearControlPosition("colorControl");
-	}
-	
-	
-	public void colorControlSetup() {
-		if (colorDialog != null)
-			return;						// Already setup
-		
-		// JPanel panel = new JPanel(new GridLayout(2,7));
-		colorDialog = new JDialog();
-		colorDialog.setTitle("Adjust/Report Color");
-		JPanel colorPanel = new JPanel(new GridLayout(0, 1));
-		colorDialog.add(colorPanel);
-		// Move / Duplicate choice
-
-		JRadioButton md_move_color_button = new JRadioButton("Move");
-		md_move_color_button.setMnemonic(KeyEvent.VK_M);
-		md_move_color_button.setActionCommand("md_color");
-		md_move_color_button.setSelected(true);
-		md_move_color_button.addActionListener(this);
-
-		JRadioButton md_dup_color_button = new JRadioButton("Duplicate");
-		md_dup_color_button.setMnemonic(KeyEvent.VK_D);
-		md_dup_color_button.setActionCommand("md_duplicate");
-		md_dup_color_button.addActionListener(this);
-
-		JPanel move_dup_color_panel = new JPanel();
-		ButtonGroup move_dup_color_group = new ButtonGroup();
-		move_dup_color_group.add(md_move_color_button);
-		move_dup_color_group.add(md_dup_color_button);
-		move_dup_color_panel.add(md_move_color_button);
-		move_dup_color_panel.add(md_dup_color_button);
-		colorPanel.add(move_dup_color_panel);
-
-		JPanel moveto_panel = new JPanel();
-		colorPanel.add(moveto_panel);
-
-		// JComboBox<String> combo = new JComboBox<>();
-		OurBlock cb = getSelected();
-		if (cb == null) {
-			cb = new OurBlock(new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)), new Color(1,1,1,1));
-		}
-		colorRedField = new JTextField(String.format("%.2f", cb.getRed()));
-		colorRedField.setActionCommand("ENTER");
-		colorRedField.addActionListener(this);
-		colorGreenField = new JTextField(String.format("%.2f", cb.getGreen()));
-		colorGreenField.setActionCommand("ENTER");
-		colorGreenField.addActionListener(this);
-		colorBlueField = new JTextField(String.format("%.2f", cb.getBlue()));
-		colorBlueField.setActionCommand("ENTER");
-		colorBlueField.addActionListener(this);
-		colorAlphaField = new JTextField(String.format("%.2f", cb.getAlpha()));
-		colorAlphaField.setActionCommand("ENTER");
-		colorAlphaField.addActionListener(this);
-		JButton moveToButton = new JButton("ColorTo");
-		moveToButton.setActionCommand("colorToButton");
-		moveToButton.addActionListener(this);
-		/// panel.add(combo);
-		moveToButton.setHorizontalAlignment(SwingConstants.CENTER);
-		moveto_panel.add(new JLabel("red:"));
-		moveto_panel.add(colorRedField);
-		moveto_panel.add(new JLabel("green:"));
-		moveto_panel.add(colorGreenField);
-		moveto_panel.add(new JLabel("blue:"));
-		moveto_panel.add(colorBlueField);
-		moveto_panel.add(new JLabel("alpha:"));
-		moveto_panel.add(colorAlphaField);
-		moveto_panel.add(Box.createVerticalStrut(15)); // a spacer
-		moveto_panel.add(moveToButton);
-
-		// Adjust by
-		JPanel adjcolor_panel = new JPanel();
-		colorPanel.add(adjcolor_panel);
-		float adjamt = .1f; // Default adjustment
-		adjcolor_panel.add(Box.createVerticalStrut(15)); // a spacer
-		adjcolorRedField = new JTextField(String.format("%.2f", adjamt));
-		adjcolorRedField.setActionCommand("adjcolorENTER");
-		adjcolorRedField.addActionListener(this);
-		adjcolorGreenField = new JTextField(String.format("%.2f", adjamt));
-		adjcolorGreenField.setActionCommand("adjcolorENTER");
-		adjcolorGreenField.addActionListener(this);
-		adjcolorBlueField = new JTextField(String.format("%.2f", adjamt));
-		adjcolorBlueField.setActionCommand("adjcolorENTER");
-		adjcolorBlueField.addActionListener(this);
-		adjcolorAlphaField = new JTextField(String.format("%.2f", adjamt));
-		adjcolorAlphaField.setActionCommand("adjcolorENTER");
-		adjcolorAlphaField.addActionListener(this);
-		JButton adjcolorUpButton = new JButton("Up By");
-		adjcolorUpButton.setActionCommand("adjcolorUpButton");
-		adjcolorUpButton.addActionListener(this);
-		JButton adjcolorDownButton = new JButton("Down By");
-		adjcolorDownButton.setActionCommand("adjcolorDownButton");
-		adjcolorDownButton.addActionListener(this);
-		adjcolor_panel.add(Box.createVerticalStrut(15)); // a spacer
-		adjcolor_panel.add(new JLabel("red-adj:"));
-		adjcolor_panel.add(adjcolorRedField);
-		adjcolor_panel.add(new JLabel("green-adj:"));
-		adjcolor_panel.add(adjcolorGreenField);
-		adjcolor_panel.add(new JLabel("blue-adj:"));
-		adjcolor_panel.add(adjcolorBlueField);
-		adjcolor_panel.add(adjcolorUpButton);
-		adjcolor_panel.add(adjcolorDownButton);
-		adjcolor_panel.add(new JLabel("alpha-adj:"));
-		adjcolor_panel.add(adjcolorAlphaField);
-		adjcolor_panel.add(adjcolorUpButton);
-		adjcolor_panel.add(adjcolorDownButton);
-		colorDialog.pack();
-		setControlPosition(colorDialog, "colorControl");
-	}
-
-	/**
-	 * Control Add block
-	 */
-	public void addControlDispose() {
-		clearControlPosition("addControl");
-	}
-
-	public void addControlSetup() {
-		if (controlDialog == null)
-			controlDialog = new SceneControlDialog(this);
-	}
-
-	
-	/**
-	 * Setup controls position
-	 * Based on currently displayed controls
-	 * Uses/Updates local controls dictionary
-	 * 1. if control is active return with no action
-	 * 2. Calculate next position based on all active controls
-	 * 3. Update control's active.
-	 */
-	void setControlPosition(Object control, String controlName) {
-		if (!controls.containsKey(controlName)) {
-			controls.put(controlName, new ControlEntry(controlName, control));
-		}
-		ControlEntry control_entry = controls.get(controlName);
-		if (control_entry.active)
-			return;						// Already active
-
-										// Get required methods
-		Object control_obj = control_entry.control;
-		java.lang.reflect.Method control_setLocation = null;
-		java.lang.reflect.Method control_setVisible = null;
-		java.lang.reflect.Method control_dispose = null;		// Stored to dispose
-		try {
-			  control_setVisible = control_obj.getClass().getMethod("setVisible", boolean.class);
-			  control_dispose = control_obj.getClass().getMethod("dispose");
-			  control_setLocation = control_obj.getClass().getMethod("setLocation", Point.class);
-		} catch (SecurityException e) {
-			System.out.println(String.format("Reflection(%s) : %s", controlName, e));
-		} catch (NoSuchMethodException e) {
-			System.out.println(String.format("Reflection(%s) : %s", controlName, e));
-		}
-		control_entry.controlDispose = control_dispose;
-		
-		/**
-		 * Place controls in order below initial frame
-		 */
-		int yloc = frame.getHeight();
-		for (Map.Entry<String, ControlEntry> entry : controls.entrySet()) {
-			ControlEntry ctl_entry = entry.getValue();
-			String name = ctl_entry.name;
-			
-			if (name.equals(controlName))
-				continue;					// Skip us
-			if (!ctl_entry.active)
-				continue;					// Ignore if not active
-			
-			Object ctl_obj = ctl_entry.control;
-			java.lang.reflect.Method control_getHeight = null;
-			try {
-				  control_getHeight = ctl_obj.getClass().getMethod("getHeight");
-			} catch (SecurityException e) {
-				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
-			} catch (NoSuchMethodException e) {
-				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
-			}
-			try {
-				yloc +=  (int)control_getHeight.invoke(ctl_obj);
-			} catch (IllegalAccessException e) {
-				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
-				e.printStackTrace();
-			} catch (IllegalArgumentException e) {
-				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
-				e.printStackTrace();
-			} catch (InvocationTargetException e) {
-				System.out.println(String.format("Reflection(%s) : %s", controlName, e));
-				e.printStackTrace();
-			}
-		}
-		
-			
-		try {
-			control_setLocation.invoke(control_obj, new Point(0, yloc));
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		try {
-			control_setVisible.invoke(control_obj, true);
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	control_entry.active = true;		// Set as in action and displayed
-	}
-
-	/**
-	 * Clear controls entry's active - Currently does not dispose
-	 * @param controlName
-	 */
-	void clearControlPosition(String controlName) {
-		if (controls.containsKey(controlName)) {		
-			ControlEntry control_entry = controls.get(controlName);
-			try {
-				control_entry.controlDispose.invoke(control_entry.control);
-			} catch (IllegalAccessException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IllegalArgumentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InvocationTargetException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-				control_entry.active = false;
-		}
-		
-	}
-	
-	/**
-	 * Remove Control/Display of position
-	 */
-	public void positionControlSet(boolean on) {
-		if (on)
-			positionControlSetup();
-		else
-			positionControlDispose();
-	}
-	
-	
-	public void positionControlDispose() {
-			clearControlPosition("positionControl");
-	}
-	
-	/**
-	 * Setup Control / Display  position of selected block
-	 */
-	public void positionControlSetup() {
-		if (posDialog != null)
-			return;					// Already present
-		
-		// JPanel panel = new JPanel(new GridLayout(2,7));
-		posDialog = new JDialog();
-		posDialog.setTitle("Adjust/Report Position");
-		JPanel posPanel = new JPanel(new GridLayout(0, 1));
-		posDialog.add(posPanel);
-
-		JRadioButton ps_pos_button = new JRadioButton("Position");
-		ps_pos_button.setActionCommand("ps_position");
-		ps_pos_button.setSelected(true);
-		ps_pos_button.addActionListener(this);
-
-		JRadioButton ps_size_button = new JRadioButton("Size");
-		ps_size_button.setActionCommand("ps_size");
-		ps_size_button.setSelected(false);
-		ps_size_button.addActionListener(this);
-
-
-		JPanel pos_size_panel = new JPanel();
-		ButtonGroup pos_size_group = new ButtonGroup();
-		pos_size_group.add(ps_pos_button);
-		pos_size_group.add(ps_size_button);
-		pos_size_panel.add(ps_pos_button);
-		pos_size_panel.add(ps_size_button);
-		posPanel.add(pos_size_panel);
-
-		
-		// Move / Duplicate choice
-		JRadioButton mdmove_button = new JRadioButton("Move");
-		mdmove_button.setMnemonic(KeyEvent.VK_M);
-		mdmove_button.setActionCommand("md_move");
-		mdmove_button.setSelected(true);
-		mdmove_button.addActionListener(this);
-		
-		JRadioButton mddup_button = new JRadioButton("Duplicate");
-		mddup_button.setMnemonic(KeyEvent.VK_D);
-		mddup_button.setActionCommand("md_duplicate");
-		mddup_button.addActionListener(this);
-
-		JPanel movedup_panel = new JPanel();
-		ButtonGroup movedup_group = new ButtonGroup();
-		movedup_group.add(mdmove_button);
-		movedup_group.add(mddup_button);
-		movedup_panel.add(mdmove_button);
-		movedup_panel.add(mddup_button);
-		posPanel.add(movedup_panel);
-
-		JPanel moveto_panel = new JPanel();
-		posPanel.add(moveto_panel);
-
-		// JComboBox<String> combo = new JComboBox<>();
-		OurBlock cb = getSelected();
-		Point3D center = new Point3D(0,0,0);
-		if (cb != null)
-			center = cb.getCenter();
-		posXfield = new JTextField(String.format("%.2f", center.x()));
-		posXfield.setActionCommand("ENTER");
-		posXfield.addActionListener(this);
-		posYfield = new JTextField(String.format("%.2f", center.y()));
-		posYfield.setActionCommand("ENTER");
-		posYfield.addActionListener(this);
-		posZfield = new JTextField(String.format("%.2f", center.z()));
-		posZfield.setActionCommand("ENTER");
-		posZfield.addActionListener(this);
-		JButton moveToButton = new JButton("MoveTo");
-		moveToButton.setActionCommand("moveToButton");
-		moveToButton.addActionListener(this);
-		/// panel.add(combo);
-		moveToButton.setHorizontalAlignment(SwingConstants.CENTER);
-		moveto_panel.add(new JLabel("x-coord:"));
-		moveto_panel.add(posXfield);
-		moveto_panel.add(new JLabel("y-coord:"));
-		moveto_panel.add(posYfield);
-		moveto_panel.add(new JLabel("z-coord:"));
-		moveto_panel.add(posZfield);
-		moveto_panel.add(Box.createVerticalStrut(15)); // a spacer
-		moveto_panel.add(moveToButton);
-
-		// Adjust by
-		JPanel adjpos_panel = new JPanel();
-		posPanel.add(adjpos_panel);
-		float adjamt = .1f; // Default adjustment
-		adjpos_panel.add(Box.createVerticalStrut(15)); // a spacer
-		adjposXfield = new JTextField(String.format("%.2f", adjamt));
-		adjposXfield.setActionCommand("adjposENTER");
-		adjposXfield.addActionListener(this);
-		adjposYfield = new JTextField(String.format("%.2f", adjamt));
-		adjposYfield.setActionCommand("adjposENTER");
-		adjposYfield.addActionListener(this);
-		adjposZfield = new JTextField(String.format("%.2f", adjamt));
-		adjposZfield.setActionCommand("adjposENTER");
-		adjposZfield.addActionListener(this);
-		JButton adjposUpButton = new JButton("Up By");
-		adjposUpButton.setActionCommand("adjposUpButton");
-		adjposUpButton.addActionListener(this);
-		JButton adjposDownButton = new JButton("Down By");
-		adjposDownButton.setActionCommand("adjposDownButton");
-		adjposDownButton.addActionListener(this);
-		adjpos_panel.add(Box.createVerticalStrut(15)); // a spacer
-		adjpos_panel.add(new JLabel("x-adj:"));
-		adjpos_panel.add(adjposXfield);
-		adjpos_panel.add(new JLabel("y-adj:"));
-		adjpos_panel.add(adjposYfield);
-		adjpos_panel.add(new JLabel("z-adj:"));
-		adjpos_panel.add(adjposZfield);
-		adjpos_panel.add(adjposUpButton);
-		adjpos_panel.add(adjposDownButton);
-		posDialog.pack();
-		setControlPosition(posDialog, "positionContol");
-	}
-
 	public void setColorOfSelection(float r, float g, float b) {
 		if (indexOfSelectedBlock >= 0) {
 			scene.setColorOfBlock(indexOfSelectedBlock, r, g, b);
@@ -870,31 +453,10 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			System.out.println(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1],
 					viewport[2], viewport[3]));
 		}
-		if (displayAddControl) {
-			if (controlDialog == null) {
-				controlDialog = new SceneControlDialog(this);
-			}
-		} else {
-			if (controlDialog != null) {
-				controlDialog.controlDispose();
-				controlDialog = null;
-			}
-		}
-		if (displayAddControl) {
-			addControlSetup();
-		} else {
-			addControlDispose();
-		}
-		if (displayPositionControl) {
-			positionControlSetup();
-		} else {
-			positionControlDispose();
-		}
-		if (displayColorControl) {
-			colorControlSetup();
-		} else {
-			colorControlDispose();
-		}
+		
+		setControl("addControl", displayAddControl);
+		setControl("placementControl", displayPlacementControl);
+		setControl("colorControl", displayColorControl);
 		if (displayWorldAxes) {
 			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(1, 0, 0);
@@ -1212,75 +774,8 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public void actionPerformed(ActionEvent ae) {
 		String action = ae.getActionCommand();
 		System.out.println(String.format("action: %s", action));
-		switch (action) {
-			case"md_move":
-				pos_move_duplicate = true;
-				break;
-				
-			case "md_duplicate":
-				pos_move_duplicate = false;
-				break;
-				
-			case "ps_position":
-				pos_size_position = true;
-				break;
-				
-			case "ps_size":
-				pos_size_position = false;
-				break;
-				
-			case "moveToButton":
-				moveToPosition();
-				break;
-				
-			case "ENTER":
-				moveToPosition();
-				break;
-				
-			case "adjposUpButton":
-				adjustPosition(1);
-				break;
-				
-			case "adjposENTER":
-				adjustPosition(1);
-				break;
-
-			case "adjposDownButton":
-				adjustPosition(-1);
-				break;
-				
-			case "moveToColorButton":
-				moveToColor();
-				break;
-					
-			case "moveToColorENTER":
-				moveToColor();
-				break;
-			
-			case "adjcolorUpButton":
-				adjustColor(1);
-				break;
-				
-			case "adjcolorENTER":
-				adjustColor(1);
-				break;
-				
-			case "adjcolorDownButton":
-				adjustColor(-1);
-				break;
-
-			case "deleteBlockButton":
-			case "duplicateBlockButton":
-			case "addBoxButton":
-			case "addBallButton":
-			case "addConeButton":
-			case "addCylinderButton":
-				addBlockButton(action);
-				break;
-			
-				default:
-					break;
-		}
+		if (controls.ckDoAction(action))
+			return;
 	}
 
 	
@@ -1322,219 +817,21 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		}
 		repaint();
 	}
+
 	
+	/**
+	 * Add/Remove Control/Display
+	 */
+	public void setControl(String controlName, boolean on) {
+		controls.setControl(controlName, on);
+	}
+
 	
-	/**
-	 * Color Control / Display
-	 * 
-	 **/
 
-	/**
-	 * Adjust controls based on current selection
-	 * @param bindex - indes of currently selected block
-	 */
-	public void adjustControls() {
-		OurBlock cb = getSelected();
-		if (cb == null)
-			return;
-		if (posDialog != null) {
-			Point3D min = cb.getMin();
-			posXfield.setText(String.format("%.2g", min.x()));
-			posYfield.setText(String.format("%.2g", min.y()));
-			posZfield.setText(String.format("%.2g", min.z()));
-
-			Vector3D size = cb.getSize();
-			adjposXfield.setText(String.format("%.2g",size.x()));
-			adjposYfield.setText(String.format("%.2g",size.y()));
-			adjposZfield.setText(String.format("%.2g",size.z()));
-
-			posDialog.repaint();
-		}
-		if (colorDialog != null) {
-			Color color = cb.getColor();
-			colorRedField.setText(String.format("%.2g", cb.getRed()));
-			colorGreenField.setText(String.format("%.2g",cb.getGreen()));
-			colorBlueField.setText(String.format("%.2g", cb.getBlue()));
-			
-			adjcolorRedField.setText(String.format("%.2g", cb.getRed()/10));
-			adjcolorGreenField.setText(String.format("%.2g",cb.getGreen()/10));
-			adjcolorBlueField.setText(String.format("%.2g", cb.getBlue()/10));
-
-			colorDialog.repaint();
-			
-		}
-		
-	}
-	/**
-	 * Adjust by increments in direction 1- positive, -1 negative
-	 * 
-	 * @param direction
-	 */
-	private void adjustColor(int direction) {
-		if (indexOfSelectedBlock < 0)
-			return;
-		float adjcolor_redval = 0;
-		float adjcolor_greenval = 0;
-		float adjcolor_blueval = 0;
-		float adjcolor_alphaval = 0;
-		if (adjcolorRedField != null) {
-			String text = adjcolorRedField.getText();
-			adjcolor_redval = Float.valueOf(text);
-		}
-		if (adjcolorGreenField != null) {
-			String text = adjcolorGreenField.getText();
-			adjcolor_greenval = Float.valueOf(text);
-		}
-		if (adjcolorBlueField != null) {
-			String text = adjcolorBlueField.getText();
-			adjcolor_blueval = Float.valueOf(text);
-		}
-		if (adjcolorAlphaField != null) {
-			String text = adjcolorAlphaField.getText();
-			adjcolor_alphaval = Float.valueOf(text);
-		}
-		if (direction < 0) {
-			adjcolor_redval *= -1;
-			adjcolor_greenval *= -1;
-			adjcolor_blueval *= -1;
-			adjcolor_alphaval *= -1;
-		}
-		OurBlock cb = scene.ourBlocks.elementAt(indexOfSelectedBlock);
-		if (!pos_move_duplicate) {
-			cb = cb.duplicate();
-			addBlock(cb);
-		}
-		cb.colorAdj(adjcolor_redval, adjcolor_greenval, adjcolor_blueval, adjcolor_alphaval);
-		System.out.println(
-				String.format("adjust to red=%.2f green=%.2f blue=%.2f  alpha=%.2f",
-						cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha()));
-		repaint();
+	public void setCheckBox(String name, boolean checked) {
+		if (modeler != null)
+			modeler.setCheckBox(name, checked);
 	}
 
-	private void moveToColor() {
-		if (indexOfSelectedBlock < 0)
-			return;
-		float redval = 0;
-		float greenval = 0;
-		float blueval = 0;
-		if (colorRedField != null) {
-			String text = colorRedField.getText();
-			redval = Float.valueOf(text);
-		}
-		if (colorGreenField != null) {
-			String text = colorGreenField.getText();
-			greenval = Float.valueOf(text);
-		}
-		if (colorBlueField != null) {
-			String text = colorBlueField.getText();
-			blueval = Float.valueOf(text);
-		}
-
-		OurBlock cb = scene.ourBlocks.elementAt(indexOfSelectedBlock);
-		Color new_color = new Color(redval, greenval, blueval);
-		if (!color_move_duplicate) {
-			cb = cb.duplicate();
-			addBlock(cb);
-		}
-		cb.setColor(new_color);
-		System.out.println(String.format("move to x=%.2f y=%.2f z=%.2f", redval, greenval, blueval));
-		repaint();
-	}
-
-	/**
-	 * Adjust Position
-	 * 
-	 **/
-	/*
-	 * Adjust by increments in direction 1- positive, -1 negative
-	 * 
-	 * @param direction
-	 */
-	private void adjustPosition(int direction) {
-		if (indexOfSelectedBlock < 0)
-			return;
-		float adjpos_xval = 0;
-		float adjpos_yval = 0;
-		float adjpos_zval = 0;
-		if (adjposXfield != null) {
-			String text = adjposXfield.getText();
-			adjpos_xval = Float.valueOf(text);
-		}
-		if (adjposYfield != null) {
-			String text = adjposYfield.getText();
-			adjpos_yval = Float.valueOf(text);
-		}
-		if (adjposZfield != null) {
-			String text = adjposZfield.getText();
-			adjpos_zval = Float.valueOf(text);
-		}
-		if (direction < 0) {
-			if (pos_size_position) {
-				adjpos_xval *= -1;
-				adjpos_yval *= -1;
-				adjpos_zval *= -1;
-			} else {
-				adjpos_xval *= -1;
-				adjpos_yval *= -1;
-				adjpos_zval *= -1;				
-			}
-		}
-		OurBlock cb = scene.ourBlocks.elementAt(indexOfSelectedBlock);
-		Point3D base_point = cb.getBasePoint();
-		Vector3D adjpos_vector = new Vector3D(adjpos_xval, adjpos_yval, adjpos_zval);
-		Point3D new_point = Point3D.sum(base_point, adjpos_vector);
-		if (!pos_move_duplicate) {
-			cb = cb.duplicate();
-			addBlock(cb);
-		}
-		if (pos_size_position) {
-			cb.moveTo(new_point);
-			System.out
-					.println(String.format("adjust to x=%.2f y=%.2f z=%.2f", new_point.x(), new_point.y(), new_point.z()));
-		} else {
-			cb.resize(adjpos_vector);
-			Vector3D size = cb.getSize();
-			System.out
-			.println(String.format("adjust size to x=%.2f y=%.2f z=%.2f", size.x(), size.y(), size.z()));
-		}
-		repaint();
-	}
-
-	/**
-	 * Move to position/size accordingly
-	 */
-	private void moveToPosition() {
-		if (indexOfSelectedBlock < 0)
-			return;
-		float xval = 0;
-		float yval = 0;
-		float zval = 0;
-		if (posXfield != null) {
-			String text = posXfield.getText();
-			xval = Float.valueOf(text);
-		}
-		if (posYfield != null) {
-			String text = posYfield.getText();
-			yval = Float.valueOf(text);
-		}
-		if (posZfield != null) {
-			String text = posZfield.getText();
-			zval = Float.valueOf(text);
-		}
-
-		OurBlock cb = scene.ourBlocks.elementAt(indexOfSelectedBlock);
-		Point3D new_point = new Point3D(xval, yval, zval);
-		if (!pos_move_duplicate) {
-			cb = cb.duplicate();
-			addBlock(cb);
-		}
-		if (pos_size_position) {
-			cb.moveTo(new_point);
-		} else {
-			Vector3D size = new Vector3D(new_point);
-			cb.resize(0, size);
-		}
-		System.out.println(String.format("move to x=%.2f y=%.2f z=%.2f", xval, yval, zval));
-		repaint();
-	}
+	
 }
