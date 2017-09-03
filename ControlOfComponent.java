@@ -81,6 +81,13 @@ public class ControlOfComponent extends ControlOf {
 	 * Check for and act on action
 	 */
 	public boolean ckDoAction(String action) {
+		BlockCommand bcmd;
+		try {
+			bcmd = new BlkCmdAdd(action);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
 		switch (action) {
 			case "deleteBlockButton":
 			case "deleteBlockAllButton":
@@ -89,7 +96,8 @@ public class ControlOfComponent extends ControlOf {
 			case "addBallButton":
 			case "addConeButton":
 			case "addCylinderButton":
-				scene.addBlockButton(action);
+				scene.addBlockButton(bcmd, action);
+				bcmd.saveCmd();		// TBD - check for successful addition
 				return true;
 			
 				default:

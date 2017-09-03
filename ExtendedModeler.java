@@ -11,6 +11,7 @@ import java.awt.BorderLayout;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JSeparator;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -38,7 +39,7 @@ public class ExtendedModeler implements ActionListener {
 	JFrame frame;
 	Container toolPanel;
 	SceneViewer sceneViewer;
-	
+
 	public enum AutoAddType {	// Auto add block type
 		NONE,					// none added
 		PLACEMENT_COMPUTE,		// Block placement
@@ -53,6 +54,13 @@ public class ExtendedModeler implements ActionListener {
 	}
 	
 	JMenuItem deleteAllMenuItem, quitMenuItem, aboutMenuItem;
+	
+	JMenuItem undoMenuItem;			// Command undo
+	JMenuItem redoMenuItem;			// Command redo
+	JMenuItem repeatMenuItem;		// Command repeat
+	JButton undoButton;				// Command undo
+	JButton redoButton;				// Command redo
+	JButton repeatButton;			// Command repeat
 	
 	JMenuItem placementMenuItem;
 	JMenuItem placementComputeMenuItem;
@@ -86,6 +94,18 @@ public class ExtendedModeler implements ActionListener {
 
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
+		if (source == undoButton || source == undoMenuItem) {
+			sceneViewer.cmdUndo();
+			return;
+		}
+		else if (source == redoButton || source == redoMenuItem) {
+			sceneViewer.cmdRedo();
+			return;
+		}
+		else if (source == repeatButton || source == repeatMenuItem) {
+			sceneViewer.cmdRepeat();
+			return;
+		}
 		if ( source == deleteAllMenuItem ) {
 			int response = JOptionPane.showConfirmDialog(
 				frame,
@@ -95,34 +115,18 @@ public class ExtendedModeler implements ActionListener {
 			);
 
 			if (response == JOptionPane.YES_OPTION) {
-				sceneViewer.deleteAll();
+				BlockCommand bcmd;
+				try {
+					bcmd = new BlkCmdAdd("deleteAllMenuItem");
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+					return;
+				}
+				sceneViewer.deleteAll(bcmd);
+				bcmd.saveCmd();
 				sceneViewer.repaint();
 			}
-		}
-		else if (source == placementComputeMenuItem) {
-			sceneViewer.controls.setControl("addControl", true);
-		}
-		else if (source == colorComputeMenuItem) {
-			sceneViewer.controls.setControl("colorControl", true);			
-		}
-		else if ( source == duplicateMenuItem ) {
-			System.out.println(String.format("choose %s", "duplicate"));
-			sceneViewer.setAutoAdd(AutoAddType.DUPLICATE);
-		}
-		else if ( source == cancelAddMenuItem ) {
-			sceneViewer.setAutoAdd(AutoAddType.NONE);
-		}
-		else if ( source == boxMenuItem ) {
-			sceneViewer.setAutoAdd(AutoAddType.BOX);
-		}
-		else if ( source == ballMenuItem ) {
-			sceneViewer.setAutoAdd(AutoAddType.BALL);
-		}
-		else if ( source == coneMenuItem ) {
-			sceneViewer.setAutoAdd(AutoAddType.CONE);
-		}
-		else if ( source == cylinderMenuItem ) {
-			sceneViewer.setAutoAdd(AutoAddType.CYLINDER);
 		}
 		else if ( source == quitMenuItem ) {
 			int response = JOptionPane.showConfirmDialog(
@@ -145,32 +149,16 @@ public class ExtendedModeler implements ActionListener {
 				JOptionPane.INFORMATION_MESSAGE
 			);
 		}
-		else if ( source == createBoxButton ) {
-			if (SmTrace.tr("menubutton"))
-					System.out.println(String.format("Create Box button"));
-			sceneViewer.createNewBlock("box");
-			sceneViewer.repaint();
-		}
-		else if ( source == createBallButton ) {
-			if (SmTrace.tr("menubutton"))
-					System.out.println(String.format("Create Ball button"));
-			sceneViewer.createNewBlock("ball");
-			sceneViewer.repaint();
-		}
-		else if ( source == createConeButton ) {
-			if (SmTrace.tr("menubutton"))
-					System.out.println(String.format("Create Cone button"));
-			sceneViewer.createNewBlock("cone");
-			sceneViewer.repaint();
-		}
-		else if ( source == createCylinderButton ) {
-			if (SmTrace.tr("menubutton"))
-					System.out.println(String.format("Create Cylinder button"));
-			sceneViewer.createNewBlock("cylinder");
-			sceneViewer.repaint();
-		}
 		else if ( source == deleteSelectionButton ) {
-			sceneViewer.deleteSelection();
+			BlockCommand bcmd;
+			try {
+				bcmd = new BlkCmdAdd("deleteSelectionButton");
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+				return;
+			}
+			sceneViewer.deleteSelection(bcmd);
 			sceneViewer.repaint();
 		}
 		else if ( source == lookAtSelectionButton ) {
@@ -224,7 +212,6 @@ public class ExtendedModeler implements ActionListener {
 				"Warning: UI is not being created in the Event Dispatch Thread!");
 			assert false;
 		}
-
 		frame = new JFrame( applicationName );
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 
@@ -240,53 +227,39 @@ public class ExtendedModeler implements ActionListener {
 				quitMenuItem.addActionListener(this);
 				menu.add(quitMenuItem);
 			menuBar.add(menu);
-			menu = new JMenu("AddBlock");
-				duplicateMenuItem = new JMenuItem("Duplicate");
-				duplicateMenuItem.addActionListener(this);
-				menu.add(duplicateMenuItem);
-				
-				menu.addSeparator();
-				
-				boxMenuItem = new JMenuItem("Box");
-				boxMenuItem.addActionListener(this);
-				menu.add(boxMenuItem);
-				ballMenuItem = new JMenuItem("Ball");
-				ballMenuItem.addActionListener(this);
-				menu.add(ballMenuItem);
-				coneMenuItem = new JMenuItem("Cone");
-				coneMenuItem.addActionListener(this);
-				menu.add(coneMenuItem);
-				cylinderMenuItem = new JMenuItem("Cylinder");
-				cylinderMenuItem.addActionListener(this);
-				menu.add(cylinderMenuItem);
-			menuBar.add(menu);
-
-			menu = new JMenu("colorBlock");
-			colorComputeMenuItem = new JMenuItem("Computed");
-			colorComputeMenuItem.addActionListener(this);
-			menu.add(colorComputeMenuItem);
-			menuBar.add(menu);
-
-			menu = new JMenu("placementBlock");
-			placementComputeMenuItem = new JMenuItem("Computed");
-			placementComputeMenuItem.addActionListener(this);
-			menu.add(placementComputeMenuItem);
-			placementDragMenuItem = new JMenuItem("Drag");
-			placementDragMenuItem.addActionListener(this);
-			menu.add(placementDragMenuItem);
-			placementPushMenuItem = new JMenuItem("Push");
-			placementPushMenuItem.addActionListener(this);
-			menu.add(placementPushMenuItem);
-			placementRotateMenuItem = new JMenuItem("Rotate");
-			placementRotateMenuItem.addActionListener(this);
-			menu.add(placementRotateMenuItem);
-			menuBar.add(menu);
 		
+			menu = new JMenu("CMD");
+				undoMenuItem = new JMenuItem("Undo");
+				undoMenuItem.addActionListener(this);
+				menu.add(undoMenuItem);
+				redoMenuItem = new JMenuItem("Redo");
+				redoMenuItem.addActionListener(this);
+				menu.add(redoMenuItem);
+				repeatMenuItem = new JMenuItem("Repeat");
+				repeatMenuItem.addActionListener(this);
+				menu.add(repeatMenuItem);
+			menuBar.add(menu);
+	
 			menu = new JMenu("Help");
 				aboutMenuItem = new JMenuItem("About");
 				aboutMenuItem.addActionListener(this);
 				menu.add(aboutMenuItem);
 			menuBar.add(menu);
+			
+			menuBar.add(new JSeparator());
+			undoButton = new JButton("Undo");
+			undoButton.addActionListener(this);
+			menuBar.add(undoButton);
+			
+			redoButton = new JButton("Redo");
+			redoButton.addActionListener(this);
+			menuBar.add(redoButton);
+			
+			repeatButton = new JButton("Repeat");
+			repeatButton.addActionListener(this);
+			menuBar.add(repeatButton);
+					
+					
 		frame.setJMenuBar(menuBar);
 
 		toolPanel = new JPanel();
@@ -300,7 +273,7 @@ public class ExtendedModeler implements ActionListener {
 		GLCapabilities caps = new GLCapabilities(null);
 		caps.setDoubleBuffered(true);
 		caps.setHardwareAccelerated(true);
-		sceneViewer = new SceneViewer(caps, this, frame, this.smTrace);
+		sceneViewer = new SceneViewer(caps, this, frame, smTrace);
 
 		Container pane = frame.getContentPane();
 		// We used to use a BoxLayout as the layout manager here,
@@ -310,30 +283,6 @@ public class ExtendedModeler implements ActionListener {
 		pane.add( toolPanel, BorderLayout.LINE_START );
 		pane.add( sceneViewer, BorderLayout.CENTER );
 
-		createBoxButton = new JButton("Create Box");
-		createBoxButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		createBoxButton.addActionListener(this);
-		toolPanel.add( createBoxButton );
-
-		createBallButton = new JButton("Create Ball");
-		createBallButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		createBallButton.addActionListener(this);
-		toolPanel.add( createBallButton );
-
-		createConeButton = new JButton("Create Cone");
-		createConeButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		createConeButton.addActionListener(this);
-		toolPanel.add( createConeButton );
-
-		createCylinderButton = new JButton("Create Cylindar");
-		createCylinderButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		createCylinderButton.addActionListener(this);
-		toolPanel.add( createCylinderButton );
-
-		deleteSelectionButton = new JButton("Delete Selection");
-		deleteSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		deleteSelectionButton.addActionListener(this);
-		toolPanel.add( deleteSelectionButton );
 
 		lookAtSelectionButton = new JButton("Look At Selection");
 		lookAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
@@ -391,6 +340,10 @@ public class ExtendedModeler implements ActionListener {
 	 */
 	public void setCheckBox(String name, boolean checked) {
 		System.out.println(String.format("setCheckBox(%s, %b)", name, checked));
+		if (SmTrace.tr("select")) {
+			int bindex = sceneViewer.getSelectedBlockIndex();
+			System.out.println(String.format("modeler.setCheckBox(%s): selected(%d);", name, bindex));
+		}
 		switch (name) {
 			case "addControl":
 				displayAddControlCheckBox.setSelected(checked);

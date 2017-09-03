@@ -10,6 +10,7 @@ import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -22,6 +23,8 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
+
+import smTrace.SmTrace;
 
 
 public class ControlOfColor extends ControlOf {
@@ -63,6 +66,10 @@ public class ControlOfColor extends ControlOf {
 		
 		System.out.println("ControlOfColor.setup()-2c");
 		setTitle("Adjust/Report Color");
+		if (SmTrace.tr("select")) {
+			int bindex = scene.getSelectedBlockIndex();
+			System.out.println(String.format("ControlOfColor.setup: selected(%d);", bindex));
+		}
 		JPanel colorPanel = new JPanel(new GridLayout(0, 1));
 		add(colorPanel);
 		pack();
@@ -103,11 +110,11 @@ public class ControlOfColor extends ControlOf {
 	 */
 	public void addDigital(JPanel panel) {
 		System.out.println("addDigital");
-		JPanel moveto_panel = new JPanel();
-		panel.add(moveto_panel);
+		JPanel colorTo_panel = new JPanel();
+		panel.add(colorTo_panel);
 		pack();
 		
-		OurBlock cb = scene.getSelected();
+		OurBlock cb = scene.getSelectedBlock();
 		if (cb == null) {
 			cb = new OurBlock(new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)), new Color(1,1,1,1));
 		}
@@ -123,21 +130,25 @@ public class ControlOfColor extends ControlOf {
 		colorAlphaField = new JTextField(String.format("%.2f", cb.getAlpha()));
 		colorAlphaField.setActionCommand("ENTER");
 		colorAlphaField.addActionListener(scene);
-		JButton moveToButton = new JButton("ColorTo");
-		moveToButton.setActionCommand("colorToButton");
-		moveToButton.addActionListener(scene);
+		JButton colorToButton = new JButton("ColorTo");
+		colorToButton.setActionCommand("colorToButton");
+		colorToButton.addActionListener(scene);
+		JButton colorToPreviousButton = new JButton("ColorToPrevious");
+		colorToPreviousButton.setActionCommand("colorToPreviousButton");
+		colorToPreviousButton.addActionListener(scene);
 		/// panel.add(combo);
-		moveToButton.setHorizontalAlignment(SwingConstants.CENTER);
-		moveto_panel.add(new JLabel("red:"));
-		moveto_panel.add(colorRedField);
-		moveto_panel.add(new JLabel("green:"));
-		moveto_panel.add(colorGreenField);
-		moveto_panel.add(new JLabel("blue:"));
-		moveto_panel.add(colorBlueField);
-		moveto_panel.add(new JLabel("alpha:"));
-		moveto_panel.add(colorAlphaField);
-		moveto_panel.add(Box.createVerticalStrut(15)); // a spacer
-		moveto_panel.add(moveToButton);
+		colorToButton.setHorizontalAlignment(SwingConstants.CENTER);
+		colorTo_panel.add(new JLabel("red:"));
+		colorTo_panel.add(colorRedField);
+		colorTo_panel.add(new JLabel("green:"));
+		colorTo_panel.add(colorGreenField);
+		colorTo_panel.add(new JLabel("blue:"));
+		colorTo_panel.add(colorBlueField);
+		colorTo_panel.add(new JLabel("alpha:"));
+		colorTo_panel.add(colorAlphaField);
+		colorTo_panel.add(Box.createVerticalStrut(15)); // a spacer
+		colorTo_panel.add(colorToButton);
+		colorTo_panel.add(colorToPreviousButton);
 		pack();
 		
 		// Adjust by
@@ -203,7 +214,7 @@ public class ControlOfColor extends ControlOf {
 	 * 
 	 * @param direction
 	 */
-	private void adjustColor(int direction) {
+	private void adjustColor(BlockCommand bcmd, int direction) {
 		if (scene.getSelected() == null)
 			return;
 		
@@ -233,10 +244,10 @@ public class ControlOfColor extends ControlOf {
 			adjcolor_blueval *= -1;
 			adjcolor_alphaval *= -1;
 		}
-		OurBlock cb = scene.getSelected();
+		OurBlock cb = scene.getSelectedBlock();
 		if (!color_move_duplicate) {
 			cb = cb.duplicate();
-			scene.addBlock(cb);
+			scene.addBlock(bcmd, cb);
 		}
 		cb.colorAdj(adjcolor_redval, adjcolor_greenval, adjcolor_blueval, adjcolor_alphaval);
 		System.out.println(
@@ -249,7 +260,7 @@ public class ControlOfColor extends ControlOf {
 	 * Adjust control based on selection
 	 */
 	public void adjustControls() {
-		OurBlock cb = scene.getSelected();
+		OurBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -269,7 +280,7 @@ public class ControlOfColor extends ControlOf {
 		
 		
 		
-	private void moveToColor() {
+	private void colorToColor(BlockCommand bcmd) {
 		if (scene.getSelected() == null)
 			return;
 		
@@ -289,14 +300,35 @@ public class ControlOfColor extends ControlOf {
 			blueval = Float.valueOf(text);
 		}
 
-		OurBlock cb = scene.getSelected();
+		OurBlock cb = scene.getSelectedBlock();
 		Color new_color = new Color(redval, greenval, blueval);
 		if (!color_move_duplicate) {
 			cb = cb.duplicate();
-			scene.addBlock(cb);
+			scene.addBlock(bcmd, cb);
 		}
 		cb.setColor(new_color);
 		System.out.println(String.format("move to x=%.2f y=%.2f z=%.2f", redval, greenval, blueval));
+		scene.repaint();
+	}
+
+	
+	private void colorToPreviousColor(BlockCommand bcmd) {
+		OurBlock cb_sel = scene.getSelectedBlock();
+		if (cb_sel == null)
+			return;
+
+		OurBlock cb_prev = scene.getSelectedBlock(-1);
+		if (cb_prev == null)
+			return;
+		
+		Color new_color = cb_prev.getColor();
+		if (!color_move_duplicate) {
+			cb_sel = cb_sel.duplicate();
+			scene.addBlock(bcmd, cb_sel);
+		}
+		cb_sel.setColor(new_color);
+		System.out.println(String.format("move to x=%.2f y=%.2f z=%.2f",
+								cb_sel.getRed(), cb_sel.getGreen(), cb_sel.getBlue()));
 		scene.repaint();
 	}
 
@@ -305,27 +337,31 @@ public class ControlOfColor extends ControlOf {
 	/**
 	 * Check for and act on action
 	 */
-	public boolean ckDoAction(String action) {
+	public boolean ckDoAction(BlockCommand bcmd, String action) {
 		switch (action) {
 				
-			case "moveToColorButton":
-				moveToColor();
+			case "colorToButton":
+				colorToColor(bcmd);
+				break;
+				
+			case "colorToPreviousButton":
+				colorToPreviousColor(bcmd);
 				break;
 					
-			case "moveToColorENTER":
-				moveToColor();
+			case "colorToColorENTER":
+				colorToColor(bcmd);
 				break;
 			
 			case "adjcolorUpButton":
-				adjustColor(1);
+				adjustColor(bcmd, 1);
 				break;
 				
 			case "adjcolorENTER":
-				adjustColor(1);
+				adjustColor(bcmd, 1);
 				break;
 				
 			case "adjcolorDownButton":
-				adjustColor(-1);
+				adjustColor(bcmd, -1);
 				break;
 
 			case "deleteBlockButton":
@@ -334,7 +370,7 @@ public class ControlOfColor extends ControlOf {
 			case "addBallButton":
 			case "addConeButton":
 			case "addCylinderButton":
-				scene.addBlockButton(action);
+				scene.addBlockButton(bcmd, action);
 				break;
 
 				
@@ -354,13 +390,19 @@ public class ControlOfColor extends ControlOf {
 	 * Select color from color map
 	 */
 	public void colorMapSelect() {
-        Color c = JColorChooser.showDialog(
-                this, "Choose a color", Color.CYAN);
-        if (c == null) 
-        	return;			// None chosen
-
-        System.out.println(String.format("Chose color: %s", c));
-		OurBlock cb = scene.getSelected();
+        final JColorChooser chooser = new JColorChooser();
+        chooser.setColor(Color.BLUE);
+        chooser.setLocation(400,400);
+        JDialog dialog = JColorChooser.createDialog(null, "Color Chooser",
+                 true, chooser, null, null);
+        dialog.setVisible(true);
+        Color c;
+        c = chooser.getColor();
+        if (c == null)
+        	return;
+        
+       System.out.println(String.format("Chose color: %s", c));
+		OurBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;			// None selected
 		

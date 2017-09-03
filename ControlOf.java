@@ -5,6 +5,8 @@ import javax.swing.JFrame;
 import com.jogamp.newt.event.WindowEvent;
 import com.jogamp.opengl.GLAutoDrawable;
 
+import smTrace.SmTrace;
+
 public class ControlOf extends JDialog implements java.awt.event.WindowListener {
 
 	/**
@@ -41,12 +43,20 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * @param windowListener 
 	 */
 	public void setControl(boolean on) {
+		if (SmTrace.tr("select")) {
+			int bindex = scene.getSelectedBlockIndex();
+			System.out.println(String.format("ControlOf.setControl(%b) %s: before - selected(%d)", on, name, bindex));
+		}
 		if (on) {
 			setup();
 			this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 			this.addWindowListener(this);
 		} else {
 			dispose();
+		}
+		if (SmTrace.tr("select")) {
+			int bindex = scene.getSelectedBlockIndex();
+			System.out.println(String.format("ControlOf.setControl(%b) %s: after - selected(%d)", on, name, bindex));
 		}
 	}
 	

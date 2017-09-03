@@ -1,4 +1,7 @@
 import java.awt.Color;
+import java.awt.List;
+import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.Vector;
 
 import com.jogamp.opengl.GL;
@@ -7,8 +10,8 @@ import com.jogamp.opengl.GL2;
 import smTrace.SmTrace;
 
 class Scene {
-	public Vector< OurBlock > ourBlocks = new Vector< OurBlock >();
-
+	OurBlockGroup genBlocks;						// Generated
+	OurBlockGroup displayedBlocks;					// Displayed
 	AlignedBox3D boundingBoxOfScene = new AlignedBox3D();
 	boolean isBoundingBoxOfSceneDirty = false;
 
@@ -16,13 +19,16 @@ class Scene {
 
 
 	public Scene() {
+		genBlocks = new OurBlockGroup();			// Generated
+		OurBlock.setGenerated(genBlocks);
+		displayedBlocks = new OurBlockGroup();		// Displayed
 	}
 
 	public AlignedBox3D getBoundingBoxOfScene() {
 		if ( isBoundingBoxOfSceneDirty ) {
 			boundingBoxOfScene.clear();
-			for ( int i = 0; i < ourBlocks.size(); ++i ) {
-				OurBlock block = (OurBlock)ourBlocks.elementAt(i).block;
+			for ( int id : displayedBlocks.getIds()) {
+				OurBlock block = displayedBlocks.getBlock(id);
 				boundingBoxOfScene.bound(block.boundingBox());
 			}
 			isBoundingBoxOfSceneDirty = false;
@@ -30,39 +36,55 @@ class Scene {
 		return boundingBoxOfScene;
 	}
 
+
+	/**
+	 * Add block from generated to displayed scene
+	 */
+	public void addBlock(int id) {
+		OurBlock cb = genBlocks.getBlock(id);
+		if (cb != null) {
+			displayedBlocks.putBlock(cb);
+			isBoundingBoxOfSceneDirty = true;
+		}
+	}
+
 	/**
 	 * Add already created block to scene
 	 * @return index of new element
 	 */
 	public int  addBlock(
+		BlockCommand bcmd,
 		OurBlock cb) {
-		ourBlocks.addElement(cb);
-		isBoundingBoxOfSceneDirty = true;
-		return ourBlocks.size()-1;
+		addBlock(cb.iD);
+		bcmd.addBlock(cb);
+		return cb.iD;
 	}
 	
 	
 	public int addBlock(
+		BlockCommand bcmd,		// Current command
 		String blockType, 		// Block type
 		AlignedBox3D box,		// Bounding box
 		Color color
 	) {
-		OurBlock cb = OurBlock.getNewBlock(blockType, box, color);
-		
+		OurBlock cb = OurBlock.getNewBlock(blockType, box, color);		
 		if (cb == null || !cb.isOk()) {
 			System.out.println(String.format("Couldn't create block type '%s'",
 					blockType));
 			return 0;
 		}
-		return addBlock(cb);
+		genBlocks.putBlock(cb);		// Add to generated blocks
+		addBlock(bcmd, cb);			// Add to displayed blocks
+		return cb.iD;
 	}
 
 	public int addColoredBox(
+		BlockCommand bcmd,
 		AlignedBox3D box,
 		Color color
 	) {
 		OurBlock cb = new ColoredBox(box, color);
-		return addBlock(cb);
+		return addBlock(bcmd, cb);
 	}
 
 	public int getIndexOfIntersectedBox(
@@ -79,8 +101,13 @@ class Scene {
 		Vector3D candidateNormal = new Vector3D();
 		float candidateDistance;
 
-		for ( int i = 0; i < ourBlocks.size(); ++i ) {
-			OurBlock block = ourBlocks.elementAt(i);
+		for (int id : displayedBlocks.getIds())  {
+			OurBlock block = displayedBlocks.getBlock(id);
+			if (block == null) {
+				System.out.println(String.format("getIndexOfIntersectedBox: No display block id:%d", id));
+				continue;
+			}
+
 			if (block.intersects(ray,candidatePoint,candidateNormal)) {
 				candidateDistance = Point3D.diff(
 					ray.origin, candidatePoint
@@ -91,7 +118,7 @@ class Scene {
 				) {
 					// We've found a new, best candidate
 					intersectionDetected = true;
-					indexOfIntersectedBox = i;
+					indexOfIntersectedBox = id;
 					distanceToIntersection = candidateDistance;
 					intersectionPoint.copy( candidatePoint );
 					normalAtIntersection.copy( candidateNormal );
@@ -101,63 +128,99 @@ class Scene {
 		return indexOfIntersectedBox;
 	}
 
+
+	public OurBlock getBlock( int id ) {
+		return displayedBlocks.getBlock(id);
+	}
+
 	public AlignedBox3D getBox( int index ) {
-		if ( 0 <= index && index < ourBlocks.size() )
-			return ourBlocks.elementAt(index).getBox();
-		return null;
+		OurBlock cb = getBlock(index);
+		if (cb == null)
+			return null;
+		return cb.getBox();
 	}
 
-	public boolean getSelectionStateOfBox( int index ) {
-		if ( 0 <= index && index < ourBlocks.size() )
-			return ourBlocks.elementAt(index).isSelected();
-		return false;
+	public boolean getSelectionStateOfBox( int id ) {
+		OurBlock cb = displayedBlocks.getBlock(id);
+		if (cb == null)
+			return false;
+		
+		return cb.isSelected();
 	}
-	public void setSelectionStateOfBox( int index, boolean state ) {
-		if ( 0 <= index && index < ourBlocks.size() )
-			ourBlocks.elementAt(index).setSelected(state);
+	
+	public void setSelectionStateOfBox( int id, boolean state ) {
+		OurBlock cb = displayedBlocks.getBlock(id);
+		if (cb == null)
+			return;
+		
+		cb.setSelected(state);
 	}
-	public void toggleSelectionStateOfBox( int index ) {
-		if ( 0 <= index && index < ourBlocks.size() ) {
-			OurBlock cb = ourBlocks.elementAt(index);
-			cb.toggleSelected();
-		}
+	public void toggleSelectionStateOfBox( int id ) {
+		OurBlock cb = displayedBlocks.getBlock(id);
+		if (cb == null)
+			return;
+		
+		cb.toggleSelected();
 	}
 
-	public void setColorOfBlock( int index, float r, float g, float b ) {
-		if ( 0 <= index && index < ourBlocks.size() ) {
-			OurBlock cb = ourBlocks.elementAt(index);
+	public void setColorOfBlock( int id, float r, float g, float b ) {
+		OurBlock cb = displayedBlocks.getBlock(id);
+		if (cb != null)
 			cb.setColor(r,g,b);
-		}
 	}
 
-	public void translateBlock( int index, Vector3D translation ) {
-		if ( 0 <= index && index < ourBlocks.size() ) {
-			OurBlock cb = ourBlocks.elementAt(index);
+	public void translateBlock( int id, Vector3D translation ) {
+		OurBlock cb = displayedBlocks.getBlock(id);
+		if (cb != null) {
 			cb.translate(translation);
 			isBoundingBoxOfSceneDirty = true;
 		}
 	}
 
 	public void resizeBlock(
-		int indexOfBlock, int indexOfCornerToResize, Vector3D translation
+		int id, int indexOfCornerToResize, Vector3D translation
 	) {
-		if ( 0 <= indexOfBlock && indexOfBlock < ourBlocks.size() ) {
-			OurBlock cb = ourBlocks.elementAt(indexOfBlock);
+		OurBlock cb = displayedBlocks.getBlock(id);
+		if (cb != null) {
 			cb.resize(indexOfCornerToResize, translation);
 			isBoundingBoxOfSceneDirty = true;
 		}
 	}
 
-	public void deleteBlock( int index ) {
-		if ( 0 <= index && index < ourBlocks.size() ) {
-			ourBlocks.removeElementAt( index );
+	public void deleteBlock( int id ) {
+		OurBlock cb = displayedBlocks.getBlock(id);
+		if (cb != null) {
+			displayedBlocks.removeBlock(id);
 			isBoundingBoxOfSceneDirty = true;
 		}
 	}
 
+	public void deleteBlock(BlockSelect selected) {
+		ArrayList<Integer> index_list = selected.getList();
+		for (Integer si : index_list) {
+			deleteBlock(si.intValue());
+		}
+	}
+	
+	/**
+	 * Get newest block index
+	 * -1 if none
+	 */
+	public int cbIndex() {
+		return displayedBlocks.getNewestId();
+	}
+
+	
+	/**
+	 * Get block, given index
+	 */
+	public OurBlock cb(int id) {
+		return displayedBlocks.getBlock(id);
+	}
+
 
 	public void deleteAllBlocks() {
-		ourBlocks.removeAllElements();
+		displayedBlocks.removeAllBlocks();
 		isBoundingBoxOfSceneDirty = true;
 	}
 
@@ -184,8 +247,12 @@ class Scene {
 			gl.glBlendFunc( GL.GL_SRC_ALPHA, GL.GL_ONE );
 			gl.glEnable( GL.GL_BLEND );
 		}
-		for ( int i = 0; i < ourBlocks.size(); ++i ) {
-			OurBlock cb = ourBlocks.elementAt(i);
+		for (int id : displayedBlocks.getIds()) {
+			OurBlock cb = displayedBlocks.getBlock(id);
+			if (cb == null) {
+				System.out.println(String.format("drawScene: No display block for id:%d",id));
+				continue;
+			}
 			if ( useAlphaBlending )
 				gl.glColor4f(cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha());
 			else
@@ -197,22 +264,26 @@ class Scene {
 			gl.glDepthMask(true);
 			gl.glEnable(GL.GL_DEPTH_TEST);
 		}
-		for ( int i = 0; i < ourBlocks.size(); ++i ) {
-			OurBlock cb = ourBlocks.elementAt(i);
+		for ( int id : displayedBlocks.getIds()) {
+			OurBlock cb = displayedBlocks.getBlock(id);
+			if (cb == null) {
+				System.out.println(String.format("drawScene: No display block for id:%d", id));
+				continue;
+			}
 			if (SmTrace.tr("ball"))
 				if (cb.blockType().equals("ball")) {
-					System.out.println(String.format("ball at[%d]", i));
+					System.out.println(String.format("ball at[%d]", id));
 					if (cb.isSelected()) {
 						System.out.println("ball selected");
 					} else {
 						System.out.println("ball not selected");
 					}
 				}
-			if ( cb.isSelected() && indexOfHilitedBox == i )
+			if ( cb.isSelected() && indexOfHilitedBox == id )
 				gl.glColor3f( 1, 1, 0 );
 			else if ( cb.isSelected() )
 				gl.glColor3f( 1, 0, 0 );
-			else if ( indexOfHilitedBox == i )
+			else if ( indexOfHilitedBox == id )
 				gl.glColor3f( 0, 1, 0 );
 			else continue;
 			drawBlock( gl, cb, true, true, true );

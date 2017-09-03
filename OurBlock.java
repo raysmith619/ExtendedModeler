@@ -1,4 +1,5 @@
 import java.awt.Color;
+import java.util.Hashtable;
 
 import com.jogamp.opengl.GL2;
 
@@ -8,18 +9,31 @@ import com.jogamp.opengl.GL2;
 public class OurBlock {
 	public static final float DEFAULT_SIZE = 0.5f;
 	public static final float DEFAULT_ALPHA = 0.5f;
+	int iD;				// Unique identifier
 	public Object block = null;
 	
-						// Uniniversal object traits
+						// Universal object traits
 	private AlignedBox3D box;	// Bounding box
 	private Color color;		// Object color
 	private boolean isSelected = false;
-	public boolean isOk = false;	// Set OK upon successful construction
+	public boolean isOk = false;		// Set OK upon successful construction
+	private static int blockId = 0;		// Unique block identifier, used as key
+	private static OurBlockGroup blocks;	// MUST be set BEFORE block  use
+
 	
+	/**
+	 * Setup for generated group access
+	 * @param group
+	 */
+	public static void setGenerated(OurBlockGroup group) {
+		blocks = group;
+	}
 	
 	public OurBlock(AlignedBox3D box, Color color) {
+		this.iD = ++blockId;
 		this.box = box;
 		this.color = color;
+		blocks.putBlock(this);
 	}
 	
 	/**
@@ -333,5 +347,4 @@ public class OurBlock {
 	public Vector3D getDiagonal() {
 		return box.getDiagonal();
 	}
-
 }

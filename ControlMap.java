@@ -112,25 +112,6 @@ class ControlMap extends GLCanvas implements MouseListener, MouseMotionListener,
 
 	public void display(GLAutoDrawable drawable) {
 		this.drawable = drawable;
-		GL2 gl = (GL2) drawable.getGL();
-		JPanel map_color_panel = new JPanel(new GridLayout(0, 1));
-		/**
-		colorPanel.add(map_color_panel);
-		GLProfile glp = GLProfile.getDefault();
-       // Specifies a set of OpenGL capabilities, based on your profile.
-       GLCapabilities caps = new GLCapabilities(glp);
-		caps.setDoubleBuffered(true);
-		caps.setHardwareAccelerated(true);
-
-		// create the canvas for drawing
-		canvas = new GLCanvas(caps);
-		final int width = this.getWidth();  // width of the drawable
-		final int height = 100; 			// height of the drawable
-		canvas.setSize(width, height);
-		map_color_panel.setBorder(BorderFactory.createLineBorder(Color.blue));
-		map_color_panel.add(canvas);
-		triangle = new ColorTriangle(canvas, width, height);
-		*/
 
 
 	}

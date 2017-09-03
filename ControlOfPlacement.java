@@ -10,6 +10,8 @@ import javax.swing.SwingConstants;
 
 import com.jogamp.newt.event.KeyEvent;
 
+import smTrace.SmTrace;
+
 public class ControlOfPlacement extends ControlOf {
 	/**
 	 * 
@@ -30,13 +32,23 @@ public class ControlOfPlacement extends ControlOf {
 		setup();
 	}	
 
+	private void traceSelected(int place) {
+		if (SmTrace.tr("select")) {
+			int bindex = scene.getSelectedBlockIndex();
+			System.out.println(String.format("ControlOfPlacement.setup place(%d) - selected(%d)", place, bindex));
+		}
+	}
+	
 	/**
 	 * Setup Control / Display  position of selected block
 	 */
 	public void setup() {
 		if (controlActive)
 			return;					// Already present
-		
+		if (SmTrace.tr("select")) {
+			int bindex = scene.getSelectedBlockIndex();
+			System.out.println(String.format("ControlOfPlacement.setup before - selected(%d)", bindex));
+		}
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 ///		controlDialog = new JDialog();
 		setTitle("Adjust/Report Position");
@@ -86,14 +98,24 @@ public class ControlOfPlacement extends ControlOf {
 		JPanel moveto_panel = new JPanel();
 		posPanel.add(moveto_panel);
 
+		traceSelected(1);
 		// JComboBox<String> combo = new JComboBox<>();
-		OurBlock cb = scene.getSelected();
+		OurBlock cb = scene.getSelectedBlock();
+		if (cb == null)
+			 return;
+		
+		traceSelected(11);
 		Point3D center = new Point3D(0,0,0);
+		traceSelected(12);
 		if (cb != null)
 			center = cb.getCenter();
+		traceSelected(13);
 		posXfield = new JTextField(String.format("%.2f", center.x()));
+		traceSelected(14);
 		posXfield.setActionCommand("ENTER");
+		traceSelected(15);
 		posXfield.addActionListener(scene);
+		traceSelected(16);
 		posYfield = new JTextField(String.format("%.2f", center.y()));
 		posYfield.setActionCommand("ENTER");
 		posYfield.addActionListener(scene);
@@ -101,8 +123,11 @@ public class ControlOfPlacement extends ControlOf {
 		posZfield.setActionCommand("ENTER");
 		posZfield.addActionListener(scene);
 		JButton moveToButton = new JButton("MoveTo");
+		traceSelected(17);
 		moveToButton.setActionCommand("moveToButton");
+		traceSelected(18);
 		moveToButton.addActionListener(scene);
+		traceSelected(19);
 		/// panel.add(combo);
 		moveToButton.setHorizontalAlignment(SwingConstants.CENTER);
 		moveto_panel.add(new JLabel("x-coord:"));
@@ -113,6 +138,7 @@ public class ControlOfPlacement extends ControlOf {
 		moveto_panel.add(posZfield);
 		moveto_panel.add(Box.createVerticalStrut(15)); // a spacer
 		moveto_panel.add(moveToButton);
+		traceSelected(2);
 
 		// Adjust by
 		JPanel adjpos_panel = new JPanel();
@@ -120,14 +146,17 @@ public class ControlOfPlacement extends ControlOf {
 		float adjamt = .1f; // Default adjustment
 		adjpos_panel.add(Box.createVerticalStrut(15)); // a spacer
 		adjposXfield = new JTextField(String.format("%.2f", adjamt));
+		traceSelected(3);
 		adjposXfield.setActionCommand("adjposENTER");
 		adjposXfield.addActionListener(scene);
+		traceSelected(4);
 		adjposYfield = new JTextField(String.format("%.2f", adjamt));
 		adjposYfield.setActionCommand("adjposENTER");
 		adjposYfield.addActionListener(scene);
 		adjposZfield = new JTextField(String.format("%.2f", adjamt));
 		adjposZfield.setActionCommand("adjposENTER");
 		adjposZfield.addActionListener(scene);
+		traceSelected(5);
 		JButton adjposUpButton = new JButton("Up By");
 		adjposUpButton.setActionCommand("adjposUpButton");
 		adjposUpButton.addActionListener(scene);
@@ -137,6 +166,7 @@ public class ControlOfPlacement extends ControlOf {
 		adjpos_panel.add(Box.createVerticalStrut(15)); // a spacer
 		adjpos_panel.add(new JLabel("x-adj:"));
 		adjpos_panel.add(adjposXfield);
+		traceSelected(6);
 		adjpos_panel.add(new JLabel("y-adj:"));
 		adjpos_panel.add(adjposYfield);
 		adjpos_panel.add(new JLabel("z-adj:"));
@@ -144,6 +174,11 @@ public class ControlOfPlacement extends ControlOf {
 		adjpos_panel.add(adjposUpButton);
 		adjpos_panel.add(adjposDownButton);
 		pack();
+
+		if (SmTrace.tr("select")) {
+			int bindex2 = scene.getSelectedBlockIndex();
+			System.out.println(String.format("ControlOfPlacement.setup after - selected(%d)", bindex2));
+		}
 	}
 	
 	
@@ -157,8 +192,8 @@ public class ControlOfPlacement extends ControlOf {
 	 * 
 	 * @param direction
 	 */
-	private void adjustPosition(int direction) {
-		if (scene.getSelected() == null)
+	private void adjustPosition(BlockCommand bcmd, int direction) {
+		if (!scene.anySelected())
 			return;
 		
 		float adjpos_xval = 0;
@@ -187,13 +222,16 @@ public class ControlOfPlacement extends ControlOf {
 				adjpos_zval *= -1;				
 			}
 		}
-		OurBlock cb = scene.getSelected();
+		OurBlock cb = scene.getSelectedBlock();
+		if (cb == null)
+			return;
+		
 		Point3D base_point = cb.getBasePoint();
 		Vector3D adjpos_vector = new Vector3D(adjpos_xval, adjpos_yval, adjpos_zval);
 		Point3D new_point = Point3D.sum(base_point, adjpos_vector);
 		if (!pos_move_duplicate) {
 			cb = cb.duplicate();
-			scene.addBlock(cb);
+			scene.addBlock(bcmd, cb);
 		}
 		if (pos_size_position) {
 			cb.moveTo(new_point);
@@ -211,7 +249,7 @@ public class ControlOfPlacement extends ControlOf {
 	/**
 	 * Move to position/size accordingly
 	 */
-	private void moveToPosition() {
+	private void moveToPosition(BlockCommand bcmd) {
 		if (scene.getSelected() == null)
 			return;
 		float xval = 0;
@@ -230,11 +268,11 @@ public class ControlOfPlacement extends ControlOf {
 			zval = Float.valueOf(text);
 		}
 
-		OurBlock cb = scene.getSelected();
+		OurBlock cb = scene.getSelectedBlock();
 		Point3D new_point = new Point3D(xval, yval, zval);
 		if (!pos_move_duplicate) {
 			cb = cb.duplicate();
-			scene.addBlock(cb);
+			scene.addBlock(bcmd, cb);
 		}
 		if (pos_size_position) {
 			cb.moveTo(new_point);
@@ -251,7 +289,7 @@ public class ControlOfPlacement extends ControlOf {
 	 * Adjust control based on selection
 	 */
 	public void adjustControls() {
-		OurBlock cb = scene.getSelected();
+		OurBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -275,6 +313,13 @@ public class ControlOfPlacement extends ControlOf {
 	 * Check for and act on action
 	 */
 	public boolean ckDoAction(String action) {
+		BlockCommand bcmd;
+		try {
+			bcmd = new BlkCmdAdd(action);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
 		switch (action) {
 			case"md_move":
 				pos_move_duplicate = true;
@@ -293,38 +338,29 @@ public class ControlOfPlacement extends ControlOf {
 				break;
 				
 			case "moveToButton":
-				moveToPosition();
+				moveToPosition(bcmd);
 				break;
 				
 			case "ENTER":
-				moveToPosition();
+				moveToPosition(bcmd);
 				break;
 				
 			case "adjposUpButton":
-				adjustPosition(1);
+				adjustPosition(bcmd, 1);
 				break;
 				
 			case "adjposENTER":
-				adjustPosition(1);
+				adjustPosition(bcmd, 1);
 				break;
 
 			case "adjposDownButton":
-				adjustPosition(-1);
-				break;
-
-			case "deleteBlockButton":
-			case "deleteBlockAllButton":
-			case "duplicateBlockButton":
-			case "addBoxButton":
-			case "addBallButton":
-			case "addConeButton":
-			case "addCylinderButton":
-				scene.addBlockButton(action);
+				adjustPosition(bcmd, -1);
 				break;
 			
 				default:
 					return false;		// No action here
 		}
+		bcmd.saveCmd();
 		return true;					// Got action
 
 	}
