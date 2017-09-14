@@ -69,6 +69,7 @@ public class ControlOfComponent extends ControlOf {
 		blockPanel.add(compPanel);
 		
 		pack();
+		controlActive = true;
 	}
 
 	/**
@@ -81,6 +82,7 @@ public class ControlOfComponent extends ControlOf {
 	 * Check for and act on action
 	 */
 	public boolean ckDoAction(String action) {
+		scene.selectPrint(String.format("ckDoAction(%s)", action));
 		BlockCommand bcmd;
 		try {
 			bcmd = new BlkCmdAdd(action);
@@ -97,8 +99,11 @@ public class ControlOfComponent extends ControlOf {
 			case "addConeButton":
 			case "addCylinderButton":
 				scene.addBlockButton(bcmd, action);
-				bcmd.saveCmd();		// TBD - check for successful addition
-				return true;
+				if (bcmd != null) {
+					boolean res = bcmd.doCmd();
+					scene.selectPrint(String.format("ckDoAction(%s) AFTER", action));
+					return res;
+				}
 			
 				default:
 					break;

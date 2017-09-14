@@ -1,5 +1,6 @@
 import java.awt.List;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Stack;
 
 /**
@@ -15,6 +16,22 @@ public class BlockSelect {
 		selected = new ArrayList<Integer>();
 	}
 
+	/**
+	 * New copy of ids
+	 * @param select
+	 */
+	public BlockSelect(BlockSelect select) {
+		selected = new ArrayList<Integer>(select.getList());
+	}
+
+	/**
+	 * Create select list from array of ints
+	 */
+	public BlockSelect(int [] sels) {
+		selected = new ArrayList<Integer>();
+		for (int i : sels)
+			selected.add(i);
+	}
 	public boolean isEmpty() {
 		return selected.isEmpty();
 	}
@@ -72,6 +89,18 @@ public class BlockSelect {
 	public  ArrayList<Integer> getList() {
 		return selected;
 	}
+
+	/**
+	 * get array if ids of currently selected selected
+	 * @return
+	 */
+	public  int[] getIds() {
+		int ret[] = new int[selected.size()];
+		Iterator<Integer> it = selected.iterator();
+		for (int i = 0; i < ret.length; i++)
+			ret[i] = it.next().intValue();
+		return ret;
+	}
 	
 	public Integer remove() {
 		return selected.remove(0);
@@ -82,4 +111,35 @@ public class BlockSelect {
 			return -1;
 		return remove().intValue();
 	}
+
+
+	
+	/**
+	 * Select description
+	 */
+	public String toString() {
+		String str = "";
+		for (int id : selected) {
+			if (str != "")
+				str += ", ";
+			str += String.valueOf(id);
+		}
+		return str;
+	}
+
+
+	
+	/**
+	 * Select description
+	 */
+	public String toString(OurBlockGroup group) {
+		String str = "";
+		for (int id : selected) {
+			if (str != "")
+				str += ", ";
+			str += group.getBlock(id);
+		}
+		return str;
+	}
+	
 }

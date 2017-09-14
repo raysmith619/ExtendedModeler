@@ -5,9 +5,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.Stack;
 
@@ -57,7 +55,12 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	double projmatrix[] = new double[16];
 	public Scene scene = new Scene();
 	///public int indexOfSelectedBlock = -1; // -1 for none
+									/**
+									 * Only used to go to previously
+									 * selecte block(s) in case of delete
+									 */
 	private Stack<BlockSelect> selectStack = new Stack<BlockSelect>();			// Stack of recent selected
+	
 	private Point3D selectedPoint = new Point3D();
 	private Vector3D normalAtSelectedPoint = new Vector3D();
 	public int indexOfHilitedBox = -1; // -1 for none
@@ -123,31 +126,29 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 	}
 
+	
+	/**
+	 * Get generated blocks' ids
+	 */
+	public int[] getDisplayedIds() {
+		return scene.getDisplayedIds();
+	}
+	
+	
 	public Dimension getPreferredSize() {
 		return new Dimension(512, 512);
 	}
 
-	/**
-	 * Get currently selected  block
-	 * if more than one - get most recent
-	 */
-	public OurBlock getSelectedBlock(int offset) {
-		if (selectStack.isEmpty())
-			return null;
+	public OurBlock getPrevSelectedBlock() {
+		return commandManager.getPrevSelectedBlock();
 		
-		BlockSelect select = selectStack.peek();
-		int index = select.getIndex(offset);
-		return scene.getBlock(index);
 	}
-	
 
 	/**
 	 * Get currently selected
 	 */
 	public BlockSelect getSelected() {
-		if (selectStack.isEmpty())
-			return new BlockSelect();
-		return selectStack.peek();
+		return commandManager.getSelected();
 	}
 	
 
@@ -155,7 +156,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Get currently selected block
 	 */
 	public OurBlock getSelectedBlock() {
-		return getSelectedBlock(0);
+		return commandManager.getSelectedBlock();
 	}
 	
 
@@ -165,14 +166,6 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public int getSelectedBlockIndex() {
 		BlockSelect select = getSelected();
 		return select.getIndex();
-	}
-
-	/**
-	 * Get previously selected
-	 */
-	public OurBlock getPreviousSelected() {
-		OurBlock cb = getSelectedBlock(-1);
-		return cb;
 	}
 	
 	/**
@@ -190,11 +183,15 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 */
 	public void pushSelected(BlockSelect select) {
 		System.out.println(String.format("pushSelected"));
-		if (select == null) {
-			System.out.println("pushSelected(null) - cvt to empty");
-			select = new BlockSelect();
-		}
-		selectStack.push(select);
+		setSelected(select);
+	}
+
+	/**
+	 * Set selection
+	 */
+	public void setSelected(BlockSelect select) {
+		System.out.println(String.format("setSelected"));
+		commandManager.setSelected(select);
 	}
 
 	
@@ -202,18 +199,9 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Save selected in order
 	 * Only push changed index
 	 */
-	public void pushSelected(int bindex) {
-		if (!selectStack.isEmpty()) {
-			BlockSelect top = selectStack.peek();
-			int ci = top.getIndex();
-			if (ci >= 0) {
-				if (ci == bindex)
-					return;				// Don't push multiple selection of same block
-			}
-		}
-		System.out.println(String.format("pushSelected(%d)", bindex));
-		BlockSelect new_entry = new BlockSelect(bindex);
-		pushSelected(new_entry);
+	public void pushSelected(int id) {
+		BlockSelect select = new BlockSelect(id);
+		setSelected(select);
 	}
 
 	/**
@@ -222,15 +210,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 */
 	public BlockSelect popSelected() {
 		System.out.println(String.format("popSelected"));
-		if (selectStack.isEmpty()) {
-			System.out.println(String.format("popSelected:Empty"));
-			return new BlockSelect();
-		}
-		BlockSelect select = selectStack.pop();
-		int bindex = select.getIndex();
-		System.out.println(String.format("popSelected(%d)", bindex));
-		selectMark();
-		return select;
+		return getSelected();
 	}
 	
 	/**
@@ -239,40 +219,72 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public int popSelectedIndex() {
 		BlockSelect top = popSelected();
 		
-		int bindex = top.getIndex();
-		System.out.println(String.format("popSelected = %d", bindex));
-		return bindex;
+		int id = top.getIndex();
+		System.out.println(String.format("popSelected = %d", id));
+		return id;
 	}
 	
 	/**
 	 * Select given block
 	 * @return index of selected block
-	 * @param bindex - index of block to select, -1 - most recent block(s)
+	 * @param id - index of block to select, -1 - most recent block(s)
 	 * @param keep - selection is added to currently selected, else currently selected group is pushed 
 	 */
-	public int select(int bindex, boolean keep) {
-		if (bindex < 0)
-			bindex = getSelectedBlockIndex();
-		if (bindex < 0)
-			bindex = scene.displayedBlocks.getNewestId();
-		if (isSelected(bindex))
-			return bindex;							// Already selected
+	public int select(int id, boolean keep) {
+		if (id < 0)
+			id = getSelectedBlockIndex();
+		if (id < 0)
+			id = scene.displayedBlocks.getNewestId();
+		if (isSelected(id))
+			return id;							// Already selected
 		
 		selectUnmark();								// Unmark previously selected  TBD - see if more efficient way
 		if (!keep) {
-			selectStack.push(new BlockSelect(bindex));		// New entry with newly selected
+			selectStack.push(new BlockSelect(id));		// New entry with newly selected
 		} else {
 			BlockSelect select;
 			if (selectStack.isEmpty())
-				select = new BlockSelect(bindex);
+				select = new BlockSelect(id);
 			else
 				select = selectStack.peek();
-			select.addIndex(bindex);
+			select.addIndex(id);
 		}
 		selectMark();
-		return bindex;
+		return id;
 	}
 
+	/**
+	 * Check if select stack empty
+	 */
+	public boolean selectIsEmpty() {
+		return selectStack.isEmpty();
+	}
+
+	
+	public BlockSelect selectPop() {
+		return selectStack.pop();
+	}
+	
+	
+	public void selectPush(BlockSelect select) {
+		selectStack.push(select);
+	}
+	
+	
+	/**
+	 * command to replace selection
+	 * Add another block to selection
+	 * @param id - id to add
+	 * @param keep - true keep any already selected, false - drop them
+	 */
+	public int selectAdd(BlockCommand bcmd, int id, boolean keep) {
+		if (!keep) {
+			bcmd.newSelect = new BlockSelect();
+		}
+		bcmd.newSelect.addIndex(id);
+		return id;
+	}
+	
 	
 	/**
 	 * Mark current selection(s)
@@ -283,8 +295,8 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			return select;				// None selected
 		
 		for (Integer bin : select.getList()) {
-			int bindex = bin.intValue();
-			scene.setSelectionStateOfBox(bindex, true);
+			int id = bin.intValue();
+			scene.setSelectionStateOfBox(id, true);
 			indexOfHilitedBox = getSelectedBlockIndex();	/// TBD generalize hilighted
 		}
 		controls.adjustControls();
@@ -302,35 +314,98 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			return select;				// None selected
 		
 		for (Integer bin : select.getList()) {
-			int bindex = bin.intValue();
-			scene.setSelectionStateOfBox(bindex, false);
+			int id = bin.intValue();
+			scene.setSelectionStateOfBox(id, false);
 		}
 
 		return select;
 	}
+
+	/**
+	 * Print current selected blocks
+	 */
+	public void selectPrint(String tag) {
+		if (tag == null) {
+			tag = "select";
+		}
+		BlockCommand currentCmd = commandManager.currentCmd;
+		if (currentCmd == null ) {
+			System.out.println(String.format("%s select: NONE", tag));
+			return;
+		}
+		String str =  currentCmd.newSelect.toString(scene.genBlocks);
+		System.out.println(String.format("%s select:%s", tag, str));
+		
+			/**
+			 * Select stack
+			 */
+		String str2 = "";
+		if (selectStack.isEmpty() ) {
+			System.out.println(String.format("%s selectStack: Empty", tag));
+			return;
+		}
+		Iterator<BlockSelect> sel_itr = selectStack.iterator();
+		
+		while (sel_itr.hasNext()) {
+			BlockSelect sel = sel_itr.next();
+			if (!str2.equals(""))
+				str2 += "; ";
+			str2 += sel.toString(scene.genBlocks);
+		}
+		System.out.println(String.format("%s selectStack: %s", tag, str2));
+	
+	}
+
+	
+	/**
+	 * Text representation
+	 */
+	public String selectToString(BlockSelect select) {
+		String str = "";
+		for (int id : select.getIds()) {
+			if (str != "")
+				str += ", ";
+			str += scene.genBlocks.getBlock(id);
+		}
+		return str;
+	}
+	
+	/**
+	 * Update selection display
+	 * For now we just unselect all previous and select all new
+	 * Add to selectStack if new_select is populated
+	 */
+	public boolean displayUpdate(BlockSelect new_select, BlockSelect prev_select) {
+		for (int id : prev_select.getIds()) {
+			scene.setSelectionStateOfBox(id, false);
+		}
+		for (int id : new_select.getIds()) {
+			scene.setSelectionStateOfBox(id, true);
+		}
+		if (!new_select.isEmpty()) {
+			selectStack.push(new_select);		// Remember if deleting
+		}
+		repaint();
+		return true;
+	}
+	
 	
 	/**
 	 * Check if any selected
 	 */
 	public boolean anySelected() {
-		if (selectStack.isEmpty())
-			return false;
-		
-		if (selectStack.peek().isEmpty())
-			return false;
-		
-		return true;
+		return commandManager.anySelected();
 	}
 	
 	/**
 	 * Check if block at this index is already selected
 	 */
-	public boolean isSelected(int bindex) {
+	public boolean isSelected(int id) {
 		if (selectStack.isEmpty())
 			return false;			// Nothing is selected
 		
 		BlockSelect select = selectStack.peek();
-		if (select.hasIndex(bindex))
+		if (select.hasIndex(id))
 			return true;
 
 		return false;
@@ -338,11 +413,11 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 	/**
 	 * Select new block, unselecting current
-	 * @param bindex
+	 * @param id
 	 * @return selected block's index
 	 */
-	public int select(int bindex) {
-		return select(bindex, false);
+	public int select(int id) {
+		return select(id, false);
 	}
 
 	/**
@@ -383,7 +458,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		if (!selectStack.isEmpty()) {
 			BlockSelect select = selectStack.pop();
 			unSelect(select.getList());
-			bcmd.pushSelection(select);
+			bcmd.setSelect(select);
 		}
 	}
 	
@@ -392,9 +467,9 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Unselect is restricted to those in the currently selected entry
 	 * If the result is an empty selected set it is popped from the stack
 	 * Any re-selection is done elsewhere.
-	 * @param bindex - index to unselect, -1 => all
+	 * @param id - index to unselect, -1 => all
 	 */
-	public void unSelect(int bindex) {
+	public void unSelect(int id) {
 		if (selectStack.isEmpty())
 			return;						// None selected
 		
@@ -408,7 +483,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			bilist.add(new Integer(bin));		// Make copy
 		for (Integer bin : bilist) {
 			int bi = bin.intValue();
-			if (bindex < 0 || bi == bindex) {
+			if (id < 0 || bi == id) {
 				scene.setSelectionStateOfBox(bi, false);
 				select.removeIndex(bi);
 				indexOfHilitedBox = bi;		// TBD - highlight needs to track selected in form
@@ -439,27 +514,33 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	}
 
 	/**
-	 * Add block from generated to displayed scene
+	 * Add another block to scene
 	 */
-	public void addBlock(int id) {
-		scene.addBlock(id);
+	public void addBlock(BlockCommand bcmd, OurBlock cb) {
+		int icb = bcmd.addBlock(cb.iD);
+		bcmd.addSelect(icb);
 	}
 
 	/**
 	 * Add another block to scene
 	 */
-	public void addBlock(BlockCommand bcmd, OurBlock cb) {
-		int icb = scene.addBlock(bcmd, cb);
-		select(icb);
-		if (SmTrace.tr("select")) {
-			int bindex = getSelectedBlockIndex();
-			System.out.println(String.format("addBlock: after - selected(%d)", bindex));
-		}
+	public void addBlock(BlockCommand bcmd, int id) {
+		scene.addBlock(bcmd, id);
 	}
 
-	public void addBlock(BlockCommand bcmd, String blocktype, AlignedBox3D box, Color color) {
-		OurBlock cb = OurBlock.getNewBlock(blocktype, box, color);
-		addBlock(bcmd, cb);
+	public int addNewBlock(BlockCommand bcmd, String blocktype, AlignedBox3D box, Color color) {
+		 OurBlock cb = OurBlock.getNewBlock(blocktype, box, color);
+		bcmd.addBlock(cb.iD());
+		return cb.iD();
+	}
+
+	/**
+	 * Add blocks to scene
+	 */
+	public void addBlocks(BlockCommand bcmd, int[] ids) {
+		for (int id : ids) {
+			addBlock(bcmd, id);
+		}
 	}
 
 	/**
@@ -470,10 +551,10 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		addBlock(bcmd, cbnew);
 	}
 
-	public void createNewBlock(BlockCommand bcmd, String blockType) {
+	public int createNewBlock(BlockCommand bcmd, String blockType) {
 		Vector3D halfDiagonalOfNewBox = new Vector3D(OurBlock.DEFAULT_SIZE * 0.5f, OurBlock.DEFAULT_SIZE * 0.5f,
 				OurBlock.DEFAULT_SIZE * 0.5f);
-		OurBlock cb = getSelectedBlock(0);
+		OurBlock cb = getSelectedBlock();
 		if (cb != null) {
 			Point3D centerOfNewBox = Point3D.sum(
 					Point3D.sum(cb.getCenter(),
@@ -487,25 +568,31 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), alpha);
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
-			addBlock(bcmd, blockType, box, color);
+			cb = OurBlock.getNewBlock(blockType, box, color);
 		} else {
 			Point3D centerOfNewBox = camera.target;
 			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
 					OurBlock.DEFAULT_ALPHA);
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
-			addBlock(bcmd, blockType, box, color);
+			cb = OurBlock.getNewBlock(blockType, box, color);
 			normalAtSelectedPoint = new Vector3D(1, 0, 0);
 		}
-		// update selection to be new box
-		///select();  // Done in addBlock
+		if (cb != null) {
+			bcmd.addBlock(cb.iD());
+			bcmd.selectBlock(cb.iD());		// Select new block
+			return cb.iD();
+		}
+		return -1;			// No block
+		
 	}
 
 	public void createNewBlock(BlockCommand bcmd, String blockType, Point3D at_point, Vector3D size) {
 		Vector3D halfDiagonalOfNewBox = new Vector3D(OurBlock.DEFAULT_SIZE * 0.5f, OurBlock.DEFAULT_SIZE * 0.5f,
 				OurBlock.DEFAULT_SIZE * 0.5f);
+		OurBlock cb = null;
 		if (anySelected()) {
-			OurBlock cb = getSelectedBlock();
+			cb = getSelectedBlock();
 			Point3D centerOfNewBox = Point3D.sum(
 					Point3D.sum(cb.getCenter(),
 							Vector3D.mult(normalAtSelectedPoint,
@@ -517,18 +604,19 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 					clamp(cb.getGreen() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), cb.getAlpha());
 
-			addBlock(bcmd, blockType, box, color);
+			cb = OurBlock.getNewBlock(blockType, box, color);
 		} else {
 			Point3D centerOfNewBox = camera.target;
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
 			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
 					OurBlock.DEFAULT_ALPHA);
-			addBlock(bcmd, blockType, box, color);
+			cb = OurBlock.getNewBlock(blockType, box, color);
 			normalAtSelectedPoint = new Vector3D(1, 0, 0);
 		}
-		// update selection to be new box
-		select();
+		if (cb != null) {
+			bcmd.addBlock(cb.iD());
+		}
 	}
 	
 	/**
@@ -542,80 +630,150 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	/**
 	 * Get block, given index
 	 */
-	public OurBlock cb(int bindex) {
-		return scene.cb(bindex);
+	public OurBlock cb(int id) {
+		return scene.cb(id);
 	}
 
 	/**
 	 * Duplicate selected block - offset a bit
 	 */
-	public void duplicateBlock(BlockCommand bcmd) {
-		String blockType = "box"; // Default
+	public int duplicateBlock(BlockCommand bcmd) {
 		OurBlock cb = getSelectedBlock();
-		if (cb != null)
-			blockType = cb.blockType();
-		createNewBlock(bcmd, blockType);
+		if (cb != null) {
+			cb = cb.duplicate();
+		}
+		if (cb != null) {
+			bcmd.addBlock(cb.iD());
+			return cb.iD();
+		}
+		return -1;		// None created
 	}
 
 	/**
 	 * Duplicate block
 	 * 
-	 * @param cb
-	 *            - original bloce
-	 * @param atpoint
-	 *            - base point of new block
-	 * @param size
-	 *            - bounding dimensions default: same as original
-	 * @param color
-	 *            - color of new block default: same as original
+	 * @param id - original block
+	 * @return - id of new block
 	 */
-	public void duplicateBlock(BlockCommand bcmd, OurBlock cb, Point3D atpoint, Vector3D size, Color color) {
-		String blockType = cb.blockType();
-		createNewBlock(bcmd, blockType);
+	public int duplicateBlock(BlockCommand bcmd, int id) {
+		String blockType = cb(id).blockType();
+		int idnew = createNewBlock(bcmd, blockType);
+		return idnew;
 	}
 
 	public void setColorOfSelection(BlockCommand bcmd, float r, float g, float b) {
 		if (anySelected()) {
-			bcmd.saveSelection();
+///			bcmd.saveSelection();
 			scene.setColorOfBlock(getSelectedBlockIndex(), r, g, b);
 		}
 	}
 
-	public void deleteBlock(int id) {
-		scene.deleteBlock(id);
-	}
+///	public void deleteBlock(int id) {
+///		scene.deleteBlock(id);
+///	}
 
-	public void deleteSelection(BlockCommand bcmd) {
-		BlockSelect select = getSelected();
-		System.out.println("deleteSelection");
-		if (!select.isEmpty()) {
-			System.out.println("deleteSelection:checking for entry in selection");
-			bcmd.addPrevBlocks(select.getList());
-			scene.deleteBlock(select);
-			popSelected();				// Backup to previously selected
-			selectMark();				// Mark previously selected
+	/**
+	 * Delete blocks
+	 */
+	public void deleteBlocks(BlockCommand bcmd, int[] ids) {
+		for (int id : ids) {
+			deleteBlock(bcmd, id);
 		}
-		System.out.println("deleteSelection:Empty");
+		
+	}
+	
+	
+	/**
+	 * Delete block, as part of a command
+	 * Selection process is handled by others
+	 * @param bcmd
+	 * @param id
+	 */
+	public void deleteBlock(BlockCommand bcmd, int id) {
+		System.out.println(String.format("deleteBlock(%d)", id));
+		bcmd.addPrevBlock(id);
+	}
+	
+	public void deleteSelection(BlockCommand bcmd) {
+		System.out.println("deleteSelection");
+		selectPrint(String.format("deleteSelection"));
+		BlockSelect select = getSelected();
+		if (!select.isEmpty()) {
+			deleteBlocks(bcmd, select.getIds());
+			if (!selectStack.isEmpty()) {
+				selectStack.pop();
+				if (!selectStack.isEmpty()) {
+					BlockSelect select2 = selectStack.pop();
+					bcmd.setSelect(select2);
+				}
+			}
+		}
 	}
 
 	public void deleteAll(BlockCommand bcmd) {
-		clearSelections(bcmd);
-		scene.deleteAllBlocks();
+		int[] allids = getDisplayedIds();
+		deleteBlocks(bcmd, allids);
 		indexOfHilitedBox = -1;
 	}
 
 	public void lookAtSelection() {
-		int bindex = getSelectedBlockIndex();
-		if (bindex >= 0) {
-			Point3D p = scene.getBox(bindex).getCenter();
+		int id = getSelectedBlockIndex();
+		if (id >= 0) {
+			Point3D p = scene.getBox(id).getCenter();
 			camera.lookAt(p);
 		}
+	}
+	
+	
+	/**
+	 * Remove block from display
+	 * No other processing is done.
+	 * Physical display update is done elsewhere.
+	 * @param id
+	 */
+	public void removeBlock(int id) {
+		System.out.println(String.format("removeBlock(%d)", id));
+		scene.displayedBlocks.removeBlock(id);
+	}
+
+
+	/**
+	 * Remove blocks from display
+	 * No additional processing is done
+	 */
+	public void removeBlocks(int[] ids) {
+		for (int id : ids) {
+			removeBlock(id);
+		}
+		
 	}
 
 	public void resetCamera() {
 		camera.setSceneRadius((float) Math.max(5 * OurBlock.DEFAULT_SIZE,
 				scene.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
 		camera.reset();
+	}
+
+	
+
+	/**
+	 * Insert block to scene display
+	 * No other processing is done here
+	 * Display update is done elsewhere
+	 */
+	public void insertBlock(int id) {
+		scene.insertBlock(id);
+	}
+	
+	/**
+	 * Insert blocks to display
+	 * No additional processing is done here.
+	 * Display update is done elsewhere.
+	 */
+	public void insertBlocks(int[] ids) {
+		for (int id : ids) {
+			insertBlock(id);
+		}
 	}
 
 	public void init(GLAutoDrawable drawable) {
@@ -768,12 +926,29 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		if (e.isControlDown())
 			System.out.println("isControlDown");
 		if (indexOfHilitedBox >= 0) {
-			if (e.isControlDown())
-				select(indexOfHilitedBox, true);		// keep with selected
-			else
-				select(indexOfHilitedBox, false);
-		} else {
-			selectUnmark();
+			if (e.isControlDown()) {
+				BlockCommand bcmd;
+				String action = "mouseAddSelect";
+				try {
+					bcmd = new BlkCmdAdd(action);
+				} catch (Exception e2) {
+					e2.printStackTrace();
+					return;
+				}
+				selectAdd(bcmd, indexOfHilitedBox, true);		// keep with selected
+				bcmd.doCmd();
+			} else {
+				BlockCommand bcmd;
+				String action = "mouseNewSelect";
+				try {
+					bcmd = new BlkCmdAdd(action);
+				} catch (Exception e2) {
+					e2.printStackTrace();
+					return;
+				}
+				selectAdd(bcmd, indexOfHilitedBox, false);
+				bcmd.doCmd();
+			}
 		}
 		selectedPoint.copy(hilitedPoint);
 		normalAtSelectedPoint.copy(normalAtHilitedPoint);
@@ -804,7 +979,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				p = pnew;
 			}
 			camera.lookAt(p);
-			BlockCommand bcmd;
+			BlockCommand bcmd = null;
 			switch (autoAdd) {
 			case DUPLICATE:
 				try {
@@ -862,7 +1037,8 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			default:
 				System.out.println("Unrecognized AutoAdd value - ignored");
 			}
-			repaint();
+			if (bcmd != null)
+				bcmd.doCmd();
 			return;
 		}
 		if (radialMenu.isVisible()
@@ -875,23 +1051,6 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		}
 
 		updateHiliting();
-/** - moved to mouseClicked
-///		if (SwingUtilities.isLeftMouseButton(e) && !e.isControlDown()) {
-		if (SwingUtilities.isLeftMouseButton(e)) {
-			if (indexOfHilitedBox < 0 && !e.isControlDown())	// A bit cloogy to avoid loosing selection on rotation
-				selectUnmark();
-			else {
-				if (e.isControlDown())
-					select(indexOfHilitedBox, true);		// keep with selected
-				else
-					select(indexOfHilitedBox, false);
-			}
-			selectedPoint.copy(hilitedPoint);
-			normalAtSelectedPoint.copy(normalAtHilitedPoint);
-			repaint();
-		}
-**/
-		
 	}
 
 		
@@ -1158,6 +1317,33 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 	}
 
+
+
+	/**
+	 * Print displayed blocks
+	 */
+	public void displayPrint(String tag) {
+		if (tag == null) {
+			tag = "displayList";
+		}
+		int[] block_ids = scene.getDisplayedIds();
+		if (block_ids.length == 0) {
+			System.out.println(String.format("%s displayed: None", tag));
+			return;
+		}
+
+		String str = "";
+		
+		for (int id : block_ids) {
+			if (str != "") {
+				str += ", ";
+			}
+			str += scene.displayedBlocks.getBlock(id);
+		}
+		System.out.println(String.format("%s displayed:%s", tag, str));
+	}
+	
+	
 	@Override
 	public void actionPerformed(ActionEvent ae) {
 		String action = ae.getActionCommand();
@@ -1171,19 +1357,19 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Add component control
 	 */
 	public void addBlockButton(BlockCommand bcmd, String action) {
+		selectPrint(String.format("addBlockButton(%s) select", action));
 		try {
 			if (bcmd == null) {
-				bcmd = new BlkCmdAdd(action);
+				System.out.println(String.format(
+						"addBlockButton(%s) with no cmd - ignored",
+						action));
+				return;
 			}
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return;
-		}
-		if (SmTrace.tr("select")) {
-			int bindex = getSelectedBlockIndex();
-			System.out.println(String.format("addBlockButton(%s): before - selected(%d)",action, bindex));
 		}
 		switch(action) {
 			case "duplicateBlockButton":
@@ -1219,26 +1405,13 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 						"Unrecognized addBlockButton: %s - ignored", action));
 				return;
 		}
-		repaint();
-		if (SmTrace.tr("select")) {
-			int bindex2 = getSelectedBlockIndex();
-			System.out.println(String.format("addBlockButton(%s): after - selected(%d)",action, bindex2));
-		}
 	}
 	
 	/**
 	 * Add/Remove Control/Display
 	 */
 	public void setControl(String controlName, boolean on) {
-		if (SmTrace.tr("select")) {
-			int bindex = getSelectedBlockIndex();
-			System.out.println(String.format("SceneViewer.setControl(%s): before - selected(%d)",controlName, bindex));
-		}
 		controls.setControl(controlName, on);
-		if (SmTrace.tr("select")) {
-			int bindex2 = getSelectedBlockIndex();
-			System.out.println(String.format("SceneViewer.setControl(%s): after - selected(%d)",controlName, bindex2));
-		}
 	}
 
 	

@@ -124,8 +124,7 @@ public class ExtendedModeler implements ActionListener {
 					return;
 				}
 				sceneViewer.deleteAll(bcmd);
-				bcmd.saveCmd();
-				sceneViewer.repaint();
+				bcmd.doCmd();
 			}
 		}
 		else if ( source == quitMenuItem ) {
@@ -159,7 +158,7 @@ public class ExtendedModeler implements ActionListener {
 				return;
 			}
 			sceneViewer.deleteSelection(bcmd);
-			sceneViewer.repaint();
+			bcmd.doCmd();
 		}
 		else if ( source == lookAtSelectionButton ) {
 			sceneViewer.lookAtSelection();
@@ -339,10 +338,10 @@ public class ExtendedModeler implements ActionListener {
 	 * 
 	 */
 	public void setCheckBox(String name, boolean checked) {
-		System.out.println(String.format("setCheckBox(%s, %b)", name, checked));
+		if (SmTrace.tr("checkbox"))
+			System.out.println(String.format("setCheckBox(%s, %b)", name, checked));
 		if (SmTrace.tr("select")) {
-			int bindex = sceneViewer.getSelectedBlockIndex();
-			System.out.println(String.format("modeler.setCheckBox(%s): selected(%d);", name, bindex));
+			sceneViewer.selectPrint(String.format("modeler.setCheckBox(%s): selected;", name));
 		}
 		switch (name) {
 			case "addControl":

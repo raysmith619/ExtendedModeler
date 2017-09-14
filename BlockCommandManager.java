@@ -1,3 +1,4 @@
+import java.util.Iterator;
 import java.util.Stack;
 
 /**
@@ -7,8 +8,9 @@ import java.util.Stack;
  */
 public class BlockCommandManager {
 	SceneViewer scene;
-	Stack<BlockCommand> commandStack;	// Commands done
-	Stack<BlockCommand> undoStack;				// Commands undone
+	BlockCommand currentCmd;				// Currently executing command
+	Stack<BlockCommand> commandStack;		// Commands done
+	Stack<BlockCommand> undoStack;			// Commands undone
 	
 	public BlockCommandManager(SceneViewer scene) {
 		this.scene = scene;
@@ -92,16 +94,19 @@ public class BlockCommandManager {
 	public int cbIndex() {
 		return scene.cbIndex();
 	}
+	
+
+	/**
+	 * Get block, given index
+	 */
+	public OurBlock cb(int id) {
+		return scene.cb(id);
+	}
 
 	
 	/**
 	 * Undo if possible
-	 * Return true after undoing
-	 * Remove the effects of the most recently done command
-	 *  1. remove command from commandStack
-	 *  2. add command to undoStack
-	 *  3. reverse changes caused by the command
-	 *  4. return true iff could undo
+	 * command and select stack modifications are done through BlockCommand functions
 	 */
 	public boolean undo() {
 		System.out.println(String.format("undo"));
@@ -109,14 +114,8 @@ public class BlockCommandManager {
 			System.out.println(String.format("Can't undo"));
 			return false;
 		}
-		BlockCommand cmd = lastCommand();
-		if (cmd.undo()) {
-			commandStack.pop();  	// Remove command of command stack
-			undoStack.push(cmd);	// Save iff successful
-			return true;
-		} else {
-			return false;
-		}
+		BlockCommand cmd = commandStack.pop();
+		return cmd.undo();
 	}
 
 	/**
@@ -128,8 +127,7 @@ public class BlockCommandManager {
 			System.out.println(String.format("Can't redo"));
 			return false;
 		}
-		BlockCommand cmd = lastUndoCommand();
-		cmd = undoStack.pop();
+		BlockCommand cmd = undoStack.pop();
 		return cmd.redo();
 	}
 
@@ -143,11 +141,7 @@ public class BlockCommandManager {
 			return false;
 		}
 		BlockCommand cmd = lastCommand();
-		if (cmd.redo()) {
-			commandStack.push(cmd);	// push iff successful
-			return true;
-		}
-		return false;		// Indicate unsuccessful
+		return cmd.doCmd();
 	}
 
 	/**
@@ -160,18 +154,156 @@ public class BlockCommandManager {
 
 
 	public boolean anySelected() {
-		return scene.anySelected();
+		BlockSelect select = getSelected();
+		return !select.isEmpty();
+		
 	}
 
+	
+	/**
+	 * Access to selection
+	 * We may want to reorganize this knowledge from the BlockCommand
+	 */
+
+	/**
+	 * Get current command, if any
+	 * @return current command, if one, else null
+	 */
+	public BlockCommand getCurrentCommand() {
+		return currentCmd;
+	}
+
+	/**
+	 * Get previous command, if any
+	 * Return previous command, if one else
+	 * return current command if one else
+	 * return null
+	 */
+	public BlockCommand getPrevCommand() {
+		if (commandStack.isEmpty())
+			return null;
+		if (commandStack.size() < 2)
+			return commandStack.peek();
+		return commandStack.elementAt(1);
+	}
+
+	/**
+	 * Get previously executed command's selection
+	 */
+	public BlockSelect getPrevSelected() {
+		BlockCommand prev_cmd = getPrevCommand();
+		if (prev_cmd == null)
+			return new BlockSelect();
+		return prev_cmd.newSelect;
+			
+	}
+
+	
+	/**
+	 * Get previously executed command's selected block
+	 * Use current command if command stack only has one 
+	 */
+	public OurBlock getPrevSelectedBlock() {
+		BlockSelect prev_select = getPrevSelected();
+		if (prev_select.isEmpty())
+			return null;
+		return cb(prev_select.getIndex(0));
+	}
+	
+	
 	/**
 	 * Get currently selected
 	 */
 	public BlockSelect getSelected() {
-		return scene.getSelected();
+		BlockCommand cmd = getCurrentCommand();
+		if (cmd == null)
+			return new BlockSelect();		// Empty when none
+		
+		return cmd.newSelect;
 	}
+	/**
+	 * Get currently selected block if any
+	 */
+	public OurBlock getSelectedBlock() {
+		BlockSelect select = getSelected();
+		if (select.isEmpty())
+			return null;
+		return cb(select.getList().get(0));
+	}
+	
+	
+	/**
+	 * Check select stack
+	 */
+	public boolean selectIsEmpty() {
+		return getSelected().isEmpty();
+	}
+	
+	
+	public BlockSelect selectPop() {
+		System.out.print("No select stack");
+		return getSelected();
+	}
+	
 
+	/**
+	 * Set selection
+	 */
+	public void setSelected(BlockSelect select) {
+		BlockCommand cmd = getCurrentCommand();
+		cmd.setSelect(select);
+	}
+	
+	/**
 	public OurBlock cb(int bindex) {
 		return scene.cb(bindex);
 	}
+
 	
+
+	/**
+	 * Print displayed blocks
+	 */
+	public void displayPrint(String tag) {
+		scene.displayPrint(tag);
+	}
+
+	
+	/**
+	 * Update selection display
+	 * For now we just unselect all previous and select all new
+	 */
+	public boolean displayUpdate(BlockSelect new_select, BlockSelect prev_select) {
+		return (scene.displayUpdate(new_select, prev_select));
+	}
+	
+
+	/**
+	 * Print command stack
+	 */
+	public void cmdStackPrint(String tag) {
+		String str = "";
+		if (commandStack.isEmpty() ) {
+			System.out.println(String.format("%s commandStack: Empty", tag));
+			return;
+		}
+		Iterator<BlockCommand> cmd_itr = commandStack.iterator();
+		
+		while (cmd_itr.hasNext()) {
+			BlockCommand cmd = cmd_itr.next();
+			if (!str.equals(""))
+				str += "; ";
+			str += cmd;
+		}
+		System.out.println(String.format("%s commandStack: %s", tag, str));
+	}
+	
+	
+	/**
+	 * Print select stack state
+	 */
+	public void selectPrint(String tag) {
+		scene.selectPrint(tag);
+	}
+
 }

@@ -1,22 +1,17 @@
-import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 
-import javax.swing.BorderFactory;
 import javax.swing.JFrame;
-import javax.swing.JPanel;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
-import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.gl2.GLUT;
@@ -42,8 +37,6 @@ class ControlMap extends GLCanvas implements MouseListener, MouseMotionListener,
 
 	GLU glu; // Needed for scene2WorldCoord
 	GLUT glut;
-	private Point3D selectedPoint = new Point3D();
-
 	int mouse_x, mouse_y, old_mouse_x, old_mouse_y;
 	
 	public ControlMap(String frameName,
@@ -159,8 +152,6 @@ class ControlMap extends GLCanvas implements MouseListener, MouseMotionListener,
 		old_mouse_y = mouse_y;
 		mouse_x = e.getX();
 		mouse_y = e.getY();
-		int delta_x = mouse_x - old_mouse_x;
-		int delta_y = old_mouse_y - mouse_y;
 
 	}
 

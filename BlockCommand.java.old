@@ -60,16 +60,15 @@ public abstract class BlockCommand {
 	 * without storing it for redo
 	 */
 	public boolean execute() {
-		commandManager.currentCmd = this;
+		commandManager.displayPrint(String.format("execute(%s)", this.action));
+		commandManager.selectPrint(String.format("execute(%s)", this.action));
 		int[] prev_ids = prevBlocks.getIds();
 		commandManager.scene.removeBlocks(prev_ids);
 		if (newBlocks == null)
 			System.out.println("execute - null newBlocks");
 		int[] new_ids = newBlocks.getIds();
 		commandManager.scene.insertBlocks(new_ids);
-		commandManager.displayUpdate(newSelect, prevSelect);
 		commandManager.displayPrint(String.format("execute(%s) AFTER", this.action));
-		commandManager.selectPrint(String.format("execute(%s) AFTER", this.action));
 		return true;
 	}
 
@@ -99,9 +98,18 @@ public abstract class BlockCommand {
 		cmd.newSelect = cmd.prevSelect;
 		cmd.prevSelect = temp_sel;
 		
-		boolean res = cmd.execute();
-		if (res)
-			commandManager.undoStack.push(this);
+		boolean res = cmd.doCmd();
+		/*** done in doCmd
+		if (!commandManager.isEmpty()) {
+			commandManager.commandStack.pop();
+		}
+
+		if (!commandManager.selectIsEmpty()) {		// Backup select if one
+			commandManager.selectPop();
+		}
+		commandManager.selectPush(prevSelect);
+		commandManager.undoStack.push(this);
+		***/
 		return res;
 	}
 	/**
@@ -111,7 +119,7 @@ public abstract class BlockCommand {
 	 */
 	public boolean redo() {
 		if (canRedo()) {
-			return doCmd();
+			return execute();
 		}
 		return false;
 	}
@@ -202,8 +210,8 @@ public abstract class BlockCommand {
 	/**
 	 * Display updated selection
 	 */
-	public boolean displaySelection(BlockSelect new_select, BlockSelect prev_select) {
-		return commandManager.displayUpdate(new_select, prev_select);
+	public boolean displaySelection(int [] new_ids, int [] prev_ids) {
+		return commandManager.scene.displaySelection(new_ids, prev_ids);
 	}
 	 	 
 	 
@@ -212,16 +220,14 @@ public abstract class BlockCommand {
 	 */
 	public boolean doCmd() {
 		commandManager.selectPrint(String.format("doCmd(%s)", this.action));
-		commandManager.displayPrint(String.format("doCmd(%s)", this.action));
-		commandManager.cmdStackPrint(String.format("doCmd(%s)", this.action));
 		boolean res = execute();
 		if (res) {
 			if (canUndo() || canRepeat()) {
-				System.out.println("add to commandStack");
 				commandManager.commandStack.add(this);
 			}
 		}
-		commandManager.cmdStackPrint(String.format("doCmd(%s) AFTER", this.action));
+		commandManager.selectPush(newSelect);
+		commandManager.selectPrint(String.format("doCmd(%s) AFTER", this.action));
 		return res;
 	}
 	
@@ -292,16 +298,5 @@ public abstract class BlockCommand {
 		return canUndo();
 	}
 
-	/**
-	 * Command Description String
-	 */
-	public String toString() {
-		String str = action;
-		if (!newBlocks.isEmpty())
-		{
-			str += " " + newBlocks;
-		}
-		return str;
-	}
 
 }

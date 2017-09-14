@@ -113,25 +113,31 @@ public class OurBlock {
 		
 	}
 
-	
+	/**
+	 * Create new block and return its unique id
+	 * @param blockType
+	 * @param box
+	 * @param color
+	 * @return id
+	 */
 	public static OurBlock getNewBlock(
 		String blockType, 		// Block type
 		AlignedBox3D box,		// Bounding box
 		Color color
 	) {
-		OurBlock block = null;
+		OurBlock cb = null;
 		if (blockType.equals("box"))
-			block = new ColoredBox(box, color);
+			cb = new ColoredBox(box, color);
 		else if (blockType.equals("ball"))
-			block = new ColoredBall(box, color);
+			cb = new ColoredBall(box, color);
 		else if (blockType.equals("cone"))
-			block = new ColoredCone(box, color);
+			cb = new ColoredCone(box, color);
 		else if (blockType.equals("cylinder"))
-			block = new ColoredCylinder(box, color);
+			cb = new ColoredCylinder(box, color);
 		else
 			System.out.println(String.format("Unsupported block type %s",
 					blockType));
-		return block;
+		return cb;
 	}
 
 	
@@ -145,7 +151,13 @@ public class OurBlock {
 		Vector3D size = Point3D.diff(maxp, minp);
 		return size;
 	}
-	
+
+	/**
+	 * Unique block id
+	 */
+	public int iD() {
+		return iD;
+	}
 	
 	/**
 	 * Check if ok block
@@ -276,6 +288,14 @@ public class OurBlock {
 		return setSelected(!isSelected());
 	}
 
+	/**
+	 *  Textual representation
+	 */
+	public String toString() {
+		String str = String.format("[%d]%s", iD, blockType());
+		return str;
+		
+	}
 	/**
 	 * Inherent color to all blocks
 	 * @return

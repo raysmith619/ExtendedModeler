@@ -60,15 +60,16 @@ public class ControlOfColor extends ControlOf {
 	 * Hopefully a model / base class of other control dialogs
 	 */
 	public void setup() {
-		System.out.println("ControlOfColor.setup()");
+		if(SmTrace.tr("setup"))
+			System.out.println("ControlOfColor.setup()");
 		if (controlActive)
 			return;					// Already present
 		
-		System.out.println("ControlOfColor.setup()-2c");
+		if(SmTrace.tr("setup"))
+			System.out.println("ControlOfColor.setup()-2c");
 		setTitle("Adjust/Report Color");
 		if (SmTrace.tr("select")) {
-			int bindex = scene.getSelectedBlockIndex();
-			System.out.println(String.format("ControlOfColor.setup: selected(%d);", bindex));
+			scene.selectPrint("ControlOfColor.setup");
 		}
 		JPanel colorPanel = new JPanel(new GridLayout(0, 1));
 		add(colorPanel);
@@ -101,7 +102,8 @@ public class ControlOfColor extends ControlOf {
 		mdChoicePanel.add(move_dup_color_panel);
 		pack();
 		addDigital(mdChoicePanel);
-		addMap(mdChoicePanel);		
+		addMap(mdChoicePanel);
+		controlActive = true;
 	}
 
 	/**
@@ -245,9 +247,12 @@ public class ControlOfColor extends ControlOf {
 			adjcolor_alphaval *= -1;
 		}
 		OurBlock cb = scene.getSelectedBlock();
+		if (cb == null)
+			return;
+		
 		if (!color_move_duplicate) {
 			cb = cb.duplicate();
-			scene.addBlock(bcmd, cb);
+			bcmd.addBlock(cb.iD());
 		}
 		cb.colorAdj(adjcolor_redval, adjcolor_greenval, adjcolor_blueval, adjcolor_alphaval);
 		System.out.println(
@@ -317,7 +322,8 @@ public class ControlOfColor extends ControlOf {
 		if (cb_sel == null)
 			return;
 
-		OurBlock cb_prev = scene.getSelectedBlock(-1);
+		OurBlock cb_prev = scene.getPrevSelectedBlock();
+		
 		if (cb_prev == null)
 			return;
 		
@@ -337,7 +343,14 @@ public class ControlOfColor extends ControlOf {
 	/**
 	 * Check for and act on action
 	 */
-	public boolean ckDoAction(BlockCommand bcmd, String action) {
+	public boolean ckDoAction(String action) {
+		BlockCommand bcmd;
+		try {
+			bcmd = new BlkCmdAdd(action);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
 		switch (action) {
 				
 			case "colorToButton":
@@ -363,16 +376,6 @@ public class ControlOfColor extends ControlOf {
 			case "adjcolorDownButton":
 				adjustColor(bcmd, -1);
 				break;
-
-			case "deleteBlockButton":
-			case "duplicateBlockButton":
-			case "addBoxButton":
-			case "addBallButton":
-			case "addConeButton":
-			case "addCylinderButton":
-				scene.addBlockButton(bcmd, action);
-				break;
-
 				
 			case "colorMapButton":
 				colorMapSelect();
@@ -380,6 +383,9 @@ public class ControlOfColor extends ControlOf {
 				
 				default:
 					return false;
+		}
+		if (bcmd != null) {
+			return bcmd.doCmd();
 		}
 		return true;
 

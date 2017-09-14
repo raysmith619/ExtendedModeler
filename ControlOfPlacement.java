@@ -179,6 +179,7 @@ public class ControlOfPlacement extends ControlOf {
 			int bindex2 = scene.getSelectedBlockIndex();
 			System.out.println(String.format("ControlOfPlacement.setup after - selected(%d)", bindex2));
 		}
+		controlActive = true;
 	}
 	
 	
@@ -360,8 +361,10 @@ public class ControlOfPlacement extends ControlOf {
 				default:
 					return false;		// No action here
 		}
-		bcmd.saveCmd();
-		return true;					// Got action
+		if (bcmd != null)
+			return bcmd.doCmd();
+		
+		return true;					// Got action, but no cmd
 
 	}
 

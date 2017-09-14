@@ -1,8 +1,5 @@
 import java.awt.Color;
-import java.awt.List;
 import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.Vector;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -40,7 +37,7 @@ class Scene {
 	/**
 	 * Add block from generated to displayed scene
 	 */
-	public void addBlock(int id) {
+	public void insertBlock(int id) {
 		OurBlock cb = genBlocks.getBlock(id);
 		if (cb != null) {
 			displayedBlocks.putBlock(cb);
@@ -52,6 +49,7 @@ class Scene {
 	 * Add already created block to scene
 	 * @return index of new element
 	 */
+	/***
 	public int  addBlock(
 		BlockCommand bcmd,
 		OurBlock cb) {
@@ -59,7 +57,7 @@ class Scene {
 		bcmd.addBlock(cb);
 		return cb.iD;
 	}
-	
+***/	
 	
 	public int addBlock(
 		BlockCommand bcmd,		// Current command
@@ -74,7 +72,7 @@ class Scene {
 			return 0;
 		}
 		genBlocks.putBlock(cb);		// Add to generated blocks
-		addBlock(bcmd, cb);			// Add to displayed blocks
+		addBlock(bcmd, cb.iD);			// Add to displayed blocks
 		return cb.iD;
 	}
 
@@ -84,7 +82,7 @@ class Scene {
 		Color color
 	) {
 		OurBlock cb = new ColoredBox(box, color);
-		return addBlock(bcmd, cb);
+		return addBlock(bcmd, cb.iD);
 	}
 
 	public int getIndexOfIntersectedBox(
@@ -130,7 +128,7 @@ class Scene {
 
 
 	public OurBlock getBlock( int id ) {
-		return displayedBlocks.getBlock(id);
+		return genBlocks.getBlock(id);
 	}
 
 	public AlignedBox3D getBox( int index ) {
@@ -138,6 +136,14 @@ class Scene {
 		if (cb == null)
 			return null;
 		return cb.getBox();
+	}
+
+	
+	/**
+	 * Get generated blocks' ids
+	 */
+	public int[] getDisplayedIds() {
+		return displayedBlocks.getIds();
 	}
 
 	public boolean getSelectionStateOfBox( int id ) {
@@ -215,7 +221,7 @@ class Scene {
 	 * Get block, given index
 	 */
 	public OurBlock cb(int id) {
-		return displayedBlocks.getBlock(id);
+		return genBlocks.getBlock(id);
 	}
 
 
@@ -294,5 +300,10 @@ class Scene {
 		AlignedBox3D box = getBoundingBoxOfScene();
 		if ( ! box.isEmpty() )
 			ColoredBox.drawBox( gl, box, false, true, false );
+	}
+
+	public int addBlock(BlockCommand bcmd, int id) {
+		return bcmd.addBlock(id);
+		
 	}
 }

@@ -1,3 +1,7 @@
+import java.awt.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Stack;
 
@@ -29,12 +33,14 @@ public class OurBlockGroup {
 	 * Get array of ids(indexes)
 	 */
 	public int[] getIds( ) {
-		Object[] idso = blocks.keySet().toArray();
-		int[] ids = new int[idso.length];
-		for (int i = 0; i < idso.length; i++) {
-			Object ido = idso[i];
-			Integer iid = (Integer) ido;
-			ids[i] = iid.intValue();
+///		Object[] idso = blocks.keySet().toArray();
+		Enumeration ide = blocks.keys();
+		ArrayList idl = Collections.list(ide);
+		Collections.sort(idl);
+		int[] ids = new int[idl.size()];
+		for (int i = 0; i < ids.length; i++) {
+			int  id = (int)idl.get(i);
+			ids[i] = (int)idl.get(i);
 		}
 		return ids;
 	}
@@ -98,6 +104,19 @@ public class OurBlockGroup {
 	public void removeAllBlocks() {
 		blocks = new Hashtable<Integer, OurBlock>();
 		newestStack = new Stack<OurBlock>();
+	}
+
+	/**
+	 * Descriptive string
+	 */
+	public String toString() {
+		String str = "";
+		for (int id : this.getIds()) {
+			if (!str.equals(""))
+				str += ", ";
+			str += getBlock(id);
+		}
+		return str;
 	}
 
 }
