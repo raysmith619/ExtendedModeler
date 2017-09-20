@@ -568,20 +568,20 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), alpha);
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
-			cb = OurBlock.getNewBlock(blockType, box, color);
+			cb = OurBlock.newBlock(blockType, box, color);
 		} else {
 			Point3D centerOfNewBox = camera.target;
 			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
 					OurBlock.DEFAULT_ALPHA);
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
-			cb = OurBlock.getNewBlock(blockType, box, color);
+			cb = OurBlock.newBlock(blockType, box, color);
 			normalAtSelectedPoint = new Vector3D(1, 0, 0);
 		}
 		if (cb != null) {
-			bcmd.addBlock(cb.iD());
-			bcmd.selectBlock(cb.iD());		// Select new block
-			return cb.iD();
+			int id = bcmd.addBlock(cb);
+			bcmd.selectBlock(id);		// Select new block
+			return id;
 		}
 		return -1;			// No block
 		
@@ -774,6 +774,15 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		for (int id : ids) {
 			insertBlock(id);
 		}
+	}
+	
+	/**
+	 * Insert blocks to display
+	 * No additional processing is done here.
+	 * Display update is done elsewhere.
+	 */
+	public void insertBlocks(OurBlockGroup blocks) {
+		scene.insertBlocks(blocks);
 	}
 
 	public void init(GLAutoDrawable drawable) {

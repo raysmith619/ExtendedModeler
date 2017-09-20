@@ -366,7 +366,65 @@ public class ExtendedModeler implements ActionListener {
 	
 	
 	public static void main( String[] args ) {
-		SmTrace.setFlags(args[0]);		// Use first arg
+		int n_test = 0;				// Number of testit calls
+		String str = "";
+		for (String arg : args) {
+			if (!str.equals(""))
+				str += " ";
+			str += arg;
+		}
+		System.out.println(String.format("Command Args: %s", str));
+		for (int i = 0; i < args.length; i++) {
+			String arg = args[i];
+			if (arg.startsWith("--")) {
+				String opt = arg.substring(2);
+				switch (opt) {
+					case "trace":
+						if (i < args.length-1) {
+							String trace_val = args[++i];
+							SmTrace.setFlags(trace_val);
+						} else {
+							SmTrace.setFlags("ALL");
+						}
+						break;
+						
+					case "test":
+						boolean res = false;		// Set true iff PASS
+						String test_name = "NONE";
+						n_test++;
+						if (i < args.length-1) {
+							test_name = args[++i];
+						} else {
+							test_name = "ALL";
+						}
+						res = testit(test_name);
+						if (!res) {
+							System.out.println(String.format("Test %s FAILED", test_name));
+						}
+						break;
+					
+					default:
+						System.out.println(String.format("Unrecognized flag(%s)", opt));
+						break;
+				}
+			} else {
+				System.out.println(String.format("Unrecognized arg(%s)", arg));
+				break;
+			}
+					
+		}
+		if (n_test > 0) {
+			System.out.println(String.format("End of %d tests - quiting", n_test));
+			System.exit(0);
+		}
+		setupModeler();
+	}
+	
+	
+	/**
+	 * Setup modeler for execution
+	 */
+	public static void setupModeler() {
 		// Schedule the creation of the UI for the event-dispatching thread.
 		javax.swing.SwingUtilities.invokeLater(
 			new Runnable() {
@@ -376,6 +434,43 @@ public class ExtendedModeler implements ActionListener {
 				}
 			}
 		);
+	}
+
+	
+	/**
+	 * Testing
+	 * @return true iff PASS
+	 */
+	public static boolean testit(String test_tag) {
+		setupModeler();
+		System.out.println(String.format("testit(%s)", test_tag));
+		boolean res = false;
+		switch (test_tag) {
+			case "ALL":
+				res = test_adj_position(test_tag);
+				if (!res)
+					return res;
+				break;
+			
+			case "adj_position":
+				res = test_adj_position(test_tag);
+				break;
+				
+			default:
+				System.out.println(String.format("Unrecognized test(%s, args)", test_tag));
+				break;
+		}
+		
+		return res;
+	}
+	
+	/**
+	 * Test adjust position
+	 * 
+	 */
+	private static boolean test_adj_position(String test_tag) {
+		
+		return true;
 	}
 }
 

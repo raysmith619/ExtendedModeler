@@ -1,10 +1,6 @@
-import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Container;
-import java.awt.Graphics;
 import java.awt.GridLayout;
-import java.awt.image.BufferStrategy;
-
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -18,12 +14,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 import com.jogamp.newt.event.KeyEvent;
-import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.GLCapabilities;
-import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.awt.GLCanvas;
-
 import smTrace.SmTrace;
 
 
@@ -118,7 +109,10 @@ public class ControlOfColor extends ControlOf {
 		
 		OurBlock cb = scene.getSelectedBlock();
 		if (cb == null) {
-			cb = new OurBlock(new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)), new Color(1,1,1,1));
+			AlignedBox3D box = new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1));
+			Color color = new Color(1,1,1,1);
+			System.out.println(String.format("addDigital: red=%d", color.getRed()));
+			cb = OurBlock.newBlock("box", box, color);
 		}
 		colorRedField = new JTextField(String.format("%.2f", cb.getRed()));
 		colorRedField.setActionCommand("ENTER");
@@ -250,15 +244,19 @@ public class ControlOfColor extends ControlOf {
 		if (cb == null)
 			return;
 		
+
 		if (!color_move_duplicate) {
-			cb = cb.duplicate();
-			bcmd.addBlock(cb.iD());
+			bcmd.addBlock(cb);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
 		}
-		cb.colorAdj(adjcolor_redval, adjcolor_greenval, adjcolor_blueval, adjcolor_alphaval);
+		bcmd.addPrevBlock(cb);				//Save copy for undo/redo
+		OurBlock cb1 = cb.duplicate();		// New or modified
+
+		cb1.colorAdj(adjcolor_redval, adjcolor_greenval, adjcolor_blueval, adjcolor_alphaval);
 		System.out.println(
 				String.format("adjust to red=%.2f green=%.2f blue=%.2f  alpha=%.2f",
 						cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha()));
-		scene.repaint();
+		bcmd.addBlock(cb1);					// Add New / modified block
+		bcmd.setSelect(new BlockSelect(cb1.iD()));
 	}
 
 	/**
@@ -378,16 +376,13 @@ public class ControlOfColor extends ControlOf {
 				break;
 				
 			case "colorMapButton":
-				colorMapSelect();
+				colorMapSelect(bcmd);
 				break;
 				
 				default:
 					return false;
 		}
-		if (bcmd != null) {
-			return bcmd.doCmd();
-		}
-		return true;
+		return bcmd.doCmd();
 
 	}
 
@@ -395,9 +390,13 @@ public class ControlOfColor extends ControlOf {
 	/**
 	 * Select color from color map
 	 */
-	public void colorMapSelect() {
+	public void colorMapSelect(BlockCommand bcmd) {
+		OurBlock cb = scene.getSelectedBlock();
+		if (cb == null)
+			return;			// None selected
+		
         final JColorChooser chooser = new JColorChooser();
-        chooser.setColor(Color.BLUE);
+        chooser.setColor(cb.getColor());
         chooser.setLocation(400,400);
         JDialog dialog = JColorChooser.createDialog(null, "Color Chooser",
                  true, chooser, null, null);
@@ -408,12 +407,15 @@ public class ControlOfColor extends ControlOf {
         	return;
         
        System.out.println(String.format("Chose color: %s", c));
-		OurBlock cb = scene.getSelectedBlock();
-		if (cb == null)
-			return;			// None selected
-		
-		cb.setColor(c);
-		scene.repaint();
+       
+		if (!color_move_duplicate) {
+			bcmd.addBlock(cb);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
+		}
+		bcmd.addPrevBlock(cb);				//Save copy for undo/redo
+		OurBlock cb1 = cb.duplicate();		// New or modified
+		cb1.setColor(c);
+		bcmd.addBlock(cb1);					// Add New / modified block
+		bcmd.setSelect(new BlockSelect(cb1.iD()));
 	}
 
 	/**

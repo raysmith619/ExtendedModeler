@@ -226,25 +226,28 @@ public class ControlOfPlacement extends ControlOf {
 		OurBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;
+
+		if (!pos_move_duplicate) {
+			bcmd.addBlock(cb);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
+		}
+		bcmd.addPrevBlock(cb);				//Save copy for undo/redo
+		OurBlock cb1 = cb.duplicate();		// New or modified
 		
 		Point3D base_point = cb.getBasePoint();
 		Vector3D adjpos_vector = new Vector3D(adjpos_xval, adjpos_yval, adjpos_zval);
-		Point3D new_point = Point3D.sum(base_point, adjpos_vector);
-		if (!pos_move_duplicate) {
-			cb = cb.duplicate();
-			scene.addBlock(bcmd, cb);
-		}
+		Point3D adjpos_point = Point3D.sum(base_point, adjpos_vector);
 		if (pos_size_position) {
-			cb.moveTo(new_point);
+			cb1.moveTo(adjpos_point);
 			System.out
-					.println(String.format("adjust to x=%.2f y=%.2f z=%.2f", new_point.x(), new_point.y(), new_point.z()));
+					.println(String.format("adjust to x=%.2f y=%.2f z=%.2f", adjpos_point.x(), adjpos_point.y(), adjpos_point.z()));
 		} else {
-			cb.resize(adjpos_vector);
-			Vector3D size = cb.getSize();
+			cb1.resize(adjpos_vector);
+			Vector3D size = cb1.getSize();
 			System.out
 			.println(String.format("adjust size to x=%.2f y=%.2f z=%.2f", size.x(), size.y(), size.z()));
 		}
-		scene.repaint();
+		bcmd.addBlock(cb1);					// Add New / modified block
+		bcmd.setSelect(new BlockSelect(cb1.iD()));
 	}
 
 	/**
@@ -270,17 +273,23 @@ public class ControlOfPlacement extends ControlOf {
 		}
 
 		OurBlock cb = scene.getSelectedBlock();
-		Point3D new_point = new Point3D(xval, yval, zval);
+		if (cb == null)
+			return;
+
 		if (!pos_move_duplicate) {
-			cb = cb.duplicate();
-			scene.addBlock(bcmd, cb);
+			bcmd.addBlock(cb);			// Keep original also
 		}
+		bcmd.addPrevBlock(cb);			// Save original, for undo
+		OurBlock cb1 = cb.duplicate();		// New or modified
+		
+		Point3D new_point = new Point3D(xval, yval, zval);
 		if (pos_size_position) {
-			cb.moveTo(new_point);
+			cb1.moveTo(new_point);
 		} else {
 			Vector3D size = new Vector3D(new_point);
-			cb.resize(0, size);
+			cb1.resize(0, size);
 		}
+		bcmd.addBlock(cb1);				// Save new or modified
 		System.out.println(String.format("move to x=%.2f y=%.2f z=%.2f", xval, yval, zval));
 		scene.repaint();
 	}

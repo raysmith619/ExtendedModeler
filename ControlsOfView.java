@@ -51,10 +51,6 @@ public class ControlsOfView {
 			addControl(controlName);
 			controls.add(controlName);			// Add to ordered list of control names
 		}
-		if (SmTrace.tr("select")) {
-			int bindex = scene.getSelectedBlockIndex();
-			System.out.println(String.format("ControlsOf.setControl(%s): before - selected(%d)",controlName, bindex));
-		}
 		ControlEntry ctl_ent = controlh.get(controlName);
 		ControlOf control = ctl_ent.control;
 		//ControlEntry control_entry = new ControlEntry(ctl_ent.name, control);
@@ -65,12 +61,16 @@ public class ControlsOfView {
 		
 		scene.setCheckBox(controlName, on);		// Have check box reflect setting
 		if (on) {
+			if (SmTrace.tr("select")) {
+				int bindex = scene.getSelectedBlockIndex();
+				System.out.println(String.format("ControlsOf.setControl(%s): before - selected(%d)",controlName, bindex));
+			}
 			placeControl(controlName);
+			if (SmTrace.tr("select")) {
+				int bindex2 = scene.getSelectedBlockIndex();
+				System.out.println(String.format("ControlsOf.setControl(%s): after - selected(%d)",controlName, bindex2));
+			}	
 		}
-		if (SmTrace.tr("select")) {
-			int bindex2 = scene.getSelectedBlockIndex();
-			System.out.println(String.format("ControlsOf.setControl(%s): after - selected(%d)",controlName, bindex2));
-		}	
 	}
 	
 	

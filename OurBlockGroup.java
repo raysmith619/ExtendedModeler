@@ -55,9 +55,10 @@ public class OurBlockGroup {
 	
 	/**
 	 * Insert unique block
+	 * Copy, in case of subsequent modification
 	 */
 	public OurBlock putBlock(OurBlock cb) {
-		blocks.put(cb.iD, cb);
+		blocks.put(cb.iD, cb);		/// internal id differs from external id ???
 		newestStack.push(cb);
 		return cb;
 	}

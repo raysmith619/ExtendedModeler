@@ -11,6 +11,17 @@ public class AlignedBox3D {
 
 	public AlignedBox3D() {
 	}
+	
+	/**
+	 * Deep copy, allowing modifications
+	 */
+	public AlignedBox3D(AlignedBox3D box) {
+		this.isEmpty = box.isEmpty;
+		this.p0 = new Point3D(box.p0.x(), box.p0.y(), box.p0.z());
+		this.p1 = new Point3D(box.p1.x(), box.p1.y(), box.p1.z()); 
+	}
+	
+	
 	public AlignedBox3D( Point3D min, Point3D max ) {
 		assert min.x() <= max.x() : "bounds error";
 		assert min.y() <= max.y() : "bounds error";

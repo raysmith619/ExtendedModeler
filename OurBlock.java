@@ -1,26 +1,26 @@
 import java.awt.Color;
-import java.util.Hashtable;
-
 import com.jogamp.opengl.GL2;
 
 /*
  * Contains some block
  */
-public class OurBlock {
+public abstract class OurBlock {
 	public static final float DEFAULT_SIZE = 0.5f;
 	public static final float DEFAULT_ALPHA = 0.5f;
 	int iD;				// Unique identifier
-	public Object block = null;
+///	public Object block = null;
 	
 						// Universal object traits
 	private AlignedBox3D box;	// Bounding box
 	private Color color;		// Object color
 	private boolean isSelected = false;
+	private int prevId;					// ID of previous block, iff modified
+	private static OurBlock defaultAtt;	// Default attributes for creation/access
 	public boolean isOk = false;		// Set OK upon successful construction
 	private static int blockId = 0;		// Unique block identifier, used as key
 	private static OurBlockGroup blocks;	// MUST be set BEFORE block  use
-
-	
+		
+		
 	/**
 	 * Setup for generated group access
 	 * @param group
@@ -28,13 +28,90 @@ public class OurBlock {
 	public static void setGenerated(OurBlockGroup group) {
 		blocks = group;
 	}
+
+	/**
+	 * Setup for defaults
+	 */
+	public static void setDefaults(String blockType, AlignedBox3D box, Color color) {
+		defaultAtt = OurBlock.newBlock(blockType, box, color);		// Use std creation
+	}
+
 	
+	/**
+	 * Base constructor
+	 */
 	public OurBlock(AlignedBox3D box, Color color) {
 		this.iD = ++blockId;
 		this.box = box;
 		this.color = color;
 		blocks.putBlock(this);
 	}
+
+	/**
+	 * Create new block
+	 */
+	public static OurBlock newBlock(String blockType, AlignedBox3D box, Color color) {
+		OurBlock cb_copy = null;
+		if (blockType.equals("box"))
+			cb_copy = new ColoredBox(box, color);
+		else if (blockType.equals("ball"))
+			cb_copy = new ColoredBall(box, color);
+		else if (blockType.equals("cone"))
+			cb_copy = new ColoredCone(box, color);
+		else if (blockType.equals("cylinder"))
+			cb_copy = new ColoredCylinder(box, color);
+		else
+			System.out.println(String.format("Unsupported block type %s",
+					blockType));
+		
+		return cb_copy;
+	}
+
+	/**
+	 * Create new block following based on existing block
+	 */
+	public static OurBlock newBlock(OurBlock cb) {
+		OurBlock cb2 = newBlock(cb.blockType(), cb.box, cb.color);
+		return cb2;
+	}
+
+	/**
+	 * Default blocks
+	 */
+	public static OurBlock newBlock() {
+		OurBlock cb = OurBlock.newBlock(defaultAtt.blockType(), defaultAtt.box, defaultAtt.color); 
+		return cb;
+	}
+
+
+	/**
+	 */
+	public static OurBlock newBlock(String blockType) {
+		OurBlock cb = OurBlock.newBlock(blockType, defaultAtt.box, defaultAtt.color); 
+		return cb;
+	}
+
+
+	/**
+	 */
+	public static OurBlock newBlock(String blockType, AlignedBox3D box) {
+		OurBlock cb = OurBlock.newBlock(blockType, box, defaultAtt.color); 
+		return cb;
+	}
+
+	
+	/**
+	 * Deep copy to insulate from subsequent modifications
+	 * No change to table entries
+	 */
+	public OurBlock copy() {
+		int our_id = iD;
+		OurBlock cb_copy = OurBlock.newBlock(this);
+		cb_copy.prevId = cb_copy.iD;
+		cb_copy.iD = our_id;
+		return cb_copy;
+	}
+	
 	
 	/**
 	 * duplicate block
@@ -235,11 +312,8 @@ public class OurBlock {
 	}
 
 	
-	// Overridden by all nontrivial blocks
-	public String blockType() {
-		System.out.println("BlockType() missing");
-		return "UNKNOWN";
-	}
+	public abstract String blockType();
+
 
 	// Not a box so return a bounding box
 	public AlignedBox3D getBox() {
@@ -367,4 +441,5 @@ public class OurBlock {
 	public Vector3D getDiagonal() {
 		return box.getDiagonal();
 	}
+
 }

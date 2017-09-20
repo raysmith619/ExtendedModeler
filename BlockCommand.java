@@ -66,10 +66,11 @@ public abstract class BlockCommand {
 		if (newBlocks == null)
 			System.out.println("execute - null newBlocks");
 		int[] new_ids = newBlocks.getIds();
-		commandManager.scene.insertBlocks(new_ids);
+		commandManager.scene.insertBlocks(newBlocks);
 		commandManager.displayUpdate(newSelect, prevSelect);
 		commandManager.displayPrint(String.format("execute(%s) AFTER", this.action));
 		commandManager.selectPrint(String.format("execute(%s) AFTER", this.action));
+		commandManager.cmdStackPrint(String.format("execute(%s) AFTER", this.action));
 		return true;
 	}
 
@@ -115,21 +116,6 @@ public abstract class BlockCommand {
 		}
 		return false;
 	}
-
-	/**
-	 * Utility functions to add data to command
-	 * @return 
-	 */
-
-	
-	/**
-	 * Create new block
-	 * @return new block's id
-	 */
-	public int addNewBlock(String blocktype) {
-		OurBlock cb = new OurBlock(null, null);
-		return cb.iD();
-	}
 	
 	/**
 	 * Add block to display
@@ -139,6 +125,16 @@ public abstract class BlockCommand {
 	public int addBlock(int id) {
 		newBlocks.putBlock(cb(id));
 		return id;
+	}
+	
+	/**
+	 * Add block, possibly new/changed to display
+	 * @param id
+	 * @return
+	 */
+	public int addBlock(OurBlock cb) {
+		OurBlock cb_put = newBlocks.putBlock(cb.copy());
+		return cb_put.iD;
 	}
 
 							/**
@@ -219,6 +215,8 @@ public abstract class BlockCommand {
 			if (canUndo() || canRepeat()) {
 				System.out.println("add to commandStack");
 				commandManager.commandStack.add(this);
+			} else {
+				System.out.println(String.format("doCmd(%s) can't undo/repeat", this.action));
 			}
 		}
 		commandManager.cmdStackPrint(String.format("doCmd(%s) AFTER", this.action));
@@ -303,5 +301,11 @@ public abstract class BlockCommand {
 		}
 		return str;
 	}
+
+	public void addPrevBlock(OurBlock cb) {
+		prevBlocks.putBlock(cb.copy());
+	}
+		
+
 
 }

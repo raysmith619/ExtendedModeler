@@ -18,6 +18,9 @@ class Scene {
 	public Scene() {
 		genBlocks = new OurBlockGroup();			// Generated
 		OurBlock.setGenerated(genBlocks);
+		OurBlock.setDefaults("box",
+				new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)),
+				new Color(1,0,1));
 		displayedBlocks = new OurBlockGroup();		// Displayed
 	}
 
@@ -42,6 +45,31 @@ class Scene {
 		if (cb != null) {
 			displayedBlocks.putBlock(cb);
 			isBoundingBoxOfSceneDirty = true;
+		}
+	}
+
+
+	/**
+	 * Add block to displayed scene
+	 * May be modified versions of blocks in genBlocks
+	 * May replace element of the same id 
+	 */
+	public void insertBlock(OurBlock cb) {
+		if (cb != null) {
+			displayedBlocks.putBlock(cb);
+			isBoundingBoxOfSceneDirty = true;
+		}
+	}
+
+
+	/**
+	 * Add blocks to displayed list
+	 * May be modified versions of blocks in genBlocks
+	 * May replace element of the same id 
+	 */
+	public void insertBlocks(OurBlockGroup blocks) {
+		for (int  id : blocks.getIds()) {
+			insertBlock(blocks.getBlock(id));
 		}
 	}
 
