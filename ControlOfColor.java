@@ -272,9 +272,9 @@ public class ControlOfColor extends ControlOf {
 			colorGreenField.setText(String.format("%.2g",cb.getGreen()));
 			colorBlueField.setText(String.format("%.2g", cb.getBlue()));
 			
-			adjcolorRedField.setText(String.format("%.2g", cb.getRed()/10));
-			adjcolorGreenField.setText(String.format("%.2g",cb.getGreen()/10));
-			adjcolorBlueField.setText(String.format("%.2g", cb.getBlue()/10));
+			adjcolorRedField.setText(String.format("%.2g", cb.getRed()/3));
+			adjcolorGreenField.setText(String.format("%.2g",cb.getGreen()/3));
+			adjcolorBlueField.setText(String.format("%.2g", cb.getBlue()/3));
 
 			repaint();
 			
@@ -380,6 +380,7 @@ public class ControlOfColor extends ControlOf {
 				break;
 				
 				default:
+					System.out.println(String.format("Unrecognized color command(%s)", action));
 					return false;
 		}
 		return bcmd.doCmd();

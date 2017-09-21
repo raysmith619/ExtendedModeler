@@ -36,9 +36,11 @@ public class ExtendedModeler implements ActionListener {
 
 	static final String applicationName = "Extended Modeler";
 	public static SmTrace smTrace;
+
 	JFrame frame;
 	Container toolPanel;
 	SceneViewer sceneViewer;
+	private static ExtendedModeler em_base = null;		// Used internally		
 
 	public enum AutoAddType {	// Auto add block type
 		NONE,					// none added
@@ -367,6 +369,10 @@ public class ExtendedModeler implements ActionListener {
 	
 	public static void main( String[] args ) {
 		int n_test = 0;				// Number of testit calls
+		int n_test_pass = 0;
+		int n_test_fail = 0;
+		boolean endAfterTest = false;	// true - end if testing
+		
 		String str = "";
 		for (String arg : args) {
 			if (!str.equals(""))
@@ -374,6 +380,8 @@ public class ExtendedModeler implements ActionListener {
 			str += arg;
 		}
 		System.out.println(String.format("Command Args: %s", str));
+		ExtendedModelerTest emt = new ExtendedModelerTest();
+		
 		for (int i = 0; i < args.length; i++) {
 			String arg = args[i];
 			if (arg.startsWith("--")) {
@@ -398,11 +406,19 @@ public class ExtendedModeler implements ActionListener {
 							test_name = "ALL";
 						}
 						res = testit(test_name);
+						if (res)
+							n_test_pass++;
+						else
+							n_test_fail++;
 						if (!res) {
 							System.out.println(String.format("Test %s FAILED", test_name));
 						}
 						break;
 					
+					case "tend":
+						endAfterTest = true;		// Quit program after testing completed, else continues
+						break;
+						
 					default:
 						System.out.println(String.format("Unrecognized flag(%s)", opt));
 						break;
@@ -414,27 +430,55 @@ public class ExtendedModeler implements ActionListener {
 					
 		}
 		if (n_test > 0) {
-			System.out.println(String.format("End of %d tests - quiting", n_test));
-			System.exit(0);
+			System.out.println(String.format("End of %d test runs - %d PASSES  %d FAILS", n_test, n_test_pass, n_test_fail));
+			if (endAfterTest)
+				System.exit(0);
+		} else {
+			setupModeler();
 		}
-		setupModeler();
 	}
-	
+
+	/**
+	 * Used to allow testing
+	 */
+	public static boolean isSetup() {
+		return em_base != null;
+	}
 	
 	/**
 	 * Setup modeler for execution
+	 * Waits for setup to complete so we can use it for testing
 	 */
-	public static void setupModeler() {
+	public static ExtendedModeler setupModeler() {
 		// Schedule the creation of the UI for the event-dispatching thread.
 		javax.swing.SwingUtilities.invokeLater(
 			new Runnable() {
 				public void run() {
-					ExtendedModeler sp = new ExtendedModeler();
-					sp.createUI();
+					ExtendedModeler em = new ExtendedModeler();
+					em.createUI();
+					em_base = em;		// 
 				}
 			}
 		);
+		int inctime = 1000;				// milliseconds
+		int maxtime = 10000;			// Max wait in milliseconds
+		int dur = 0;					// Current duration
+		while (em_base == null) {
+			try {
+				Thread.sleep(inctime);
+			} catch (InterruptedException e) {
+				System.out.println("setupModeler interupt exception");
+				e.printStackTrace();
+			}
+			dur += inctime;
+			if (dur > maxtime) {
+				System.out.println(String.format("Wait time(%ld) exceeded, time=%ld", maxtime, dur));
+				break;
+			}
+		}
+		return em_base;
 	}
+			
 
 	
 	/**
@@ -442,35 +486,15 @@ public class ExtendedModeler implements ActionListener {
 	 * @return true iff PASS
 	 */
 	public static boolean testit(String test_tag) {
-		setupModeler();
 		System.out.println(String.format("testit(%s)", test_tag));
-		boolean res = false;
-		switch (test_tag) {
-			case "ALL":
-				res = test_adj_position(test_tag);
-				if (!res)
-					return res;
-				break;
-			
-			case "adj_position":
-				res = test_adj_position(test_tag);
-				break;
-				
-			default:
-				System.out.println(String.format("Unrecognized test(%s, args)", test_tag));
-				break;
+		ExtendedModeler em = setupModeler();
+		if (em == null) {
+			System.out.println("Test setupModeler failed");
+			return false;
 		}
 		
-		return res;
-	}
-	
-	/**
-	 * Test adjust position
-	 * 
-	 */
-	private static boolean test_adj_position(String test_tag) {
-		
-		return true;
+		ExtendedModelerTest emt = new ExtendedModelerTest();
+		return emt.test(em, test_tag);
 	}
 }
 
