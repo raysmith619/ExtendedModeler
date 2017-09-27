@@ -41,6 +41,7 @@ public class ControlsOfView {
 	
 	/**
 	 * Add/Remove Control/Display
+	 * @throws OurBlockError 
 	 */
 	public void setControl(String controlName, boolean on) {
 		if (controlh == null)
@@ -81,8 +82,9 @@ public class ControlsOfView {
 	 * Iterates through controls, checking active
 	 * @return - true iff action performed
 	 * @param action - action performed
+	 * @throws OurBlockError 
 	 */
-	public boolean ckDoAction(String action) {
+	public boolean ckDoAction(String action) throws OurBlockError {
 		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 			ControlEntry control_entry = entry.getValue();
 			if (control_entry.active)
@@ -99,16 +101,16 @@ public class ControlsOfView {
 	public void addControl(String controlName) {
 		ControlOf control = null;
 		switch (controlName) {
-			case "addControl":
-				control = new ControlOfComponent(scene, "addControl");
+			case "component":
+				control = new ControlOfComponent(scene, "component");
 				break;
 			
-			case "placementControl":
-				control = new ControlOfPlacement(scene, "placementControl");
+			case "placement":
+				control = new ControlOfPlacement(scene, "placement");
 				break;
 				
-			case "colorControl":
-				control = new ControlOfColor(scene, "colorControl");
+			case "color":
+				control = new ControlOfColor(scene, "color");
 				break;
 				
 			default:
@@ -141,8 +143,9 @@ public class ControlsOfView {
 	/**
 	 * Clear controls entry's active - Currently does not dispose
 	 * @param controlName
+	 * @throws OurBlockError 
 	 */
-	void clearControl(String controlName) {
+	void clearControl(String controlName) throws OurBlockError {
 		if (controlh.containsKey(controlName)) {
 			setControl(controlName, false);
 		}
@@ -152,8 +155,9 @@ public class ControlsOfView {
 	/**
 	 * Clear controls entry's active - Currently does not dispose
 	 * @param controlName
+	 * @throws OurBlockError 
 	 */
-	void clearControls() {
+	void clearControls() throws OurBlockError {
 		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 			String controlName = entry.getKey();
 			clearControl(controlName);
@@ -175,7 +179,26 @@ public class ControlsOfView {
 			}
 		}
 	}
+
 	
+	/**
+	 * Get instance of control
+	 * @param controlName - unique control panel name
+	 * @return control handle, null if not available(defined, set, active)
+	 */
+	public ControlOf getControl(String controlName) {
+		if (controlh == null)
+			return null;
+		if (controlName == null)
+			return null;
+		if (!controlh.containsKey(controlName)) {
+			return null;
+		}
+		ControlEntry ctl_entry = controlh.get(controlName);
+		if (!ctl_entry.active)
+			return null;
+		return ctl_entry.control;
+	}
 
 	
 	/**

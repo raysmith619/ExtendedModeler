@@ -5,7 +5,7 @@ import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.glu.GLUquadric;
 import com.jogamp.opengl.glu.GLU;
 
-public class ColoredCone extends OurBlock {
+public class ColoredCone extends OurBlockBase {
 
 
 	public String blockType() {

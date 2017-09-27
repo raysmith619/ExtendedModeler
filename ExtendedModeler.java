@@ -41,6 +41,7 @@ public class ExtendedModeler implements ActionListener {
 	Container toolPanel;
 	SceneViewer sceneViewer;
 	private static ExtendedModeler em_base = null;		// Used internally		
+	private static ExtendedModelerTest emt = null;		// Set if testing setup
 
 	public enum AutoAddType {	// Auto add block type
 		NONE,					// none added
@@ -172,17 +173,17 @@ public class ExtendedModeler implements ActionListener {
 		}
 		else if ( source == displayAddControlCheckBox ) {
 			sceneViewer.displayAddControl = ! sceneViewer.displayAddControl;
-			sceneViewer.setControl("addControl", sceneViewer.displayAddControl);
+			sceneViewer.setControl("component", sceneViewer.displayAddControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayPlacementControlCheckBox ) {
 			sceneViewer.displayPlacementControl = ! sceneViewer.displayPlacementControl;
-			sceneViewer.setControl("placementControl", sceneViewer.displayPlacementControl);
+			sceneViewer.setControl("placement", sceneViewer.displayPlacementControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayColorControlCheckBox ) {
 			sceneViewer.displayColorControl = ! sceneViewer.displayColorControl;
-			sceneViewer.setControl("colorControl", sceneViewer.displayColorControl);
+			sceneViewer.setControl("color", sceneViewer.displayColorControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayWorldAxesCheckBox ) {
@@ -274,7 +275,13 @@ public class ExtendedModeler implements ActionListener {
 		GLCapabilities caps = new GLCapabilities(null);
 		caps.setDoubleBuffered(true);
 		caps.setHardwareAccelerated(true);
-		sceneViewer = new SceneViewer(caps, this, frame, smTrace);
+		try {
+			sceneViewer = new SceneViewer(caps, this, frame, smTrace);
+		} catch (OurBlockError e) {
+			System.out.println(String.format("SceneViewer error %s", e.getMessage()));
+			e.printStackTrace();
+			return;
+		}
 
 		Container pane = frame.getContentPane();
 		// We used to use a BoxLayout as the layout manager here,
@@ -346,17 +353,17 @@ public class ExtendedModeler implements ActionListener {
 			sceneViewer.selectPrint(String.format("modeler.setCheckBox(%s): selected;", name));
 		}
 		switch (name) {
-			case "addControl":
+			case "component":
 				displayAddControlCheckBox.setSelected(checked);
 				sceneViewer.displayAddControl = checked;
 				break;
 				
-			case "placementControl":
+			case "placement":
 				displayPlacementControlCheckBox.setSelected(checked);
 				sceneViewer.displayPlacementControl = checked;
 				break;
 				
-			case "colorControl":
+			case "color":
 				displayColorControlCheckBox.setSelected(checked);
 				sceneViewer.displayColorControl = checked;
 				break;
@@ -380,12 +387,12 @@ public class ExtendedModeler implements ActionListener {
 			str += arg;
 		}
 		System.out.println(String.format("Command Args: %s", str));
-		ExtendedModelerTest emt = new ExtendedModelerTest();
+		setupTest();
 		
 		for (int i = 0; i < args.length; i++) {
 			String arg = args[i];
 			if (arg.startsWith("--")) {
-				String opt = arg.substring(2);
+				String opt = arg.substring(2).toLowerCase();
 				switch (opt) {
 					case "trace":
 						if (i < args.length-1) {
@@ -415,7 +422,38 @@ public class ExtendedModeler implements ActionListener {
 						}
 						break;
 					
-					case "tend":
+					case "testafterSetup":
+					case "tas":
+						int afterSetupDelay = Integer.parseInt(args[++i]);
+						emt.setAfterSetupDelay(afterSetupDelay);
+						break;
+						
+					case "testrun":
+					case "tr":
+						int nRun = Integer.parseInt(args[++i]);
+						emt.setNRun(nRun);
+						break;
+						
+					case "testrundelay":
+					case "trd":
+						int runDelay = Integer.parseInt(args[++i]);
+						emt.setRunDelay(runDelay);
+						break;
+						
+					case "testtest":
+					case "tt":
+						int nTestRun = Integer.parseInt(args[++i]);
+						emt.setNTestRun(nTestRun);
+						break;
+						
+					case "testtestdelay":
+					case "ttd":
+						int testDelay = Integer.parseInt(args[++i]);
+						emt.setTestDelay(testDelay);
+						break;
+					
+					case "testend":
+					case "te":
 						endAfterTest = true;		// Quit program after testing completed, else continues
 						break;
 						
@@ -480,6 +518,19 @@ public class ExtendedModeler implements ActionListener {
 	}
 			
 
+
+	
+	/**
+	 * Setup Testing
+	 * Only, if not already setup
+	 */
+	public static void setupTest() {
+		if (emt != null)
+			return;				// Already setup
+		
+		System.out.println("setupTest()");
+		emt = new ExtendedModelerTest();
+	}
 	
 	/**
 	 * Testing
@@ -487,14 +538,17 @@ public class ExtendedModeler implements ActionListener {
 	 */
 	public static boolean testit(String test_tag) {
 		System.out.println(String.format("testit(%s)", test_tag));
-		ExtendedModeler em = setupModeler();
-		if (em == null) {
-			System.out.println("Test setupModeler failed");
+		if (emt == null)
+			setupTest();
+		try {
+			return emt.test(test_tag);
+		} catch (OurBlockError e) {
+			System.out.println(String.format("Testing error in %s: %s",
+					test_tag, e.getMessage()));
+			
+			e.printStackTrace();
 			return false;
 		}
-		
-		ExtendedModelerTest emt = new ExtendedModelerTest();
-		return emt.test(em, test_tag);
 	}
 }
 

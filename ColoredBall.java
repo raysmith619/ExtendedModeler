@@ -5,7 +5,7 @@ import com.jogamp.opengl.GL2;
 
 import com.jogamp.opengl.util.gl2.GLUT;
 
-public class ColoredBall extends OurBlock {
+public class ColoredBall extends OurBlockBase {
 	private boolean isOk = false;	// Set OK upon successful construction
 
 	public boolean intersects(
@@ -118,8 +118,13 @@ public class ColoredBall extends OurBlock {
 			gl.glTranslatef(center.x(), center.y(), center.z());
 			glut.glutWireSphere(r, nLongitudes, nLatitudes);
 			gl.glTranslatef(-center.x(), -center.y(), -center.z());
-///			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
+			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
 		}
+	}
+	@Override
+	public OurBlockBase copy() {
+		super.copy();
+		return null;
 	}
 	
 

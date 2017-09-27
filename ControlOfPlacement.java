@@ -32,6 +32,125 @@ public class ControlOfPlacement extends ControlOf {
 		setup();
 	}	
 
+	
+	/**
+	 * Set field
+	 * @param val
+	 * @return true if no error
+	 */
+	public boolean posXfieldSet(String val) {
+		if (posXfield == null) {
+			System.out.println("posXField - not initialized");
+			return false;
+		}
+		posXfield.setText(val);
+		return true;
+		
+	}
+
+	
+	/**
+	 * Set field
+	 * @param val
+	 * @return true if no error
+	 */
+	public boolean posXfieldSet(float val) {
+		String val_str = Float.toString(val);
+		return posXfieldSet(val_str);
+	}
+
+	
+	/**
+	 * Set field
+	 * @param val
+	 * @return true if no error
+	 */
+	public boolean posYfieldSet(String val) {
+		if (posYfield == null) {
+			System.out.println("posYField - not initialized");
+			return false;
+		}
+		posYfield.setText(val);
+		return true;
+		
+	}
+
+	
+	/**
+	 * Set field
+	 * @param val
+	 * @return true if no error
+	 */
+	public boolean posYfieldSet(float val) {
+		String val_str = Float.toString(val);
+		return posYfieldSet(val_str);
+	}
+
+	
+	/**
+	 * Set field
+	 * @param val
+	 * @return true if no error
+	 */
+	public boolean posZfieldSet(String val) {
+		if (posYfield == null) {
+			System.out.println("posYField - not initialized");
+			return false;
+		}
+		posYfield.setText(val);
+		return true;
+		
+	}
+
+	
+	/**
+	 * Set field
+	 * @param val
+	 * @return true if no error
+	 */
+	public boolean posZfieldSet(float val) {
+		String val_str = Float.toString(val);
+		return posZfieldSet(val_str);
+	}
+
+	
+	/**
+	 * MoveTo button simulation
+	 * @throws OurBlockError 
+	 */
+	public boolean MoveTo() throws OurBlockError {
+		boolean ret = ckDoAction("moveToButton");
+		if (!ret)
+			System.out.println("ControlOfPlacement.MoveTo failed");
+		return ret;
+	}
+
+	
+	/**
+	 * MoveTo location
+	 * @throws OurBlockError 
+	 */
+	public boolean MoveTo(float x, float y, float z) throws OurBlockError {
+		if (!posXfieldSet(x)) {
+			System.out.println(String.format("ControlOfPlacement.Moveto(x=%g) failed", x));
+			return false;
+		}
+		if (!posYfieldSet(y)) {
+			System.out.println(String.format("ControlOfPlacement.Moveto(y=%g) failed", y));
+			return false;
+		}
+		if (!posZfieldSet(z)) {
+			System.out.println(String.format("ControlOfPlacement.Moveto(z=%g) failed", z));
+			return false;
+		}
+		if (!MoveTo()) {
+			System.out.println(String.format("ControlOfPlacement.Moveto move(%g, %g,%g) failed", x, y, z));
+			return false;
+		}
+		return true;
+	}
+
+	
 	private void traceSelected(int place) {
 		if (SmTrace.tr("select")) {
 			int bindex = scene.getSelectedBlockIndex();
@@ -111,6 +230,7 @@ public class ControlOfPlacement extends ControlOf {
 			center = cb.getCenter();
 		traceSelected(13);
 		posXfield = new JTextField(String.format("%.2f", center.x()));
+		System.out.println(String.format("setup posXfield"));
 		traceSelected(14);
 		posXfield.setActionCommand("ENTER");
 		traceSelected(15);
@@ -186,6 +306,7 @@ public class ControlOfPlacement extends ControlOf {
 	
 	/**
 	 * Adjust Position
+	 * @throws OurBlockError 
 	 * 
 	 **/
 	/*
@@ -193,7 +314,7 @@ public class ControlOfPlacement extends ControlOf {
 	 * 
 	 * @param direction
 	 */
-	private void adjustPosition(BlockCommand bcmd, int direction) {
+	private void adjustPosition(BlockCommand bcmd, int direction) throws OurBlockError {
 		if (!scene.anySelected())
 			return;
 		
@@ -252,8 +373,9 @@ public class ControlOfPlacement extends ControlOf {
 
 	/**
 	 * Move to position/size accordingly
+	 * @throws OurBlockError 
 	 */
-	private void moveToPosition(BlockCommand bcmd) {
+	private void moveToPosition(BlockCommand bcmd) throws OurBlockError {
 		if (scene.getSelected() == null)
 			return;
 		float xval = 0;
@@ -321,8 +443,9 @@ public class ControlOfPlacement extends ControlOf {
 
 	/**
 	 * Check for and act on action
+	 * @throws OurBlockError 
 	 */
-	public boolean ckDoAction(String action) {
+	public boolean ckDoAction(String action) throws OurBlockError {
 		BlockCommand bcmd;
 		try {
 			bcmd = new BlkCmdAdd(action);
@@ -372,8 +495,7 @@ public class ControlOfPlacement extends ControlOf {
 		}
 		if (bcmd != null)
 			return bcmd.doCmd();
-		
-		return true;					// Got action, but no cmd
+		return pos_move_duplicate;
 
 	}
 

@@ -65,7 +65,6 @@ public abstract class BlockCommand {
 		commandManager.scene.removeBlocks(prev_ids);
 		if (newBlocks == null)
 			System.out.println("execute - null newBlocks");
-		int[] new_ids = newBlocks.getIds();
 		commandManager.scene.insertBlocks(newBlocks);
 		commandManager.displayUpdate(newSelect, prevSelect);
 		commandManager.displayPrint(String.format("execute(%s) AFTER", this.action));
@@ -123,8 +122,7 @@ public abstract class BlockCommand {
 	 * @return
 	 */
 	public int addBlock(int id) {
-		newBlocks.putBlock(cb(id));
-		return id;
+		return addBlock(cb(id));
 	}
 	
 	/**
@@ -134,7 +132,7 @@ public abstract class BlockCommand {
 	 */
 	public int addBlock(OurBlock cb) {
 		OurBlock cb_put = newBlocks.putBlock(cb.copy());
-		return cb_put.iD;
+		return cb_put.iD();
 	}
 
 							/**

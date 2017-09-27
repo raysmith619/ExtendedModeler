@@ -80,8 +80,9 @@ public class ControlOfComponent extends ControlOf {
 
 	/**
 	 * Check for and act on action
+	 * @throws OurBlockError 
 	 */
-	public boolean ckDoAction(String action) {
+	public boolean ckDoAction(String action) throws OurBlockError {
 		scene.selectPrint(String.format("ckDoAction(%s)", action));
 		BlockCommand bcmd;
 		try {

@@ -49,6 +49,7 @@ public class ControlOfColor extends ControlOf {
 	/**
 	 * Setup Control of object adding
 	 * Hopefully a model / base class of other control dialogs
+	 * @throws OurBlockError 
 	 */
 	public void setup() {
 		if(SmTrace.tr("setup"))
@@ -100,6 +101,7 @@ public class ControlOfColor extends ControlOf {
 	/**
 	 * Digital setting
 	 * @param panel
+	 * @throws OurBlockError 
 	 */
 	public void addDigital(JPanel panel) {
 		System.out.println("addDigital");
@@ -110,7 +112,7 @@ public class ControlOfColor extends ControlOf {
 		OurBlock cb = scene.getSelectedBlock();
 		if (cb == null) {
 			AlignedBox3D box = new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1));
-			Color color = new Color(1,1,1,1);
+			Color color = new Color(255,255,255);
 			System.out.println(String.format("addDigital: red=%d", color.getRed()));
 			cb = OurBlock.newBlock("box", box, color);
 		}
@@ -209,8 +211,9 @@ public class ControlOfColor extends ControlOf {
 	 * Adjust by increments in direction 1- positive, -1 negative
 	 * 
 	 * @param direction
+	 * @throws OurBlockError 
 	 */
-	private void adjustColor(BlockCommand bcmd, int direction) {
+	private void adjustColor(BlockCommand bcmd, int direction) throws OurBlockError {
 		if (scene.getSelected() == null)
 			return;
 		
@@ -283,7 +286,7 @@ public class ControlOfColor extends ControlOf {
 		
 		
 		
-	private void colorToColor(BlockCommand bcmd) {
+	private void colorToColor(BlockCommand bcmd) throws OurBlockError {
 		if (scene.getSelected() == null)
 			return;
 		
@@ -315,7 +318,7 @@ public class ControlOfColor extends ControlOf {
 	}
 
 	
-	private void colorToPreviousColor(BlockCommand bcmd) {
+	private void colorToPreviousColor(BlockCommand bcmd) throws OurBlockError {
 		OurBlock cb_sel = scene.getSelectedBlock();
 		if (cb_sel == null)
 			return;
@@ -340,8 +343,9 @@ public class ControlOfColor extends ControlOf {
 
 	/**
 	 * Check for and act on action
+	 * @throws OurBlockError 
 	 */
-	public boolean ckDoAction(String action) {
+	public boolean ckDoAction(String action) throws OurBlockError {
 		BlockCommand bcmd;
 		try {
 			bcmd = new BlkCmdAdd(action);
@@ -390,8 +394,9 @@ public class ControlOfColor extends ControlOf {
 	
 	/**
 	 * Select color from color map
+	 * @throws OurBlockError 
 	 */
-	public void colorMapSelect(BlockCommand bcmd) {
+	public void colorMapSelect(BlockCommand bcmd) throws OurBlockError {
 		OurBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;			// None selected

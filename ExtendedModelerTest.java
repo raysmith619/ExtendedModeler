@@ -1,59 +1,253 @@
 public class ExtendedModelerTest {
+	int nRun = 1;					// Number of test runs
+	boolean doSetup = true;			// Do general setup, false - test is responsible for setup
+	boolean initEachTest = false;	// true - initialize before each test
+	boolean initEachRun = false;	// true - initialize before each run
+	int nTestRun = 1;				// Number of times to repeat each test
+	int afterSetupDelay = 1000;		// After setup delay in msec
+	int testDelay = 10;				// Delay before test in msec
+	int runDelay = 100;				// Delay before run in msec
 	ExtendedModeler modeler;
 	SceneViewer sceneViewer;
+	ExtendedModeler setupModeler;
+	ControlOfPlacement cpla;
+	ControlOfComponent ccom;
+	ControlOfColor ccol;
 	int nTest = 0;
 	int nPass = 0;
 	int nFail = 0;
 	
+									/**
+									 * Debugging variables
+									 */
+	float xpos = -2;
+	float ypos = -2;
+	float zpos = -2;
+	float inc = .1f;
+	
 	public ExtendedModelerTest() {
 	}
+
 	
-	public boolean test(ExtendedModeler em, String test_tag) {
-		this.modeler = em;
-		this.sceneViewer = em.sceneViewer;
-		
-		boolean res = false;
-		switch (test_tag) {
-			case "ALL":
-				res = test_adj_position(test_tag);
-				if (!res)
-					return res;
-				break;
-				
-			case "simple":
-				res = test_simple(test_tag);
-				break;
+	/**
+	 * Set number of times to execute run
+	 * @param nRun - number of times run test
+	 */
+	public void setNRun(int nRun) {
+		this.nRun = nRun;
+	}
+
+	
+	/**
+	 * Set number of times to execute each test
+	 * @param nRun - number of times to each test
+	 */
+	public void setNTestRun(int nTestRun) {
+		this.nTestRun = nTestRun;
+	}
+
+	
+	/**
+	 * Set delay before each run
+	 */
+	public void setRunDelay(int runDelay) {
+		this.runDelay = runDelay;
+	}
+
+	
+	/**
+	 * Set delay after setup
+	 */
+	public void setAfterSetupDelay(int delay) {
+		this.afterSetupDelay = delay;
+	}
+
+	
+	/**
+	 * Set delay before each test
+	 */
+	public void setTestDelay(int testDelay) {
+		this.testDelay = testDelay;
+	}
+	
+	/**
+	 * Set to initialize before each run
+	 * @param initEachRun - initialize between runs
+	 */
+	public void setInitEachRun(boolean initEachRun) {
+		this.initEachRun = initEachRun;
+	}
+
+	
+	/**
+	 * Set to initialize before each test
+	 * @param initEachTest - initialize between tests
+	 */
+	public void setInitEachTest(boolean initEachTest) {
+		this.initEachTest = initEachTest;
+	}
+
+	
+	/**
+	 * Setup testing
+	 * @param test_tag
+	 * @return
+	 * @throws OurBlockError 
+	 */
+	public void setupTest(String test_tag) throws OurBlockError {
+		if (doSetup) {
+			System.out.println("Setup modeler");
+			modeler = ExtendedModeler.setupModeler();
+			testDelay(afterSetupDelay);
+			sceneViewer = modeler.sceneViewer;
+			String control_name = null;
+			ControlOf ctl = null;
+			control_name = "component";
+			ctl = sceneViewer.controls.getControl(control_name);
+			if (ctl == null) {
+				System.out.println(String.format("Control %s not setup", control_name));
+				System.exit(1);
+			}
+			ccom = (ControlOfComponent) ctl;
 			
-			case "adj_position":
-				res = test_adj_position(test_tag);
-				break;
+			control_name = "placement";
+			ctl = sceneViewer.controls.getControl(control_name);
+			if (ctl == null) {
+				System.out.println(String.format("Control %s not setup", control_name));
+				System.exit(1);
+			}
+			cpla = (ControlOfPlacement) ctl;
+			
+			control_name = "color";
+			ctl = sceneViewer.controls.getControl(control_name);
+			if (ctl == null) {
+				throw new OurBlockError(String.format("Control %s not setup", control_name));
+			}
+			ccol = (ControlOfColor) ctl;
+		}
+	}
+	
+	
+	public boolean test(String test_tag) throws OurBlockError {
+		boolean res = true;
+		try {
+			for (int i = 0; i < nRun; i++) {
+				System.out.println(String.format("Run: %d", i+1));
+				if (i == 0 || initEachRun) {
+					setupTest(test_tag);
+				}
+				testDelay(runDelay);
+				testOne(test_tag);
+			}
 				
-			default:
-				System.out.println(String.format("Unrecognized test(%s, args)", test_tag));
-				break;
+			} catch (EMTFail e) {
 		}
 		
 		return res;
 		
 	}
+
+	
+	/**
+	 * Delay before continuing
+	 * @param dly - delay in msec
+	 */
+	public void testDelay(int dly) {
+		try {
+			Thread.sleep(dly);
+		} catch (InterruptedException e) {
+		}
+	}
+
+	
+	/**
+	 * Do one test, possibly repeated
+	 * @throws OurBlockError 
+	 */
+	public void testOne(String test_tag) throws EMTFail, OurBlockError {
+		for (int j = 0; j < nTestRun; j++) {
+			System.out.println(String.format("Test: %d", j+1));
+			if (j == 2 || initEachTest) {	// First setup is done for run
+				setupTest(test_tag);
+			}
+			testDelay(testDelay);
+			switch (test_tag.toLowerCase()) {
+				case "all":							// Do all tests. Result is true iff ALL pass
+					test_simple(test_tag);
+					testDelay(testDelay);
+					test_adj_position(test_tag);
+					testDelay(testDelay);
+					test_move(test_tag);
+					break;
+					
+				case "simple":
+					test_simple(test_tag);
+					break;
+				
+				case "adj_position":
+					test_adj_position(test_tag);
+					break;
+	
+				case "move":
+					test_move(test_tag);
+					break;
+					
+				default:
+					System.out.println(String.format("Unrecognized test(%s)", test_tag));
+					break;
+			}
+			System.out.println(String.format("test %d END", j+1));
+		}
+	}
+	
+	/**
+	 * Test adjust position
+	 * @throws OurBlockError 
+	 * 
+	 */
+	private void test_simple(String test_tag) throws EMTFail, OurBlockError {
+
+		if (!ccom.ckDoAction("addBoxButton")) {
+			throw new EMTFail("addBoxButton failed");
+		}
+		String action_pla = "adjposUpButton";
+		if (!cpla.ckDoAction(action_pla)) {
+			throw new EMTFail(String.format("%s failed", action_pla));
+		}
+		String action = "addBallButton";
+		if (!ccom.ckDoAction(action)) {
+			throw new EMTFail(String.format("%s failed", action));
+		}
+		action_pla = "adjposUpButton";
+		if (!cpla.ckDoAction(action_pla)) {
+			throw new EMTFail(String.format("%s failed", action_pla));
+		}
+		sceneViewer.repaint();
+		
+		String action_col = "adjcolorUpButton";
+		if (!ccol.ckDoAction(action_col)) {
+			throw new EMTFail(String.format("%s failed", action_col));
+		}
+		action = "addConeButton";
+		if (!ccom.ckDoAction(action)) {
+			 throw new EMTFail(String.format("%s failed", action));
+		}
+		
+		if (!sceneViewer.cmdUndo()) {
+			throw new EMTFail("sceneViewer.cmdUndo() failed");
+		}
+	}
 	
 	
 	/**
 	 * Test adjust position
+	 * @throws OurBlockError 
 	 * 
 	 */
-	private boolean test_simple(String test_tag) {
-		ControlOfPlacement cpla = new ControlOfPlacement(sceneViewer, "cpla");
-		ControlOfComponent ccom = new ControlOfComponent(sceneViewer, "ccom");
-		ControlOfColor ccol = new ControlOfColor(sceneViewer, "ccol");
+	private boolean test_adj_position(String test_tag) throws OurBlockError {
 
 		if (!ccom.ckDoAction("addBoxButton")) {
 			System.out.println("addBoxButton failed");
-			return false;
-		}
-		String action_pla = "adjposUpButton";
-		if (!cpla.ckDoAction(action_pla)) {
-			System.out.println(String.format("%s failed", action_pla));
 			return false;
 		}
 		String action = "addBallButton";
@@ -62,84 +256,51 @@ public class ExtendedModelerTest {
 			return false;
 		}
 		sceneViewer.repaint();
-		action_pla = "adjposUpButton";
-		if (!cpla.ckDoAction(action_pla)) {
-			System.out.println(String.format("%s failed", action_pla));
-			return false;
-		}
-		sceneViewer.repaint();
-		
-		String action_col = "adjcolorUpButton";
-		if (!ccol.ckDoAction(action_col)) {
-			System.out.println(String.format("%s failed", action_col));
-			return false;
-		}
-		action = "addConeButton";
-		if (!ccom.ckDoAction(action)) {
-			System.out.println(String.format("%s failed", action));
-			return false;
-		}
-		
-		if (!sceneViewer.cmdUndo()) {
-			System.out.println("sceneViewer.cmdUndo() failed");
-			return false;
-		}
-		
-		return true;
-	}
-	
-	
-	/**
-	 * Test adjust position
-	 * 
-	 */
-	private boolean test_adj_positione(String test_tag) {
-		ControlOfPlacement cpla = new ControlOfPlacement(sceneViewer, "cpla");
-		ControlOfComponent ccom = new ControlOfComponent(sceneViewer, "ccom");
-		ControlOfColor ccol = new ControlOfColor(sceneViewer, "ccol");
-
-		if (!ccom.ckDoAction("addBoxButton")) {
-			System.out.println("addBoxButton failed");
-			return false;
-		}
 		String action_pla = "adjposUpButton";
 		if (!cpla.ckDoAction(action_pla)) {
 			System.out.println(String.format("%s failed", action_pla));
 			return false;
 		}
-		String action = "addBallButton";
-		if (!ccom.ckDoAction(action)) {
-			System.out.println(String.format("%s failed", action));
-			return false;
-		}
-		sceneViewer.repaint();
-		action_pla = "adjposUpButton";
-		if (!cpla.ckDoAction(action_pla)) {
-			System.out.println(String.format("%s failed", action_pla));
-			return false;
-		}
-		sceneViewer.repaint();
-		
-		String action_col = "adjcolorUpButton";
-		if (!ccol.ckDoAction(action_col)) {
-			System.out.println(String.format("%s failed", action_col));
-			return false;
-		}
-		action = "addConeButton";
-		if (!ccom.ckDoAction(action)) {
-			System.out.println(String.format("%s failed", action));
-			return false;
-		}
-		
-		if (!sceneViewer.cmdUndo()) {
-			System.out.println("sceneViewer.cmdUndo() failed");
-			return false;
-		}
 		
 		return true;
 	}
 
-
+	
+	/**
+	 * Test short cut move
+	 * @return
+	 * @throws OurBlockError 
+	 */
+	private boolean test_move(String test_tag)  throws EMTFail, OurBlockError {
+		if (!ccom.ckDoAction("addBoxButton")) {
+			System.out.println("addBoxButton failed");
+			return false;
+		}
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		cpla = (ControlOfPlacement) sceneViewer.controls.getControl("placement");
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if (!cpla.MoveTo(xpos, ypos, zpos)) {
+			System.out.println(String.format("MoveTo(%g, %g, %g) failed", xpos, ypos, zpos));
+			return false;
+		}
+		xpos += inc;
+		ypos += inc;
+		zpos += inc;
+		return true;
+	}
+	
+	
+	@SuppressWarnings("unused")
 	private BlockCommand newCmd() {
 		return newCmd(null);
 	}

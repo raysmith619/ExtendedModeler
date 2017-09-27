@@ -24,8 +24,12 @@ public class OurBlockGroup {
 	
 	/**
 	 * Get unique block
+	 * null if none
 	 */
 	public OurBlock getBlock(int id) {
+		if (!blocks.containsKey(id))
+			return null;
+		
 		return blocks.get(id);
 	}
 
@@ -58,7 +62,8 @@ public class OurBlockGroup {
 	 * Copy, in case of subsequent modification
 	 */
 	public OurBlock putBlock(OurBlock cb) {
-		blocks.put(cb.iD, cb);		/// internal id differs from external id ???
+		OurBlock cb_copy = cb.copy();
+		blocks.put(cb.iD(), cb_copy);
 		newestStack.push(cb);
 		return cb;
 	}
@@ -70,7 +75,7 @@ public class OurBlockGroup {
 	public OurBlock getNewestBlock() {
 		while (!newestStack.isEmpty()) {
 			OurBlock cb = newestStack.peek();
-			if (blocks.containsKey(cb.iD)) {
+			if (blocks.containsKey(cb.iD())) {
 				return cb;
 			}
 			newestStack.pop();    // Remove if not displayed
@@ -84,7 +89,7 @@ public class OurBlockGroup {
 	public int getNewestId() {
 		OurBlock cb = getNewestBlock();
 		if (cb != null)
-			return cb.iD;
+			return cb.iD();
 		
 		return -1;
 	}

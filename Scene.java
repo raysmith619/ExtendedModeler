@@ -15,12 +15,12 @@ class Scene {
 
 
 
-	public Scene() {
+	public Scene() throws OurBlockError {
 		genBlocks = new OurBlockGroup();			// Generated
 		OurBlock.setGenerated(genBlocks);
 		OurBlock.setDefaults("box",
 				new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)),
-				new Color(1,0,1));
+				new Color(255, 0, 255));
 		displayedBlocks = new OurBlockGroup();		// Displayed
 	}
 
@@ -93,15 +93,15 @@ class Scene {
 		AlignedBox3D box,		// Bounding box
 		Color color
 	) {
-		OurBlock cb = OurBlock.getNewBlock(blockType, box, color);		
+		OurBlock cb = OurBlock.newBlock(blockType, box, color);		
 		if (cb == null || !cb.isOk()) {
 			System.out.println(String.format("Couldn't create block type '%s'",
 					blockType));
 			return 0;
 		}
 		genBlocks.putBlock(cb);		// Add to generated blocks
-		addBlock(bcmd, cb.iD);			// Add to displayed blocks
-		return cb.iD;
+		addBlock(bcmd, cb.iD());			// Add to displayed blocks
+		return cb.iD();
 	}
 
 	public int addColoredBox(
@@ -109,8 +109,8 @@ class Scene {
 		AlignedBox3D box,
 		Color color
 	) {
-		OurBlock cb = new ColoredBox(box, color);
-		return addBlock(bcmd, cb.iD);
+		OurBlock cb = OurBlock.newBlock("box", box, color);
+		return addBlock(bcmd, cb.iD());
 	}
 
 	public int getIndexOfIntersectedBox(
@@ -291,6 +291,7 @@ class Scene {
 				gl.glColor4f(cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha());
 			else
 				gl.glColor3f(cb.getRed(), cb.getGreen(), cb.getBlue());
+				///gl.glColor3f(1, 1, 1);
 			drawBlock( gl, cb, false, false, false );
 		}
 		if ( useAlphaBlending ) {

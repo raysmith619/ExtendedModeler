@@ -28,8 +28,9 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	/**
 	 * Setup Control of object adding
 	 * Hopefully a model / base class of other control dialogs
+	 * @throws OurBlockError 
 	 */
-	public void setup() {
+	public void setup()  {
 	}
 
 	/**
@@ -41,6 +42,7 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * Required control methods
 	 * Overridden, if appropriate
 	 * @param windowListener 
+	 * @throws OurBlockError 
 	 */
 	public void setControl(boolean on) {
 		if (SmTrace.tr("select")) {
@@ -70,8 +72,9 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	}
 	/**
 	 * Check for and act on action
+	 * @throws OurBlockError 
 	 */
-	public boolean ckDoAction(String action) {
+	public boolean ckDoAction(String action) throws OurBlockError {
 		return false;		// Default no action
 	}
 	
@@ -110,13 +113,15 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 
 	@Override
 	public void windowClosed(java.awt.event.WindowEvent arg0) {
-		System.out.println(String.format("ContorlOf.windowClosed(%s)", name));		
+		if (SmTrace.tr("control"))
+			System.out.println(String.format("ControlOf.windowClosed(%s)", name));		
 		
 	}
 
 	@Override
 	public void windowClosing(java.awt.event.WindowEvent evt) {
-		System.out.println(String.format("ContorlOf.windowClosing(%s)", name));
+		if (SmTrace.tr("control"))
+			System.out.println(String.format("ControlOf.windowClosing(%s)", name));
 		dispose();
 	}
 
