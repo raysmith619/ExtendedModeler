@@ -1,13 +1,21 @@
 package smTrace;
 
-//package BlockWorld;
+import java.io.BufferedWriter;
+
+/**
+ * Debug Tracing with logging support
+ */
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.HashMap;
@@ -16,13 +24,22 @@ import java.util.regex.Matcher;
 
 
 /**
- * Facilitate execution traceing / logging of execution.
+ * Facilitate execution tracing / logging of execution.
  * 
  * @author raysm
  *
  */
 public class SmTrace {
 	private static SmTrace traceObj;
+
+	/**
+	 * Logging Support
+	 */
+	private static String logName;		// Logfile name
+	private static BufferedWriter logWriter;
+	private static boolean logToScreen = true;		// true - log, additionally to STDOUT
+	private static boolean stdOutHasTs = false;		// true - timestamp prefix on STDOUT
+	
 	/**
 	 * Create private constructor
 	 */
@@ -74,6 +91,118 @@ public class SmTrace {
 		}
 	}
 
+	
+	/**
+	 * Setup Loging file name
+	 * Name without extension is appended with "_YYYYMMDD_HHMMSS.tlog"
+	 */
+	public static void setLogName(String logName) {
+		SmTrace.logName = logName;
+	}
+
+	/**
+	 * Set logging to stdout
+	 */
+	public static void setLogToStd(boolean on) {
+		logToScreen = on;
+	}
+
+	/**
+	 * Set stdout log to have timestamp prefix
+	 */
+	public static void setLogStdTs(boolean on) {
+		stdOutHasTs = on;
+	}
+	
+	
+	/**
+	 * Setup writing to log file ( via lg(string))
+	 * @throws IOException 
+	 */
+	public static BufferedWriter setupLogging() throws IOException {
+		if (logWriter != null)
+			return logWriter;
+		
+		if (logName == null) {
+			logName = "smt_";		// Default prefix
+		}
+		if (!new File(logName).isAbsolute()) {
+			logName = "log" + File.separator + logName;
+		}
+		File base_file = new File(logName);
+		File directory = base_file.getParentFile();
+		if (!directory.exists()) {
+		    try{
+		        directory.mkdir();
+		    } 
+		    catch(SecurityException se){
+		    	System.out.println(String.format(
+		    			"Can't create logging directory %s",
+		    			logName));
+		    	System.exit(1);
+		    }
+		    
+		    System.out.println(String.format("Logging Directory %s  created\n",
+		        		directory.getAbsolutePath()));  
+		}
+
+		if (!logName.contains(".")) {
+			String ts = getTs();
+			logName = logName + ts;
+			logName += ".smlog";		// Default extension
+		}
+		BufferedWriter bw = null;
+		FileWriter fw = null;
+		fw = new FileWriter(logName);
+		logWriter = new BufferedWriter(fw);
+		lg(String.format("Log File Name: %s", logName));
+		return bw;
+	}
+	
+	
+	/**
+	 * Log string to file, and optionally to console
+	 * @throws IOException 
+	 */
+	public static void lg(String msg) {
+		try {
+			setupLogging();
+		} catch (IOException e) {
+			System.out.println("IOException in lg setupLogging");
+			return;
+		}
+		String ts = getTs();
+		if (logToScreen) {
+			String prefix = "";
+			if (stdOutHasTs) {
+				prefix += " " + ts;
+			}
+			System.out.println(prefix + " " + msg);
+		}
+		if (logWriter == null) {
+			System.out.println("Can't write to log file");
+			return;
+		}
+		try {
+			logWriter.write(" " + ts + " " + msg  +"\n");
+			logWriter.flush();			// Force output
+		} catch (IOException e) {
+			System.out.println("IOException in lg write");
+		}
+	}
+
+	
+	/**
+	 * Get / generate time stamp
+	 * Format: YYYYMMDD_HHMMSS
+	 */
+	public static String getTs() {
+	    final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+	    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+	    String ts = sdf.format(timestamp);
+	    return ts;
+	}
+	
 	/**
 	 * Set up based on properties file
 	 * 

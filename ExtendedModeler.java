@@ -42,6 +42,10 @@ public class ExtendedModeler implements ActionListener {
 	SceneViewer sceneViewer;
 	private static ExtendedModeler em_base = null;		// Used internally		
 	private static ExtendedModelerTest emt = null;		// Set if testing setup
+	private static int mainArgIndex;					// current Arg index
+	private static String[] mainArgs;						// Args array
+	private static int mainArgsLength;					// Number of args
+	private static String logName ="emt_";				// Default log prefix
 
 	public enum AutoAddType {	// Auto add block type
 		NONE,					// none added
@@ -210,7 +214,7 @@ public class ExtendedModeler implements ActionListener {
 	//
 	private void createUI() {
 		if ( ! SwingUtilities.isEventDispatchThread() ) {
-			System.out.println(
+			SmTrace.lg(
 				"Warning: UI is not being created in the Event Dispatch Thread!");
 			assert false;
 		}
@@ -278,7 +282,7 @@ public class ExtendedModeler implements ActionListener {
 		try {
 			sceneViewer = new SceneViewer(caps, this, frame, smTrace);
 		} catch (OurBlockError e) {
-			System.out.println(String.format("SceneViewer error %s", e.getMessage()));
+			SmTrace.lg(String.format("SceneViewer error %s", e.getMessage()));
 			e.printStackTrace();
 			return;
 		}
@@ -348,7 +352,7 @@ public class ExtendedModeler implements ActionListener {
 	 */
 	public void setCheckBox(String name, boolean checked) {
 		if (SmTrace.tr("checkbox"))
-			System.out.println(String.format("setCheckBox(%s, %b)", name, checked));
+			SmTrace.lg(String.format("setCheckBox(%s, %b)", name, checked));
 		if (SmTrace.tr("select")) {
 			sceneViewer.selectPrint(String.format("modeler.setCheckBox(%s): selected;", name));
 		}
@@ -369,7 +373,7 @@ public class ExtendedModeler implements ActionListener {
 				break;
 			
 			default:
-				System.out.println(String.format("Unrecognized button name: %s - ignored", name));
+				SmTrace.lg(String.format("Unrecognized button name: %s - ignored", name));
 		}
 	}
 	
@@ -380,95 +384,165 @@ public class ExtendedModeler implements ActionListener {
 		int n_test_fail = 0;
 		boolean endAfterTest = false;	// true - end if testing
 		
-		String str = "";
+		String arg_str = "";
 		for (String arg : args) {
-			if (!str.equals(""))
-				str += " ";
-			str += arg;
+			if (!arg_str.equals(""))
+				arg_str += " ";
+			arg_str += arg;
 		}
-		System.out.println(String.format("Command Args: %s", str));
 		setupTest();
-		
-		for (int i = 0; i < args.length; i++) {
-			String arg = args[i];
-			if (arg.startsWith("--")) {
-				String opt = arg.substring(2).toLowerCase();
-				switch (opt) {
-					case "trace":
-						if (i < args.length-1) {
-							String trace_val = args[++i];
-							SmTrace.setFlags(trace_val);
-						} else {
-							SmTrace.setFlags("ALL");
-						}
-						break;
-						
-					case "test":
-						boolean res = false;		// Set true iff PASS
-						String test_name = "NONE";
-						n_test++;
-						if (i < args.length-1) {
-							test_name = args[++i];
-						} else {
-							test_name = "ALL";
-						}
-						res = testit(test_name);
-						if (res)
-							n_test_pass++;
-						else
-							n_test_fail++;
-						if (!res) {
-							System.out.println(String.format("Test %s FAILED", test_name));
-						}
-						break;
-					
-					case "testafterSetup":
-					case "tas":
-						int afterSetupDelay = Integer.parseInt(args[++i]);
-						emt.setAfterSetupDelay(afterSetupDelay);
-						break;
-						
-					case "testrun":
-					case "tr":
-						int nRun = Integer.parseInt(args[++i]);
-						emt.setNRun(nRun);
-						break;
-						
-					case "testrundelay":
-					case "trd":
-						int runDelay = Integer.parseInt(args[++i]);
-						emt.setRunDelay(runDelay);
-						break;
-						
-					case "testtest":
-					case "tt":
-						int nTestRun = Integer.parseInt(args[++i]);
-						emt.setNTestRun(nTestRun);
-						break;
-						
-					case "testtestdelay":
-					case "ttd":
-						int testDelay = Integer.parseInt(args[++i]);
-						emt.setTestDelay(testDelay);
-						break;
-					
-					case "testend":
-					case "te":
-						endAfterTest = true;		// Quit program after testing completed, else continues
-						break;
-						
-					default:
-						System.out.println(String.format("Unrecognized flag(%s)", opt));
-						break;
-				}
-			} else {
-				System.out.println(String.format("Unrecognized arg(%s)", arg));
-				break;
+		String helpStr = "Extended Modeler - a simple graphics tool\n"
+				+ "In general command line options are in the form:\n"
+				+ "    --option-name [option-value]\n"
+				+ "where:\n"
+				+ "    option-name is case insensitive and usually has a optional shortened form\n"
+				+ "    option-value is optional and depends on the option-name\n"
+				+ "If the option-value is absent - at end of line, or another --option-name follows,\n"
+				+ "then a default value is used.\n"
+				+ "Options may appear in any order\n"
+				+ "If an option appears multiple times, the most recent option\n"
+				+ "takes effect untill the next occurance of that option.\n"
+				+ "\n"
+				+ "Options:\n"
+				+ "    help(he)  - print this message and quit\n"
+				+ "    trace [str(value)] - values e.g. \"select\" ]\n"
+				+ "    test [str(test-tag)] - test to perform\n"
+				+ "    testafterSetup(tas) [float(delay)] - delay(seconds) after setup\n"
+				+ "    testrun(tr) [int(nrun)] - number of times to run test\n"
+				+ "    testrundelay(trd) [float(delay)] - delay before each run\n"
+				+ "    testtest(tt) [int(ntest)] - number of times torun each sub-test\n"
+				+ "    testtestdelay(ttd) [float(delay)] - delay(seconds) before each test\n"
+				+ "    testend(te)  - end run afer testing\n"
+				+ "\n";
+		/**
+		 * Run 3 passes to facilitate picking up all options including logging options
+		 * pass 1 - logging options
+		 * pass 2 - gather possibly late options
+		 * pass 3 - run tests
+		 */
+		mainArgs = args;
+		mainArgsLength = mainArgs.length;
+		/**
+		 * 3 pas
+		 */
+		SmTrace.setLogName(logName); 	// Setup default log name
+		for (int npass = 1; npass <= 2; npass++) {
+			if (npass == 2) {
+				smTrace.lg("setupTest()");
+				SmTrace.lg(String.format("Command Args: %s", arg_str));		// Logging options are set				
 			}
+			for (mainArgIndex = 0; mainArgIndex < mainArgsLength; mainArgIndex++) {
+				String arg = args[mainArgIndex];
+				if (arg.startsWith("--")) {
+					String str_val = "";
+					boolean boolean_val = false;
+					String opt = arg.substring(2).toLowerCase();
+					switch (opt) {
+						case "log":
+						case "lg":
+							str_val = strArg(logName);
+							if (npass > 1)
+								continue;
+							
+							SmTrace.setLogName(str_val);
+							break;
+							
+						case "logStdOut":
+						case "lgso":
+							boolean_val = booleanArg(true);
+							if (npass > 1)
+								continue;
+							SmTrace.setLogToStd(boolean_val);
+							break;
+							
+						case "logTsScreen":
+						case "lgts":
+							boolean_val = booleanArg(true);
+							if (npass > 1)
+								continue;
+							SmTrace.setLogStdTs(boolean_val);
+							break;
 					
+					
+						case "help":
+						case "h":
+							if (npass < 2)		// Let logging options be processed
+								continue;
+							
+							System.out.println(helpStr);
+							System.exit(0);
+							break;
+							
+						case "trace":
+							str_val = strArg("ALL");
+							SmTrace.setFlags(str_val);
+							break;
+							
+						case "test":
+							boolean res = false;		// Set true iff PASS
+							String test_name = strArg("ALL");
+							if (npass < 3)
+								continue;		// Skip till pass 3
+							
+							n_test++;
+							res = testit(test_name);
+							if (res)
+								n_test_pass++;
+							else
+								n_test_fail++;
+							if (!res) {
+								SmTrace.lg(String.format("Test %s FAILED", test_name));
+							}
+							break;
+						
+						case "testafterSetup":
+						case "tas":
+							float afterSetupDelay = floatArg(1.f);
+							emt.setAfterSetupDelay(afterSetupDelay);
+							break;
+							
+						case "testrun":
+						case "tr":
+							int nRun = intArg(1);
+							emt.setNRun(nRun);
+							break;
+							
+						case "testrundelay":
+						case "trd":
+							float runDelay = floatArg(1.f);
+							emt.setRunDelay(runDelay);
+							break;
+							
+						case "testtest":
+						case "tt":
+							int nTestRun = intArg(1);
+							emt.setNTestRun(nTestRun);
+							break;
+							
+						case "testtestdelay":
+						case "ttd":
+							float testDelay = floatArg(1f);
+							emt.setTestDelay(testDelay);
+							break;
+						
+						case "testend":
+						case "te":
+							endAfterTest = booleanArg(true);		// Quit program after testing completed, else continues
+							break;
+							
+						default:
+							SmTrace.lg(String.format("Unrecognized flag(%s)", opt));
+							break;
+					}
+				} else {
+					SmTrace.lg(String.format("Unrecognized arg(%s)", arg));
+					break;
+				}
+						
+			}
 		}
 		if (n_test > 0) {
-			System.out.println(String.format("End of %d test runs - %d PASSES  %d FAILS", n_test, n_test_pass, n_test_fail));
+			SmTrace.lg(String.format("End of %d test runs - %d PASSES  %d FAILS", n_test, n_test_pass, n_test_fail));
 			if (endAfterTest)
 				System.exit(0);
 		} else {
@@ -476,6 +550,74 @@ public class ExtendedModeler implements ActionListener {
 		}
 	}
 
+	/**
+	 * main argument value parsing
+	 * Checking for optionally missing values
+	 * Providing default values
+	 */
+
+	
+	/**
+	 * Get next arg if exists, or default
+	 * @param def - default value
+	 */
+	private static boolean booleanArg(boolean def) {
+		if (mainArgIndex >= mainArgsLength)
+			return def;		// No more args
+		if (mainArgs[mainArgIndex].startsWith("--"))
+			return def;		// Next is an option name
+		String val_str = mainArgs[mainArgIndex++];
+		boolean val = false;
+		if (val_str.equalsIgnoreCase("true")
+				|| val_str.equalsIgnoreCase("on")
+				|| val_str.equals("1"))
+			val = true;
+		return val;
+	}
+
+	
+	/**
+	 * Get next arg if exists, or default
+	 * @param def - default value
+	 */
+	private static float floatArg(float def) {
+		if (mainArgIndex >= mainArgsLength)
+			return def;		// No more args
+		if (mainArgs[mainArgIndex].startsWith("--"))
+			return def;		// Next is an option name
+		float val = Float.parseFloat(mainArgs[mainArgIndex++]);
+		return val;
+	}
+
+	
+	/**
+	 * Get next arg if exists, or default
+	 * @param def_str - default value
+	 */
+	private static int intArg(int def_int) {
+		if (mainArgIndex >= mainArgsLength)
+			return def_int;		// No more args
+		if (mainArgs[mainArgIndex].startsWith("--"))
+			return def_int;		// Next is an option name
+		int val_int = Integer.parseInt(mainArgs[mainArgIndex++]);
+		return val_int;
+	}
+
+	
+	/**
+	 * Get next arg if exists, or default
+	 * @param def_str - default value
+	 */
+	private static String strArg(String def_str) {
+		if (mainArgIndex >= mainArgsLength)
+			return def_str;		// No more args
+		if (mainArgs[mainArgIndex].startsWith("--"))
+			return def_str;		// Next is an option name
+		String val_str = mainArgs[mainArgIndex++];
+		return val_str;
+	}
+
+	
 	/**
 	 * Used to allow testing
 	 */
@@ -505,12 +647,12 @@ public class ExtendedModeler implements ActionListener {
 			try {
 				Thread.sleep(inctime);
 			} catch (InterruptedException e) {
-				System.out.println("setupModeler interupt exception");
+				SmTrace.lg("setupModeler interupt exception");
 				e.printStackTrace();
 			}
 			dur += inctime;
 			if (dur > maxtime) {
-				System.out.println(String.format("Wait time(%ld) exceeded, time=%ld", maxtime, dur));
+				SmTrace.lg(String.format("Wait time(%ld) exceeded, time=%ld", maxtime, dur));
 				break;
 			}
 		}
@@ -528,7 +670,7 @@ public class ExtendedModeler implements ActionListener {
 		if (emt != null)
 			return;				// Already setup
 		
-		System.out.println("setupTest()");
+		
 		emt = new ExtendedModelerTest();
 	}
 	
@@ -537,13 +679,13 @@ public class ExtendedModeler implements ActionListener {
 	 * @return true iff PASS
 	 */
 	public static boolean testit(String test_tag) {
-		System.out.println(String.format("testit(%s)", test_tag));
+		SmTrace.lg(String.format("testit(%s)", test_tag));
 		if (emt == null)
 			setupTest();
 		try {
 			return emt.test(test_tag);
 		} catch (OurBlockError e) {
-			System.out.println(String.format("Testing error in %s: %s",
+			SmTrace.lg(String.format("Testing error in %s: %s",
 					test_tag, e.getMessage()));
 			
 			e.printStackTrace();

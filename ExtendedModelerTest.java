@@ -1,12 +1,14 @@
+import smTrace.SmTrace;
+
 public class ExtendedModelerTest {
 	int nRun = 1;					// Number of test runs
 	boolean doSetup = true;			// Do general setup, false - test is responsible for setup
 	boolean initEachTest = false;	// true - initialize before each test
 	boolean initEachRun = false;	// true - initialize before each run
 	int nTestRun = 1;				// Number of times to repeat each test
-	int afterSetupDelay = 1000;		// After setup delay in msec
-	int testDelay = 10;				// Delay before test in msec
-	int runDelay = 100;				// Delay before run in msec
+	float afterSetupDelay = 1.f;	// After setup delay in sec
+	float testDelay = .010f;		// Delay before each test in sec
+	float runDelay = .10f;			// Delay before each run in sec
 	ExtendedModeler modeler;
 	SceneViewer sceneViewer;
 	ExtendedModeler setupModeler;
@@ -50,7 +52,7 @@ public class ExtendedModelerTest {
 	/**
 	 * Set delay before each run
 	 */
-	public void setRunDelay(int runDelay) {
+	public void setRunDelay(float runDelay) {
 		this.runDelay = runDelay;
 	}
 
@@ -58,7 +60,7 @@ public class ExtendedModelerTest {
 	/**
 	 * Set delay after setup
 	 */
-	public void setAfterSetupDelay(int delay) {
+	public void setAfterSetupDelay(float delay) {
 		this.afterSetupDelay = delay;
 	}
 
@@ -66,7 +68,7 @@ public class ExtendedModelerTest {
 	/**
 	 * Set delay before each test
 	 */
-	public void setTestDelay(int testDelay) {
+	public void setTestDelay(float testDelay) {
 		this.testDelay = testDelay;
 	}
 	
@@ -96,7 +98,7 @@ public class ExtendedModelerTest {
 	 */
 	public void setupTest(String test_tag) throws OurBlockError {
 		if (doSetup) {
-			System.out.println("Setup modeler");
+			SmTrace.lg("Setup modeler");
 			modeler = ExtendedModeler.setupModeler();
 			testDelay(afterSetupDelay);
 			sceneViewer = modeler.sceneViewer;
@@ -105,7 +107,7 @@ public class ExtendedModelerTest {
 			control_name = "component";
 			ctl = sceneViewer.controls.getControl(control_name);
 			if (ctl == null) {
-				System.out.println(String.format("Control %s not setup", control_name));
+				SmTrace.lg(String.format("Control %s not setup", control_name));
 				System.exit(1);
 			}
 			ccom = (ControlOfComponent) ctl;
@@ -113,7 +115,7 @@ public class ExtendedModelerTest {
 			control_name = "placement";
 			ctl = sceneViewer.controls.getControl(control_name);
 			if (ctl == null) {
-				System.out.println(String.format("Control %s not setup", control_name));
+				SmTrace.lg(String.format("Control %s not setup", control_name));
 				System.exit(1);
 			}
 			cpla = (ControlOfPlacement) ctl;
@@ -132,7 +134,7 @@ public class ExtendedModelerTest {
 		boolean res = true;
 		try {
 			for (int i = 0; i < nRun; i++) {
-				System.out.println(String.format("Run: %d", i+1));
+				SmTrace.lg(String.format("Run: %d", i+1));
 				if (i == 0 || initEachRun) {
 					setupTest(test_tag);
 				}
@@ -150,11 +152,11 @@ public class ExtendedModelerTest {
 	
 	/**
 	 * Delay before continuing
-	 * @param dly - delay in msec
+	 * @param dly - delay in sec
 	 */
-	public void testDelay(int dly) {
+	public void testDelay(float dly) {
 		try {
-			Thread.sleep(dly);
+			Thread.sleep((long) (1000 * dly));
 		} catch (InterruptedException e) {
 		}
 	}
@@ -166,7 +168,7 @@ public class ExtendedModelerTest {
 	 */
 	public void testOne(String test_tag) throws EMTFail, OurBlockError {
 		for (int j = 0; j < nTestRun; j++) {
-			System.out.println(String.format("Test: %d", j+1));
+			SmTrace.lg(String.format("Test: %d", j+1));
 			if (j == 2 || initEachTest) {	// First setup is done for run
 				setupTest(test_tag);
 			}
@@ -193,10 +195,10 @@ public class ExtendedModelerTest {
 					break;
 					
 				default:
-					System.out.println(String.format("Unrecognized test(%s)", test_tag));
+					SmTrace.lg(String.format("Unrecognized test(%s)", test_tag));
 					break;
 			}
-			System.out.println(String.format("test %d END", j+1));
+			SmTrace.lg(String.format("test %d END", j+1));
 		}
 	}
 	
@@ -247,18 +249,18 @@ public class ExtendedModelerTest {
 	private boolean test_adj_position(String test_tag) throws OurBlockError {
 
 		if (!ccom.ckDoAction("addBoxButton")) {
-			System.out.println("addBoxButton failed");
+			SmTrace.lg("addBoxButton failed");
 			return false;
 		}
 		String action = "addBallButton";
 		if (!ccom.ckDoAction(action)) {
-			System.out.println(String.format("%s failed", action));
+			SmTrace.lg(String.format("%s failed", action));
 			return false;
 		}
 		sceneViewer.repaint();
 		String action_pla = "adjposUpButton";
 		if (!cpla.ckDoAction(action_pla)) {
-			System.out.println(String.format("%s failed", action_pla));
+			SmTrace.lg(String.format("%s failed", action_pla));
 			return false;
 		}
 		
@@ -273,7 +275,7 @@ public class ExtendedModelerTest {
 	 */
 	private boolean test_move(String test_tag)  throws EMTFail, OurBlockError {
 		if (!ccom.ckDoAction("addBoxButton")) {
-			System.out.println("addBoxButton failed");
+			SmTrace.lg("addBoxButton failed");
 			return false;
 		}
 		try {
@@ -290,7 +292,7 @@ public class ExtendedModelerTest {
 			e.printStackTrace();
 		}
 		if (!cpla.MoveTo(xpos, ypos, zpos)) {
-			System.out.println(String.format("MoveTo(%g, %g, %g) failed", xpos, ypos, zpos));
+			SmTrace.lg(String.format("MoveTo(%g, %g, %g) failed", xpos, ypos, zpos));
 			return false;
 		}
 		xpos += inc;
