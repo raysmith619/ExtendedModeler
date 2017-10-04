@@ -130,7 +130,7 @@ public class BlockSelect {
 	/**
 	 * Select description
 	 */
-	public String toString(OurBlockGroup group) {
+	public String toString(EMBlockGroup group) {
 		String str = "";
 		for (int id : selected) {
 			if (str != "")

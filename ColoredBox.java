@@ -3,7 +3,7 @@ import java.awt.Color;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 
-public class ColoredBox extends OurBlockBase {
+public class ColoredBox extends EMBlockBase {
 
 	public boolean intersects(
 		Ray3D ray, // input
@@ -27,8 +27,8 @@ public class ColoredBox extends OurBlockBase {
 	 * Copy
 	 * "Deep-enough" copy to protect against subsequent modifications
 	 */
-	public OurBlockBase copy() {
-		OurBlockBase cb = new ColoredBox(this.box, this.color);
+	public EMBlockBase copy() {
+		EMBlockBase cb = new ColoredBox(this.box, this.color);
 		cb = cb.copy();
 		return cb;
 	}

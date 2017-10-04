@@ -7,28 +7,28 @@ import com.jogamp.opengl.GL2;
 import smTrace.SmTrace;
 
 class Scene {
-	OurBlockGroup genBlocks;						// Generated
-	OurBlockGroup displayedBlocks;					// Displayed
+	EMBlockGroup genBlocks;						// Generated
+	EMBlockGroup displayedBlocks;					// Displayed
 	AlignedBox3D boundingBoxOfScene = new AlignedBox3D();
 	boolean isBoundingBoxOfSceneDirty = false;
 
 
 
 
-	public Scene() throws OurBlockError {
-		genBlocks = new OurBlockGroup();			// Generated
-		OurBlock.setGenerated(genBlocks);
-		OurBlock.setDefaults("box",
+	public Scene() throws EMBlockError {
+		genBlocks = new EMBlockGroup();			// Generated
+		EMBlock.setGenerated(genBlocks);
+		EMBlock.setDefaults("box",
 				new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)),
 				new Color(255, 0, 255));
-		displayedBlocks = new OurBlockGroup();		// Displayed
+		displayedBlocks = new EMBlockGroup();		// Displayed
 	}
 
 	public AlignedBox3D getBoundingBoxOfScene() {
 		if ( isBoundingBoxOfSceneDirty ) {
 			boundingBoxOfScene.clear();
 			for ( int id : displayedBlocks.getIds()) {
-				OurBlock block = displayedBlocks.getBlock(id);
+				EMBlock block = displayedBlocks.getBlock(id);
 				boundingBoxOfScene.bound(block.boundingBox());
 			}
 			isBoundingBoxOfSceneDirty = false;
@@ -41,7 +41,7 @@ class Scene {
 	 * Add block from generated to displayed scene
 	 */
 	public void insertBlock(int id) {
-		OurBlock cb = genBlocks.getBlock(id);
+		EMBlock cb = genBlocks.getBlock(id);
 		if (cb != null) {
 			displayedBlocks.putBlock(cb);
 			isBoundingBoxOfSceneDirty = true;
@@ -54,7 +54,7 @@ class Scene {
 	 * May be modified versions of blocks in genBlocks
 	 * May replace element of the same id 
 	 */
-	public void insertBlock(OurBlock cb) {
+	public void insertBlock(EMBlock cb) {
 		if (cb != null) {
 			displayedBlocks.putBlock(cb);
 			isBoundingBoxOfSceneDirty = true;
@@ -67,7 +67,7 @@ class Scene {
 	 * May be modified versions of blocks in genBlocks
 	 * May replace element of the same id 
 	 */
-	public void insertBlocks(OurBlockGroup blocks) {
+	public void insertBlocks(EMBlockGroup blocks) {
 		for (int  id : blocks.getIds()) {
 			insertBlock(blocks.getBlock(id));
 		}
@@ -79,8 +79,8 @@ class Scene {
 	 */
 	/***
 	public int  addBlock(
-		BlockCommand bcmd,
-		OurBlock cb) {
+		EMBCommand bcmd,
+		EMBlock cb) {
 		addBlock(cb.iD);
 		bcmd.addBlock(cb);
 		return cb.iD;
@@ -88,14 +88,14 @@ class Scene {
 ***/	
 	
 	public int addBlock(
-		BlockCommand bcmd,		// Current command
+		EMBCommand bcmd,		// Current command
 		String blockType, 		// Block type
 		AlignedBox3D box,		// Bounding box
 		Color color
 	) {
-		OurBlock cb = OurBlock.newBlock(blockType, box, color);		
+		EMBlock cb = EMBlock.newBlock(blockType, box, color);		
 		if (cb == null || !cb.isOk()) {
-			System.out.println(String.format("Couldn't create block type '%s'",
+			SmTrace.lg(String.format("Couldn't create block type '%s'",
 					blockType));
 			return 0;
 		}
@@ -105,11 +105,11 @@ class Scene {
 	}
 
 	public int addColoredBox(
-		BlockCommand bcmd,
+		EMBCommand bcmd,
 		AlignedBox3D box,
 		Color color
 	) {
-		OurBlock cb = OurBlock.newBlock("box", box, color);
+		EMBlock cb = EMBlock.newBlock("box", box, color);
 		return addBlock(bcmd, cb.iD());
 	}
 
@@ -128,9 +128,9 @@ class Scene {
 		float candidateDistance;
 
 		for (int id : displayedBlocks.getIds())  {
-			OurBlock block = displayedBlocks.getBlock(id);
+			EMBlock block = displayedBlocks.getBlock(id);
 			if (block == null) {
-				System.out.println(String.format("getIndexOfIntersectedBox: No display block id:%d", id));
+				SmTrace.lg(String.format("getIndexOfIntersectedBox: No display block id:%d", id));
 				continue;
 			}
 
@@ -155,12 +155,12 @@ class Scene {
 	}
 
 
-	public OurBlock getBlock( int id ) {
+	public EMBlock getBlock( int id ) {
 		return genBlocks.getBlock(id);
 	}
 
 	public AlignedBox3D getBox( int index ) {
-		OurBlock cb = getBlock(index);
+		EMBlock cb = getBlock(index);
 		if (cb == null)
 			return null;
 		return cb.getBox();
@@ -175,7 +175,7 @@ class Scene {
 	}
 
 	public boolean getSelectionStateOfBox( int id ) {
-		OurBlock cb = displayedBlocks.getBlock(id);
+		EMBlock cb = displayedBlocks.getBlock(id);
 		if (cb == null)
 			return false;
 		
@@ -183,14 +183,14 @@ class Scene {
 	}
 	
 	public void setSelectionStateOfBox( int id, boolean state ) {
-		OurBlock cb = displayedBlocks.getBlock(id);
+		EMBlock cb = displayedBlocks.getBlock(id);
 		if (cb == null)
 			return;
 		
 		cb.setSelected(state);
 	}
 	public void toggleSelectionStateOfBox( int id ) {
-		OurBlock cb = displayedBlocks.getBlock(id);
+		EMBlock cb = displayedBlocks.getBlock(id);
 		if (cb == null)
 			return;
 		
@@ -198,13 +198,13 @@ class Scene {
 	}
 
 	public void setColorOfBlock( int id, float r, float g, float b ) {
-		OurBlock cb = displayedBlocks.getBlock(id);
+		EMBlock cb = displayedBlocks.getBlock(id);
 		if (cb != null)
 			cb.setColor(r,g,b);
 	}
 
 	public void translateBlock( int id, Vector3D translation ) {
-		OurBlock cb = displayedBlocks.getBlock(id);
+		EMBlock cb = displayedBlocks.getBlock(id);
 		if (cb != null) {
 			cb.translate(translation);
 			isBoundingBoxOfSceneDirty = true;
@@ -214,7 +214,7 @@ class Scene {
 	public void resizeBlock(
 		int id, int indexOfCornerToResize, Vector3D translation
 	) {
-		OurBlock cb = displayedBlocks.getBlock(id);
+		EMBlock cb = displayedBlocks.getBlock(id);
 		if (cb != null) {
 			cb.resize(indexOfCornerToResize, translation);
 			isBoundingBoxOfSceneDirty = true;
@@ -222,7 +222,7 @@ class Scene {
 	}
 
 	public void deleteBlock( int id ) {
-		OurBlock cb = displayedBlocks.getBlock(id);
+		EMBlock cb = displayedBlocks.getBlock(id);
 		if (cb != null) {
 			displayedBlocks.removeBlock(id);
 			isBoundingBoxOfSceneDirty = true;
@@ -248,7 +248,7 @@ class Scene {
 	/**
 	 * Get block, given index
 	 */
-	public OurBlock cb(int id) {
+	public EMBlock cb(int id) {
 		return genBlocks.getBlock(id);
 	}
 
@@ -261,7 +261,7 @@ class Scene {
 
 	static public void drawBlock(
 		GL2 gl,
-		OurBlock block,
+		EMBlock block,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
@@ -282,9 +282,9 @@ class Scene {
 			gl.glEnable( GL.GL_BLEND );
 		}
 		for (int id : displayedBlocks.getIds()) {
-			OurBlock cb = displayedBlocks.getBlock(id);
+			EMBlock cb = displayedBlocks.getBlock(id);
 			if (cb == null) {
-				System.out.println(String.format("drawScene: No display block for id:%d",id));
+				SmTrace.lg(String.format("drawScene: No display block for id:%d",id));
 				continue;
 			}
 			if ( useAlphaBlending )
@@ -300,18 +300,18 @@ class Scene {
 			gl.glEnable(GL.GL_DEPTH_TEST);
 		}
 		for ( int id : displayedBlocks.getIds()) {
-			OurBlock cb = displayedBlocks.getBlock(id);
+			EMBlock cb = displayedBlocks.getBlock(id);
 			if (cb == null) {
-				System.out.println(String.format("drawScene: No display block for id:%d", id));
+				SmTrace.lg(String.format("drawScene: No display block for id:%d", id));
 				continue;
 			}
-			if (SmTrace.tr("ball"))
+			if (true)
 				if (cb.blockType().equals("ball")) {
-					System.out.println(String.format("ball at[%d]", id));
+					SmTrace.lg(String.format("ball at[%d]", id), "ball");
 					if (cb.isSelected()) {
-						System.out.println("ball selected");
+						SmTrace.lg("ball selected", "ball");
 					} else {
-						System.out.println("ball not selected");
+						SmTrace.lg("ball not selected", "ball");
 					}
 				}
 			if ( cb.isSelected() && indexOfHilitedBox == id )
@@ -331,7 +331,7 @@ class Scene {
 			ColoredBox.drawBox( gl, box, false, true, false );
 	}
 
-	public int addBlock(BlockCommand bcmd, int id) {
+	public int addBlock(EMBCommand bcmd, int id) {
 		return bcmd.addBlock(id);
 		
 	}

@@ -81,6 +81,27 @@ public class AlignedBox3D {
 	public AlignedBox3D getBox() {
 		return this;
 	}
+
+	
+	/**
+	 * Compare box 
+	 * @param p
+	 * @return -1, 0, 1
+	 */
+	public int cmp(AlignedBox3D box2) {
+		
+		int p0cmp = p0.cmp(box2.p0);
+		if (p0cmp != 0)
+			return p0cmp;
+		
+		int p1cmp = p1.cmp(box2.p1);
+		if (p1cmp != 0)
+			return p1cmp;
+		
+		return 0;
+
+	}
+	
 	
 	public boolean contains( Point3D p ) {
 		return !isEmpty

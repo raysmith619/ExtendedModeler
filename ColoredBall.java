@@ -5,7 +5,7 @@ import com.jogamp.opengl.GL2;
 
 import com.jogamp.opengl.util.gl2.GLUT;
 
-public class ColoredBall extends OurBlockBase {
+public class ColoredBall extends EMBlockBase {
 	private boolean isOk = false;	// Set OK upon successful construction
 
 	public boolean intersects(
@@ -122,7 +122,7 @@ public class ColoredBall extends OurBlockBase {
 		}
 	}
 	@Override
-	public OurBlockBase copy() {
+	public EMBlockBase copy() {
 		super.copy();
 		return null;
 	}

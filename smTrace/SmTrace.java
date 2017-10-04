@@ -11,7 +11,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
@@ -165,6 +164,44 @@ public class SmTrace {
 	 * @throws IOException 
 	 */
 	public static void lg(String msg) {
+		lg(msg, logToScreen);
+	}
+	
+	
+	/**
+	 * Log string to file, and optionally to console
+	 * @param msg - message to output
+	 * @param trace_flag - when to trace
+	 * @param levels - level to trace - default  1
+	 * @throws IOException 
+	 */
+	public static void lg(String msg, String trace_flag, int...levels) {
+		lg(msg, SmTrace.tr(trace_flag, levels));
+	}
+	
+	
+	/**
+	 * Log string to file (based on second flag),
+	 * and optionally to console
+	 * @param msg - message to output
+	 * @param trace_flag - when to trace
+	 * @param levels - level to trace - default  1
+	 * @param 
+	 * @throws IOException 
+	 */
+	public static void lg(String msg, String trace_flag, String trace_flag_2, int...levels) {
+		if (SmTrace.tr(trace_flag_2)) {
+			lg(msg, SmTrace.tr(trace_flag, levels));
+		}
+	}
+	
+	
+	/**
+	 * Log string to file, and optionally to console
+	 * STDOUT display is based on trace info
+	 * @throws IOException 
+	 */
+	public static void lg(String msg, boolean to_stdout) {
 		try {
 			setupLogging();
 		} catch (IOException e) {
@@ -172,7 +209,7 @@ public class SmTrace {
 			return;
 		}
 		String ts = getTs();
-		if (logToScreen) {
+		if (to_stdout) {
 			String prefix = "";
 			if (stdOutHasTs) {
 				prefix += " " + ts;

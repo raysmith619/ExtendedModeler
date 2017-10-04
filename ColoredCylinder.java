@@ -5,7 +5,7 @@ import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.glu.GLUquadric;
 import com.jogamp.opengl.glu.GLU;
 
-public class ColoredCylinder extends OurBlockBase {
+public class ColoredCylinder extends EMBlockBase {
 
 
 	public String blockType() {

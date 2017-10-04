@@ -49,20 +49,16 @@ public class ControlOfColor extends ControlOf {
 	/**
 	 * Setup Control of object adding
 	 * Hopefully a model / base class of other control dialogs
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
 	public void setup() {
-		if(SmTrace.tr("setup"))
-			System.out.println("ControlOfColor.setup()");
+		SmTrace.lg("ControlOfColor.setup()", "setup");
 		if (controlActive)
 			return;					// Already present
 		
-		if(SmTrace.tr("setup"))
-			System.out.println("ControlOfColor.setup()-2c");
+		SmTrace.lg("ControlOfColor.setup()-2c", "setup");
 		setTitle("Adjust/Report Color");
-		if (SmTrace.tr("select")) {
-			scene.selectPrint("ControlOfColor.setup");
-		}
+		scene.selectPrint("ControlOfColor.setup".concat("select"));
 		JPanel colorPanel = new JPanel(new GridLayout(0, 1));
 		add(colorPanel);
 		pack();
@@ -101,20 +97,20 @@ public class ControlOfColor extends ControlOf {
 	/**
 	 * Digital setting
 	 * @param panel
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
 	public void addDigital(JPanel panel) {
-		System.out.println("addDigital");
+		SmTrace.lg("addDigital");
 		JPanel colorTo_panel = new JPanel();
 		panel.add(colorTo_panel);
 		pack();
 		
-		OurBlock cb = scene.getSelectedBlock();
+		EMBlock cb = scene.getSelectedBlock();
 		if (cb == null) {
 			AlignedBox3D box = new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1));
 			Color color = new Color(255,255,255);
-			System.out.println(String.format("addDigital: red=%d", color.getRed()));
-			cb = OurBlock.newBlock("box", box, color);
+			SmTrace.lg(String.format("addDigital: red=%d", color.getRed()));
+			cb = EMBlock.newBlock("box", box, color);
 		}
 		colorRedField = new JTextField(String.format("%.2f", cb.getRed()));
 		colorRedField.setActionCommand("ENTER");
@@ -194,7 +190,7 @@ public class ControlOfColor extends ControlOf {
 	 * @param panel
 	 */
 	public void addMap(JPanel panel) {
-		System.out.println("addMap - adding color map");
+		SmTrace.lg("addMap - adding color map");
 		JPanel colorMapPanel = new JPanel();
 		colorMapPanel.setBorder(BorderFactory.createLineBorder(Color.black));
 		panel.add(colorMapPanel);
@@ -211,9 +207,9 @@ public class ControlOfColor extends ControlOf {
 	 * Adjust by increments in direction 1- positive, -1 negative
 	 * 
 	 * @param direction
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	private void adjustColor(BlockCommand bcmd, int direction) throws OurBlockError {
+	private void adjustColor(EMBCommand bcmd, int direction) throws EMBlockError {
 		if (scene.getSelected() == null)
 			return;
 		
@@ -243,7 +239,7 @@ public class ControlOfColor extends ControlOf {
 			adjcolor_blueval *= -1;
 			adjcolor_alphaval *= -1;
 		}
-		OurBlock cb = scene.getSelectedBlock();
+		EMBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;
 		
@@ -252,10 +248,10 @@ public class ControlOfColor extends ControlOf {
 			bcmd.addBlock(cb);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
 		}
 		bcmd.addPrevBlock(cb);				//Save copy for undo/redo
-		OurBlock cb1 = cb.duplicate();		// New or modified
+		EMBlock cb1 = cb.duplicate();		// New or modified
 
 		cb1.colorAdj(adjcolor_redval, adjcolor_greenval, adjcolor_blueval, adjcolor_alphaval);
-		System.out.println(
+		SmTrace.lg(
 				String.format("adjust to red=%.2f green=%.2f blue=%.2f  alpha=%.2f",
 						cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha()));
 		bcmd.addBlock(cb1);					// Add New / modified block
@@ -266,7 +262,7 @@ public class ControlOfColor extends ControlOf {
 	 * Adjust control based on selection
 	 */
 	public void adjustControls() {
-		OurBlock cb = scene.getSelectedBlock();
+		EMBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -286,7 +282,7 @@ public class ControlOfColor extends ControlOf {
 		
 		
 		
-	private void colorToColor(BlockCommand bcmd) throws OurBlockError {
+	private void colorToColor(EMBCommand bcmd) throws EMBlockError {
 		if (scene.getSelected() == null)
 			return;
 		
@@ -306,24 +302,24 @@ public class ControlOfColor extends ControlOf {
 			blueval = Float.valueOf(text);
 		}
 
-		OurBlock cb = scene.getSelectedBlock();
+		EMBlock cb = scene.getSelectedBlock();
 		Color new_color = new Color(redval, greenval, blueval);
 		if (!color_move_duplicate) {
 			cb = cb.duplicate();
 			scene.addBlock(bcmd, cb);
 		}
 		cb.setColor(new_color);
-		System.out.println(String.format("move to x=%.2f y=%.2f z=%.2f", redval, greenval, blueval));
+		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f", redval, greenval, blueval));
 		scene.repaint();
 	}
 
 	
-	private void colorToPreviousColor(BlockCommand bcmd) throws OurBlockError {
-		OurBlock cb_sel = scene.getSelectedBlock();
+	private void colorToPreviousColor(EMBCommand bcmd) throws EMBlockError {
+		EMBlock cb_sel = scene.getSelectedBlock();
 		if (cb_sel == null)
 			return;
 
-		OurBlock cb_prev = scene.getPrevSelectedBlock();
+		EMBlock cb_prev = scene.getPrevSelectedBlock();
 		
 		if (cb_prev == null)
 			return;
@@ -334,7 +330,7 @@ public class ControlOfColor extends ControlOf {
 			scene.addBlock(bcmd, cb_sel);
 		}
 		cb_sel.setColor(new_color);
-		System.out.println(String.format("move to x=%.2f y=%.2f z=%.2f",
+		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f",
 								cb_sel.getRed(), cb_sel.getGreen(), cb_sel.getBlue()));
 		scene.repaint();
 	}
@@ -343,10 +339,10 @@ public class ControlOfColor extends ControlOf {
 
 	/**
 	 * Check for and act on action
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public boolean ckDoAction(String action) throws OurBlockError {
-		BlockCommand bcmd;
+	public boolean ckDoAction(String action) throws EMBlockError {
+		EMBCommand bcmd;
 		try {
 			bcmd = new BlkCmdAdd(action);
 		} catch (Exception e) {
@@ -384,7 +380,7 @@ public class ControlOfColor extends ControlOf {
 				break;
 				
 				default:
-					System.out.println(String.format("Unrecognized color command(%s)", action));
+					SmTrace.lg(String.format("Unrecognized color command(%s)", action));
 					return false;
 		}
 		return bcmd.doCmd();
@@ -394,10 +390,10 @@ public class ControlOfColor extends ControlOf {
 	
 	/**
 	 * Select color from color map
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public void colorMapSelect(BlockCommand bcmd) throws OurBlockError {
-		OurBlock cb = scene.getSelectedBlock();
+	public void colorMapSelect(EMBCommand bcmd) throws EMBlockError {
+		EMBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;			// None selected
 		
@@ -412,13 +408,13 @@ public class ControlOfColor extends ControlOf {
         if (c == null)
         	return;
         
-       System.out.println(String.format("Chose color: %s", c));
+       SmTrace.lg(String.format("Chose color: %s", c));
        
 		if (!color_move_duplicate) {
 			bcmd.addBlock(cb);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
 		}
 		bcmd.addPrevBlock(cb);				//Save copy for undo/redo
-		OurBlock cb1 = cb.duplicate();		// New or modified
+		EMBlock cb1 = cb.duplicate();		// New or modified
 		cb1.setColor(c);
 		bcmd.addBlock(cb1);					// Add New / modified block
 		bcmd.setSelect(new BlockSelect(cb1.iD()));

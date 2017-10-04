@@ -41,7 +41,7 @@ public class ControlsOfView {
 	
 	/**
 	 * Add/Remove Control/Display
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
 	public void setControl(String controlName, boolean on) {
 		if (controlh == null)
@@ -62,15 +62,11 @@ public class ControlsOfView {
 		
 		scene.setCheckBox(controlName, on);		// Have check box reflect setting
 		if (on) {
-			if (SmTrace.tr("select")) {
-				int bindex = scene.getSelectedBlockIndex();
-				System.out.println(String.format("ControlsOf.setControl(%s): before - selected(%d)",controlName, bindex));
-			}
+			int bindex = scene.getSelectedBlockIndex();
+			SmTrace.lg(String.format("ControlsOf.setControl(%s): before - selected(%d)",controlName, bindex), "controls", "controls");
 			placeControl(controlName);
-			if (SmTrace.tr("select")) {
-				int bindex2 = scene.getSelectedBlockIndex();
-				System.out.println(String.format("ControlsOf.setControl(%s): after - selected(%d)",controlName, bindex2));
-			}	
+			int bindex2 = scene.getSelectedBlockIndex();
+			SmTrace.lg(String.format("ControlsOf.setControl(%s): after - selected(%d)",controlName, bindex2), "controls", "controls");
 		}
 	}
 	
@@ -82,9 +78,9 @@ public class ControlsOfView {
 	 * Iterates through controls, checking active
 	 * @return - true iff action performed
 	 * @param action - action performed
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public boolean ckDoAction(String action) throws OurBlockError {
+	public boolean ckDoAction(String action) throws EMBlockError {
 		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 			ControlEntry control_entry = entry.getValue();
 			if (control_entry.active)
@@ -114,7 +110,7 @@ public class ControlsOfView {
 				break;
 				
 			default:
-				System.out.println(
+				SmTrace.lg(
 						String.format("Unrecognized control(%s) - ignored", controlName));
 				return;
 		}
@@ -143,9 +139,9 @@ public class ControlsOfView {
 	/**
 	 * Clear controls entry's active - Currently does not dispose
 	 * @param controlName
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	void clearControl(String controlName) throws OurBlockError {
+	void clearControl(String controlName) throws EMBlockError {
 		if (controlh.containsKey(controlName)) {
 			setControl(controlName, false);
 		}
@@ -155,9 +151,9 @@ public class ControlsOfView {
 	/**
 	 * Clear controls entry's active - Currently does not dispose
 	 * @param controlName
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	void clearControls() throws OurBlockError {
+	void clearControls() throws EMBlockError {
 		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 			String controlName = entry.getKey();
 			clearControl(controlName);

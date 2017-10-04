@@ -41,7 +41,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	}
 	GLCapabilities caps;			// Main set of capabilities
 	ExtendedModeler modeler;		// Main class - currently only for check button access
-	BlockCommandManager commandManager;		// Command do,redo... control
+	EMBCommandManager commandManager;		// Command do,redo... control
 	JFrame frame;					// Access to main frame
 	ControlMap controlMap;			// Control Map window/frame
 	SmTrace smTrace; 				// Trace support
@@ -99,7 +99,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		ExtendedModeler modeler,
 		JFrame frame,
 		SmTrace trace)
-		throws OurBlockError {
+		throws EMBlockError {
 
 		super(caps);
 		scene = new Scene();
@@ -107,7 +107,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		this.modeler = modeler;
 		this.frame = frame;
 		this.smTrace = trace; // Passed in
-		this.commandManager = new BlockCommandManager(this);
+		this.commandManager = new EMBCommandManager(this);
 		addGLEventListener(this);
 
 		addMouseListener(this);
@@ -122,7 +122,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		radialMenu.setItemLabelAndID(5, "Set Color to Blue", COMMAND_COLOR_BLUE);
 		radialMenu.setItemLabelAndID(7, "Delete Box", COMMAND_DELETE);
 
-		camera.setSceneRadius((float) Math.max(5 * OurBlockBase.DEFAULT_SIZE,
+		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
 				scene.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
 		camera.reset();
 
@@ -141,7 +141,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		return new Dimension(512, 512);
 	}
 
-	public OurBlock getPrevSelectedBlock() {
+	public EMBlock getPrevSelectedBlock() {
 		return commandManager.getPrevSelectedBlock();
 		
 	}
@@ -157,7 +157,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	/**
 	 * Get currently selected block
 	 */
-	public OurBlock getSelectedBlock() {
+	public EMBlock getSelectedBlock() {
 		return commandManager.getSelectedBlock();
 	}
 	
@@ -184,7 +184,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Set/Restore selection
 	 */
 	public void pushSelected(BlockSelect select) {
-		System.out.println(String.format("pushSelected"));
+		SmTrace.lg(String.format("pushSelected"));
 		setSelected(select);
 	}
 
@@ -192,7 +192,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Set selection
 	 */
 	public void setSelected(BlockSelect select) {
-		System.out.println(String.format("setSelected"));
+		SmTrace.lg(String.format("setSelected"));
 		commandManager.setSelected(select);
 	}
 
@@ -211,7 +211,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 *  empty select if empty
 	 */
 	public BlockSelect popSelected() {
-		System.out.println(String.format("popSelected"));
+		SmTrace.lg(String.format("popSelected"));
 		return getSelected();
 	}
 	
@@ -222,7 +222,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		BlockSelect top = popSelected();
 		
 		int id = top.getIndex();
-		System.out.println(String.format("popSelected = %d", id));
+		SmTrace.lg(String.format("popSelected = %d", id));
 		return id;
 	}
 	
@@ -279,7 +279,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * @param id - id to add
 	 * @param keep - true keep any already selected, false - drop them
 	 */
-	public int selectAdd(BlockCommand bcmd, int id, boolean keep) {
+	public int selectAdd(EMBCommand bcmd, int id, boolean keep) {
 		if (!keep) {
 			bcmd.newSelect = new BlockSelect();
 		}
@@ -330,20 +330,20 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		if (tag == null) {
 			tag = "select";
 		}
-		BlockCommand currentCmd = commandManager.currentCmd;
+		EMBCommand currentCmd = commandManager.currentCmd;
 		if (currentCmd == null ) {
-			System.out.println(String.format("%s select: NONE", tag));
+			SmTrace.lg(String.format("%s select: NONE", tag));
 			return;
 		}
 		String str =  currentCmd.newSelect.toString(scene.genBlocks);
-		System.out.println(String.format("%s select:%s", tag, str));
+		SmTrace.lg(String.format("%s select:%s", tag, str));
 		
 			/**
 			 * Select stack
 			 */
 		String str2 = "";
 		if (selectStack.isEmpty() ) {
-			System.out.println(String.format("%s selectStack: Empty", tag));
+			SmTrace.lg(String.format("%s selectStack: Empty", tag));
 			return;
 		}
 		Iterator<BlockSelect> sel_itr = selectStack.iterator();
@@ -354,7 +354,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				str2 += "; ";
 			str2 += sel.toString(scene.genBlocks);
 		}
-		System.out.println(String.format("%s selectStack: %s", tag, str2));
+		SmTrace.lg(String.format("%s selectStack: %s", tag, str2));
 	
 	}
 
@@ -384,9 +384,9 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		for (int id : new_select.getIds()) {
 			scene.setSelectionStateOfBox(id, true);
 		}
-		if (!new_select.isEmpty()) {
-			selectStack.push(new_select);		// Remember if deleting
-		}
+		///if (!new_select.isEmpty()) {
+		///	selectStack.push(new_select);		// Remember if deleting
+		///}
 		display();
 		repaint();
 		return true;
@@ -434,7 +434,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Clear out selections, remembering them for undo
 	 * @param bcmd
 	 */
-	public void clearSelections(BlockCommand bcmd) {
+	public void clearSelections(EMBCommand bcmd) {
 		while (!selectStack.isEmpty())
 			clearSelection(bcmd);
 	}
@@ -457,7 +457,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Clear out current selection, remembering it for undo
 	 * @param bcmd
 	 */
-	public void clearSelection(BlockCommand bcmd) {
+	public void clearSelection(EMBCommand bcmd) {
 		if (!selectStack.isEmpty()) {
 			BlockSelect select = selectStack.pop();
 			unSelect(select.getList());
@@ -519,7 +519,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	/**
 	 * Add another block to scene
 	 */
-	public void addBlock(BlockCommand bcmd, OurBlock cb) {
+	public void addBlock(EMBCommand bcmd, EMBlock cb) {
 		int icb = bcmd.addBlock(cb.iD());
 		bcmd.addSelect(icb);
 	}
@@ -527,17 +527,17 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	/**
 	 * Add another block to scene
 	 */
-	public void addBlock(BlockCommand bcmd, int id) {
+	public void addBlock(EMBCommand bcmd, int id) {
 		scene.addBlock(bcmd, id);
 	}
 
-	public int addNewBlock(BlockCommand bcmd, String blocktype, AlignedBox3D box, Color color) {
-		 OurBlock cb = newBlock(blocktype, box, color);
+	public int addNewBlock(EMBCommand bcmd, String blocktype, AlignedBox3D box, Color color) {
+		 EMBlock cb = newBlock(blocktype, box, color);
 		bcmd.addBlock(cb.iD());
 		return cb.iD();
 	}
 
-	private OurBlock newBlock(String blocktype, AlignedBox3D box, Color color) {
+	private EMBlock newBlock(String blocktype, AlignedBox3D box, Color color) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -546,7 +546,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	/**
 	 * Add blocks to scene
 	 */
-	public void addBlocks(BlockCommand bcmd, int[] ids) {
+	public void addBlocks(EMBCommand bcmd, int[] ids) {
 		for (int id : ids) {
 			addBlock(bcmd, id);
 		}
@@ -554,38 +554,38 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 	/**
 	 * Add a duplicate block at the given point
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public void addDuplicateBlock(BlockCommand bcmd, OurBlock cb, Point3D atpoint) throws OurBlockError {
-		OurBlock cbnew = cb.duplicate();
+	public void addDuplicateBlock(EMBCommand bcmd, EMBlock cb, Point3D atpoint) throws EMBlockError {
+		EMBlock cbnew = cb.duplicate();
 		addBlock(bcmd, cbnew);
 	}
 
-	public int createNewBlock(BlockCommand bcmd, String blockType) {
-		Vector3D halfDiagonalOfNewBox = new Vector3D(OurBlockBase.DEFAULT_SIZE * 0.5f, OurBlockBase.DEFAULT_SIZE * 0.5f,
-				OurBlockBase.DEFAULT_SIZE * 0.5f);
-		OurBlock cb = getSelectedBlock();
+	public int createNewBlock(EMBCommand bcmd, String blockType) {
+		Vector3D halfDiagonalOfNewBox = new Vector3D(EMBlockBase.DEFAULT_SIZE * 0.5f, EMBlockBase.DEFAULT_SIZE * 0.5f,
+				EMBlockBase.DEFAULT_SIZE * 0.5f);
+		EMBlock cb = getSelectedBlock();
 		if (cb != null) {
 			Point3D centerOfNewBox = Point3D.sum(
 					Point3D.sum(cb.getCenter(),
 							Vector3D.mult(normalAtSelectedPoint,
 									0.5f * (float) Math.abs(Vector3D.dot(cb.getDiagonal(), normalAtSelectedPoint)))),
-					Vector3D.mult(normalAtSelectedPoint, OurBlockBase.DEFAULT_SIZE * 0.5f));
+					Vector3D.mult(normalAtSelectedPoint, EMBlockBase.DEFAULT_SIZE * 0.5f));
 			float alpha = cb.getAlpha();
-			System.out.println("alpha=" + alpha);
+			SmTrace.lg("alpha=" + alpha);
 			Color color = new Color(clamp(cb.getRed() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getGreen() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), alpha);
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
-			cb = OurBlock.newBlock(blockType, box, color);
+			cb = EMBlock.newBlock(blockType, box, color);
 		} else {
 			Point3D centerOfNewBox = camera.target;
 			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
-					OurBlockBase.DEFAULT_ALPHA);
+					EMBlockBase.DEFAULT_ALPHA);
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
-			cb = OurBlock.newBlock(blockType, box, color);
+			cb = EMBlock.newBlock(blockType, box, color);
 			normalAtSelectedPoint = new Vector3D(1, 0, 0);
 		}
 		if (cb != null) {
@@ -597,31 +597,31 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		
 	}
 
-	public void createNewBlock(BlockCommand bcmd, String blockType, Point3D at_point, Vector3D size) {
-		Vector3D halfDiagonalOfNewBox = new Vector3D(OurBlockBase.DEFAULT_SIZE * 0.5f, OurBlockBase.DEFAULT_SIZE * 0.5f,
-				OurBlockBase.DEFAULT_SIZE * 0.5f);
-		OurBlock cb = null;
+	public void createNewBlock(EMBCommand bcmd, String blockType, Point3D at_point, Vector3D size) {
+		Vector3D halfDiagonalOfNewBox = new Vector3D(EMBlockBase.DEFAULT_SIZE * 0.5f, EMBlockBase.DEFAULT_SIZE * 0.5f,
+				EMBlockBase.DEFAULT_SIZE * 0.5f);
+		EMBlock cb = null;
 		if (anySelected()) {
 			cb = getSelectedBlock();
 			Point3D centerOfNewBox = Point3D.sum(
 					Point3D.sum(cb.getCenter(),
 							Vector3D.mult(normalAtSelectedPoint,
 									0.5f * (float) Math.abs(Vector3D.dot(cb.getDiagonal(), normalAtSelectedPoint)))),
-					Vector3D.mult(normalAtSelectedPoint, OurBlockBase.DEFAULT_SIZE * 0.5f));
+					Vector3D.mult(normalAtSelectedPoint, EMBlockBase.DEFAULT_SIZE * 0.5f));
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
 			Color color = new Color(clamp(cb.getRed() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getGreen() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), cb.getAlpha());
 
-			cb = OurBlock.newBlock(blockType, box, color);
+			cb = EMBlock.newBlock(blockType, box, color);
 		} else {
 			Point3D centerOfNewBox = camera.target;
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
 			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
-					OurBlockBase.DEFAULT_ALPHA);
-			cb = OurBlock.newBlock(blockType, box, color);
+					EMBlockBase.DEFAULT_ALPHA);
+			cb = EMBlock.newBlock(blockType, box, color);
 			normalAtSelectedPoint = new Vector3D(1, 0, 0);
 		}
 		if (cb != null) {
@@ -640,7 +640,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	/**
 	 * Get block, given index
 	 */
-	public OurBlock cb(int id) {
+	public EMBlock cb(int id) {
 		return scene.cb(id);
 	}
 
@@ -649,17 +649,17 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Get generated block, given index
 	 * null, if none
 	 */
-	public OurBlock cbGen(int id) {
+	public EMBlock cbGen(int id) {
 		return scene.genBlocks.getBlock(id);
 	}
 
 	
 	/**
 	 * Duplicate selected block - offset a bit
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public int duplicateBlock(BlockCommand bcmd) throws OurBlockError {
-		OurBlock cb = getSelectedBlock();
+	public int duplicateBlock(EMBCommand bcmd) throws EMBlockError {
+		EMBlock cb = getSelectedBlock();
 		if (cb != null) {
 			cb = cb.duplicate();
 		}
@@ -675,15 +675,15 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * 
 	 * @param id - original block
 	 * @return - id of new block
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public int duplicateBlock(BlockCommand bcmd, int id) throws OurBlockError {
+	public int duplicateBlock(EMBCommand bcmd, int id) throws EMBlockError {
 		String blockType = cb(id).blockType();
 		int idnew = createNewBlock(bcmd, blockType);
 		return idnew;
 	}
 
-	public void setColorOfSelection(BlockCommand bcmd, float r, float g, float b) {
+	public void setColorOfSelection(EMBCommand bcmd, float r, float g, float b) {
 		if (anySelected()) {
 ///			bcmd.saveSelection();
 			scene.setColorOfBlock(getSelectedBlockIndex(), r, g, b);
@@ -697,7 +697,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	/**
 	 * Delete blocks
 	 */
-	public void deleteBlocks(BlockCommand bcmd, int[] ids) {
+	public void deleteBlocks(EMBCommand bcmd, int[] ids) {
 		for (int id : ids) {
 			deleteBlock(bcmd, id);
 		}
@@ -711,13 +711,13 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * @param bcmd
 	 * @param id
 	 */
-	public void deleteBlock(BlockCommand bcmd, int id) {
-		System.out.println(String.format("deleteBlock(%d)", id));
+	public void deleteBlock(EMBCommand bcmd, int id) {
+		SmTrace.lg(String.format("deleteBlock(%d)", id));
 		bcmd.addPrevBlock(id);
 	}
 	
-	public void deleteSelection(BlockCommand bcmd) {
-		System.out.println("deleteSelection");
+	public void deleteSelection(EMBCommand bcmd) {
+		SmTrace.lg("deleteSelection");
 		selectPrint(String.format("deleteSelection"));
 		BlockSelect select = getSelected();
 		if (!select.isEmpty()) {
@@ -732,7 +732,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		}
 	}
 
-	public void deleteAll(BlockCommand bcmd) {
+	public void deleteAll(EMBCommand bcmd) {
 		int[] allids = getDisplayedIds();
 		deleteBlocks(bcmd, allids);
 		indexOfHilitedBox = -1;
@@ -754,7 +754,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * @param id
 	 */
 	public void removeBlock(int id) {
-		System.out.println(String.format("removeBlock(%d)", id));
+		SmTrace.lg(String.format("removeBlock(%d)", id));
 		scene.displayedBlocks.removeBlock(id);
 	}
 	
@@ -770,7 +770,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	}
 
 	public void resetCamera() {
-		camera.setSceneRadius((float) Math.max(5 * OurBlockBase.DEFAULT_SIZE,
+		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
 				scene.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
 		camera.reset();
 	}
@@ -802,7 +802,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * No additional processing is done here.
 	 * Display update is done elsewhere.
 	 */
-	public void insertBlocks(OurBlockGroup blocks) {
+	public void insertBlocks(EMBlockGroup blocks) {
 		scene.insertBlocks(blocks);
 	}
 
@@ -833,12 +833,10 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			double[] wcoord // World coordinates returned x,y,z,
 	) {
 		int realy = viewport[3] - (int) y - 1;
-		if (SmTrace.tr("projection")) {
-			System.out.println(String.format("screen2WorldCoord(x=%d,y=%d (realy=%d), z=%.2f", x, y, realy, zval));
-		}
+		SmTrace.lg(String.format("screen2WorldCoord(x=%d,y=%d (realy=%d), z=%.2f", x, y, realy, zval), "projection");
 		glu.gluUnProject((double) x, (double) realy, zval, //
 				mvmatrix, 0, projmatrix, 0, viewport, 0, wcoord, 0);
-		System.out.println(String.format("   wx=%.2f, wy=%.2f, wz=%.2f", wcoord[0], wcoord[1], wcoord[2]));
+		SmTrace.lg(String.format("   wx=%.2f, wy=%.2f, wz=%.2f", wcoord[0], wcoord[1], wcoord[2]), "projection");
 	}
 
 	/**
@@ -850,7 +848,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 *            double[16]
 	 */
 	public void printMatrix(String heading, double vals[]) {
-		System.out.println("\n" + heading);
+		SmTrace.lg("\n" + heading);
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
 				int idx = i + 4 * j;
@@ -862,7 +860,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 	public void displayChanged(GLAutoDrawable drawable, boolean modeChanged, boolean deviceChanged) {
 		// leave this empty
-		System.out.println("displayChanged");
+		SmTrace.lg("displayChanged");
 	}
 
 	public void display(GLAutoDrawable drawable) {
@@ -892,11 +890,9 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			printMatrix("display(): projmatrix", projmatrix);
 		}
 
-		if (SmTrace.tr("projection")) {
-			gl.glGetIntegerv(GL2.GL_VIEWPORT, viewport, 0);
-			System.out.println(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1],
-					viewport[2], viewport[3]));
-		}
+		gl.glGetIntegerv(GL2.GL_VIEWPORT, viewport, 0);
+		SmTrace.lg(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1],
+				viewport[2], viewport[3]), "projection");
 		
 		setControl("component", displayAddControl);
 		setControl("placement", displayPlacementControl);
@@ -952,12 +948,12 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	}
 
 	public void mouseClicked(MouseEvent e) {
-		System.out.println("mouseClick");
+		SmTrace.lg("mouseClick");
 		if (e.isControlDown())
-			System.out.println("isControlDown");
+			SmTrace.lg("isControlDown");
 		if (indexOfHilitedBox >= 0) {
 			if (e.isControlDown()) {
-				BlockCommand bcmd;
+				EMBCommand bcmd;
 				String action = "mouseAddSelect";
 				try {
 					bcmd = new BlkCmdAdd(action);
@@ -968,7 +964,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				selectAdd(bcmd, indexOfHilitedBox, true);		// keep with selected
 				bcmd.doCmd();
 			} else {
-				BlockCommand bcmd;
+				EMBCommand bcmd;
 				String action = "mouseNewSelect";
 				try {
 					bcmd = new BlkCmdAdd(action);
@@ -996,8 +992,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		old_mouse_y = mouse_y;
 		mouse_x = e.getX();
 		mouse_y = e.getY();
-		if (SmTrace.tr("mouse"))
-			System.out.println(String.format("mousePressed(%d,%d)", mouse_x, mouse_y));
+		SmTrace.lg(String.format("mousePressed(%d,%d)", mouse_x, mouse_y), "mouse");
 		if (autoAdd != ExtendedModeler.AutoAddType.NONE) {
 			// Placement point assuming z == 0
 			double world_z = 0;
@@ -1009,7 +1004,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				p = pnew;
 			}
 			camera.lookAt(p);
-			BlockCommand bcmd = null;
+			EMBCommand bcmd = null;
 			switch (autoAdd) {
 			case DUPLICATE:
 				try {
@@ -1021,9 +1016,9 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				}
 				try {
 					duplicateBlock(bcmd);
-				} catch (OurBlockError e2) {
+				} catch (EMBlockError e2) {
 					e2.printStackTrace();
-					System.out.println("duplicateBlock error");
+					SmTrace.lg("duplicateBlock error");
 					return;
 				}
 				break;
@@ -1071,7 +1066,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				createNewBlock(bcmd, "cylinder");
 				break;
 			default:
-				System.out.println("Unrecognized AutoAdd value - ignored");
+				SmTrace.lg("Unrecognized AutoAdd value - ignored");
 			}
 			if (bcmd != null)
 				bcmd.doCmd();
@@ -1095,16 +1090,14 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		old_mouse_y = mouse_y;
 		mouse_x = e.getX();
 		mouse_y = e.getY();
-		if (SmTrace.tr("mouse"))
-			System.out.println(String.format("mouseReleased(%d,%d)", mouse_x, mouse_y));
+		SmTrace.lg(String.format("mouseReleased(%d,%d)", mouse_x, mouse_y), "mouse");
 
 		if (radialMenu.isVisible()) {
 			int returnValue = radialMenu.releaseEvent(mouse_x, mouse_y);
 
 			int itemID = radialMenu.getItemID(radialMenu.getSelection());
-			if (SmTrace.tr("select"))
-				System.out.println(String.format("itemID=%d returnValue=%d", itemID, returnValue));
-			BlockCommand bcmd = null;
+			SmTrace.lg(String.format("itemID=%d returnValue=%d", itemID, returnValue), "select");
+			EMBCommand bcmd = null;
 			switch (itemID) {
 			case COMMAND_DUPLICATE_BLOCK:
 				try {
@@ -1115,10 +1108,10 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				}
 				try {
 					duplicateBlock(bcmd);
-				} catch (OurBlockError e2) {
+				} catch (EMBlockError e2) {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
-					System.out.println("duplicateBlock error");
+					SmTrace.lg("duplicateBlock error");
 					return;
 				} // Duplicate selected block
 				break;
@@ -1267,7 +1260,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			repaint();
 		} else if (SwingUtilities.isLeftMouseButton(e) && !e.isControlDown() && anySelected()) {
 			if (!e.isShiftDown()) {
-				OurBlock cb = getSelectedBlock();
+				EMBlock cb = getSelectedBlock();
 				if (cb == null)
 					return;
 				// translate a box
@@ -1278,7 +1271,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				Point3D intersection2 = new Point3D();
 				Plane plane = new Plane(normalAtSelectedPoint, selectedPoint);
 				if (plane.intersects(ray1, intersection1, true) && plane.intersects(ray2, intersection2, true)) {
-					BlockCommand bcmd;
+					EMBCommand bcmd;
 					String action = "mouseDragBlock";
 					try {
 						bcmd = new BlkCmdAdd(action);
@@ -1294,7 +1287,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				}
 			} else {
 				// resize a box
-				System.out.println("resize");
+				SmTrace.lg("resize");
 				Ray3D ray1 = camera.computeRay(old_mouse_x, old_mouse_y);
 				Ray3D ray2 = camera.computeRay(mouse_x, mouse_y);
 				Point3D intersection1 = new Point3D();
@@ -1304,7 +1297,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				Plane plane = new Plane(v2, selectedPoint);
 				if (plane.intersects(ray1, intersection1, true) && plane.intersects(ray2, intersection2, true)) {
 					Vector3D translation = Point3D.diff(intersection2, intersection1);
-					System.out.println(String.format("resize translation: %s", translation));
+					SmTrace.lg(String.format("resize translation: %s", translation));
 
 					// project the translation onto the normal, so that it is
 					// only along one axis
@@ -1384,7 +1377,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		}
 		int[] block_ids = scene.getDisplayedIds();
 		if (block_ids.length == 0) {
-			System.out.println(String.format("%s displayed: None", tag));
+			SmTrace.lg(String.format("%s displayed: None", tag));
 			return;
 		}
 
@@ -1396,19 +1389,19 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			}
 			str += scene.displayedBlocks.getBlock(id);
 		}
-		System.out.println(String.format("%s displayed:%s", tag, str));
+		SmTrace.lg(String.format("%s displayed:%s", tag, str));
 	}
 	
 	
 	@Override
 	public void actionPerformed(ActionEvent ae) {
 		String action = ae.getActionCommand();
-		System.out.println(String.format("action: %s", action));
+		SmTrace.lg(String.format("action: %s", action));
 		try {
 			if (controls.ckDoAction(action))
 				return;
-		} catch (OurBlockError e) {
-			System.out.println(String.format(
+		} catch (EMBlockError e) {
+			SmTrace.lg(String.format(
 					"controls.ckDoaction(%s): %s",
 					action, e.getMessage()));
 			e.printStackTrace();
@@ -1419,13 +1412,13 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	
 	/**
 	 * Add component control
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public void addBlockButton(BlockCommand bcmd, String action) throws OurBlockError {
+	public void addBlockButton(EMBCommand bcmd, String action) throws EMBlockError {
 		selectPrint(String.format("addBlockButton(%s) select", action));
 		try {
 			if (bcmd == null) {
-				System.out.println(String.format(
+				SmTrace.lg(String.format(
 						"addBlockButton(%s) with no cmd - ignored",
 						action));
 				return;
@@ -1466,7 +1459,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				break;
 				
 			default:
-				System.out.println(String.format(
+				SmTrace.lg(String.format(
 						"Unrecognized addBlockButton: %s - ignored", action));
 				return;
 		}
@@ -1484,6 +1477,18 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public void setCheckBox(String name, boolean checked) {
 		if (modeler != null)
 			modeler.setCheckBox(name, checked);
+	}
+
+
+	public EMDisplay getDisplay() {
+		EMDisplay disp = new EMDisplay("SceneViewer");
+		disp.putBlocks(getDisplayedBlocks());
+		return disp;
+	}
+
+
+	private EMBlockGroup getDisplayedBlocks() {
+		return scene.displayedBlocks;
 	}
 
 	
