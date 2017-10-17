@@ -69,9 +69,9 @@ public abstract class EMBCommand {
 			SmTrace.lg("execute - null newBlocks");
 		commandManager.scene.insertBlocks(newBlocks);
 		commandManager.displayUpdate(newSelect, prevSelect);
-		commandManager.displayPrint(String.format("execute(%s) AFTER", this.action));
-		commandManager.selectPrint(String.format("execute(%s) AFTER", this.action));
-		commandManager.cmdStackPrint(String.format("execute(%s) AFTER", this.action));
+		commandManager.displayPrint(String.format("execute(%s) AFTER", this.action), "execute");
+		commandManager.selectPrint(String.format("execute(%s) AFTER", this.action), "execute");
+		commandManager.cmdStackPrint(String.format("execute(%s) AFTER", this.action), "execute");
 		return true;
 	}
 
@@ -207,19 +207,19 @@ public abstract class EMBCommand {
 	 * Do command, storing, if command can be undone or repeated, for redo,repeat
 	 */
 	public boolean doCmd() {
-		commandManager.selectPrint(String.format("doCmd(%s)", this.action));
-		commandManager.displayPrint(String.format("doCmd(%s)", this.action));
-		commandManager.cmdStackPrint(String.format("doCmd(%s)", this.action));
+		commandManager.selectPrint(String.format("doCmd(%s)", this.action), "execute");
+		commandManager.displayPrint(String.format("doCmd(%s)", this.action), "execute");
+		commandManager.cmdStackPrint(String.format("doCmd(%s)", this.action), "execute");
 		boolean res = execute();
 		if (res) {
 			if (canUndo() || canRepeat()) {
-				SmTrace.lg("add to commandStack");
+				SmTrace.lg("add to commandStack", "execute");
 				commandManager.commandStack.add(this);
 			} else {
-				SmTrace.lg(String.format("doCmd(%s) can't undo/repeat", this.action));
+				SmTrace.lg(String.format("doCmd(%s) can't undo/repeat", this.action), "execute");
 			}
 		}
-		commandManager.cmdStackPrint(String.format("doCmd(%s) AFTER", this.action));
+		commandManager.cmdStackPrint(String.format("doCmd(%s) AFTER", this.action), "execute");
 		return res;
 	}
 	

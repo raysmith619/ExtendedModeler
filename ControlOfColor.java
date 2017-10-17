@@ -58,7 +58,7 @@ public class ControlOfColor extends ControlOf {
 		
 		SmTrace.lg("ControlOfColor.setup()-2c", "setup");
 		setTitle("Adjust/Report Color");
-		scene.selectPrint("ControlOfColor.setup".concat("select"));
+		scene.selectPrint("ControlOfColor.setup".concat("select"), "select");
 		JPanel colorPanel = new JPanel(new GridLayout(0, 1));
 		add(colorPanel);
 		pack();
@@ -253,7 +253,7 @@ public class ControlOfColor extends ControlOf {
 		cb1.colorAdj(adjcolor_redval, adjcolor_greenval, adjcolor_blueval, adjcolor_alphaval);
 		SmTrace.lg(
 				String.format("adjust to red=%.2f green=%.2f blue=%.2f  alpha=%.2f",
-						cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha()));
+						cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha()), "color");
 		bcmd.addBlock(cb1);					// Add New / modified block
 		bcmd.setSelect(new BlockSelect(cb1.iD()));
 	}

@@ -113,4 +113,14 @@ public class Vector3D {
 		return str;
 	}
 
+	public void set(float x1, float y1, float z1) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void set(double x1, double y1, double z1) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

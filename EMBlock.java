@@ -2,6 +2,7 @@ import java.awt.Color;
 import java.util.ArrayList;
 
 import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
 
 import smTrace.SmTrace;
 
@@ -272,12 +273,12 @@ public class EMBlock{
 	}
 	
 	public void draw(
-		GL2 gl,
+		GLAutoDrawable drawable,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		baseBlock.draw(gl, expand, drawAsWireframe, cornersOnly);
+		baseBlock.draw(drawable, expand, drawAsWireframe, cornersOnly);
 	}
 
 

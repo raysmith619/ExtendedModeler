@@ -1,13 +1,16 @@
 import java.awt.Color;
+import java.awt.Font;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.util.gl2.GLUT;
 
-public class ColoredBall extends EMBlockBase {
+public class ColoredText extends EMBlockBase {
 	private boolean isOk = false;	// Set OK upon successful construction
-
+	private String text = "BLANK";
+	static int nt = 0;				// nextText base
+	
 	public boolean intersects(
 		Ray3D ray, // input
 		Point3D intersection, // output
@@ -23,14 +26,29 @@ public class ColoredBall extends EMBlockBase {
 		return isOk;
 	}
 	
-	public ColoredBall(
+	public ColoredText(
 		AlignedBox3D box,
-		Color color
+		Color color,
+		String text
 	) {
 		super(box, color);
+		this.text = text;
 		isOk = true;
 	}
 	
+	public ColoredText(
+		AlignedBox3D box,
+		Color color
+	) {
+		this(box, color, nextText());
+	}
+
+	
+	private static String nextText() {
+		nt++;
+		String text = Character.toString((char)((nt%26)+'A'-1));
+		return text;
+	}
 
 
 	public void draw(
@@ -40,24 +58,28 @@ public class ColoredBall extends EMBlockBase {
 		boolean cornersOnly
 	) {
 		AlignedBox3D box = getBox();
-		drawBall(drawable, box, expand, drawAsWireframe, cornersOnly);
+		drawText(drawable, box, expand,
+				drawAsWireframe, cornersOnly,
+				text, color);
 	}
 
 	public String blockType() {
-		return "ball";
+		return "text";
 	}
 
 
 
-	static public void drawBall(
+	static public void drawText(
 		GLAutoDrawable drawable,
 		AlignedBox3D box,
 		boolean expand,
 		boolean drawAsWireframe,
-		boolean cornersOnly
+		boolean cornersOnly,
+		String text,
+		Color color
 	) {
 		GL2 gl = (GL2) drawable.getGL();
-		drawAsWireframe = true;			// Force frame
+		
 		if ( expand ) {
 			float diagonal = box.getDiagonal().length();
 			diagonal /= 20;
@@ -83,26 +105,7 @@ public class ColoredBall extends EMBlockBase {
 				gl.glEnd();
 			}
 			else {
-				gl.glBegin( GL.GL_LINE_STRIP );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-				gl.glEnd();
-				gl.glBegin( GL.GL_LINES );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-				gl.glEnd();
+				// Wire frame text
 			}
 			Vector3D diagonal = box.getDiagonal();
 			float xlen = Math.abs(diagonal.x());
@@ -116,25 +119,34 @@ public class ColoredBall extends EMBlockBase {
 			int nLongitudes = 20;
 			int nLatitudes = nLongitudes;
 			gl.glTranslatef(center.x(), center.y(), center.z());
-			glut.glutWireSphere(r, nLongitudes, nLatitudes);
+			// text
 			gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 		else {
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
-			Vector3D diagonal = box.getDiagonal();
-			float xlen = Math.abs(diagonal.x());
-			float ylen = Math.abs(diagonal.y());
-			float zlen = Math.abs(diagonal.z());
-			float minlen = Math.min(xlen, ylen);
-			minlen = Math.min(minlen, zlen);
-			float r = minlen/2;
 			Point3D center = box.getCenter();
+			Point3D base = box.getMin();
 			GLUT glut = new GLUT();
+		    float tx = base.x();
+		    float ty = base.y();
+		    float tz = base.z();
+		    int font_size = 10;
+		    float tscale = (float) (.9 * 1./font_size);
+		    float depth = 5f;
 			
-			gl.glTranslatef(center.x(), center.y(), center.z());
-			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
-			gl.glTranslatef(-center.x(), -center.y(), -center.z());
+			TextRenderer3D tr3 = new TextRenderer3D(new Font("SansSerif", Font.BOLD, font_size), tscale);
+			tr3 = new TextRenderer3D(new Font("TimesRoman", Font.BOLD, font_size), tscale);
+			tr3 = new TextRenderer3D(new Font("Tahoma", Font.BOLD, font_size), tscale);
+
+			float[] colors = new float[4];
+			color.getComponents(colors);
+		    gl.glColor4f(colors[0], colors[1], colors[2], colors[3]);
+		    tr3.setDepth(depth);
+		    ///tr3.setFill(false);		// false -> just edges
+		    ///tr3.setFlatness(1f);
+		    tr3.draw(text,tx, ty, tz, tscale);
+		    ///renderer.end3DRendering();
+			
+			///gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 	}
 	@Override

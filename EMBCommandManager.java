@@ -111,7 +111,7 @@ public class EMBCommandManager {
 	 * command and select stack modifications are done through EMBCommand functions
 	 */
 	public boolean undo() {
-		SmTrace.lg(String.format("undo"));
+		SmTrace.lg(String.format("undo"), "execute");
 		if (!canUndo()) {
 			SmTrace.lg(String.format("Can't undo"));
 			return false;
@@ -124,7 +124,7 @@ public class EMBCommandManager {
 	 * Re-execute the most recently undone command
 	 */
 	public boolean redo() {
-		SmTrace.lg(String.format("redo"));
+		SmTrace.lg(String.format("redo"), "execute");
 		if (!canRedo()) {
 			SmTrace.lg(String.format("Can't redo"));
 			return false;
@@ -266,8 +266,8 @@ public class EMBCommandManager {
 	/**
 	 * Print displayed blocks
 	 */
-	public void displayPrint(String tag) {
-		scene.displayPrint(tag);
+	public void displayPrint(String tag, String trace) {
+		scene.displayPrint(tag, trace);
 	}
 
 	
@@ -283,10 +283,10 @@ public class EMBCommandManager {
 	/**
 	 * Print command stack
 	 */
-	public void cmdStackPrint(String tag) {
+	public void cmdStackPrint(String tag, String trace) {
 		String str = "";
 		if (commandStack.isEmpty() ) {
-			SmTrace.lg(String.format("%s commandStack: Empty", tag));
+			SmTrace.lg(String.format("%s commandStack: Empty", tag), trace);
 			return;
 		}
 		Iterator<EMBCommand> cmd_itr = commandStack.iterator();
@@ -297,15 +297,15 @@ public class EMBCommandManager {
 				str += "; ";
 			str += cmd;
 		}
-		SmTrace.lg(String.format("%s commandStack: %s", tag, str));
+		SmTrace.lg(String.format("%s commandStack: %s", tag, str), trace);
 	}
 	
 	
 	/**
 	 * Print select stack state
 	 */
-	public void selectPrint(String tag) {
-		scene.selectPrint(tag);
+	public void selectPrint(String tag, String trace) {
+		scene.selectPrint(tag, trace);
 	}
 
 }

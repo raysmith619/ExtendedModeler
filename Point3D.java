@@ -25,6 +25,25 @@ public class Point3D {
 		p[2] = P.p[2];
 	}
 
+
+	
+	/**
+	 * Compare points 
+	 * @param p
+	 * @return -1, 0, 1
+	 */
+	public int cmp(Point3D p2) {
+		
+		for (int i = 0; i < 3; i++) {
+			float pt = p[i];
+			float pt2 = p2.p[i];
+			int ptcmp = Float.compare(pt, pt2);
+			if (ptcmp != 0)
+				return ptcmp;
+		}
+		return 0;
+	}
+
 	public float x() { return p[0]; }
 	public float y() { return p[1]; }
 	public float z() { return p[2]; }
@@ -50,6 +69,14 @@ public class Point3D {
 	static Point3D average( Point3D a, Point3D b ) {
 		// return new Point3D( Vector3D.mult( Vector3D.sum( new Vector3D(a), new Vector3D(b) ), 0.5f ) );
 		return new Point3D( (a.x()+b.x())*0.5f, (a.y()+b.y())*0.5f, (a.z()+b.z())*0.5f );
+	}
+	
+	/**
+	 * String version for diagnostics
+	 */
+	public String toString() {
+		String str = String.format("x:%.2g y:%.2g z:%.2g", x(), y(), z());
+		return str;
 	}
 }
 

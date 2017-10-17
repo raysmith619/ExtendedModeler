@@ -3,6 +3,7 @@ import java.util.ArrayList;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
 
 import smTrace.SmTrace;
 
@@ -260,21 +261,22 @@ class Scene {
 
 
 	static public void drawBlock(
-		GL2 gl,
+		GLAutoDrawable drawable,
 		EMBlock block,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		block.draw(gl, expand, drawAsWireframe, cornersOnly);
+		block.draw(drawable, expand, drawAsWireframe, cornersOnly);
 	}
 
 
 	public void drawScene(
-		GL2 gl,
+		GLAutoDrawable drawable,
 		int indexOfHilitedBox, // -1 for none
 		boolean useAlphaBlending
 	) {
+		GL2 gl = (GL2) drawable.getGL();
 		if ( useAlphaBlending ) {
 			gl.glDisable(GL.GL_DEPTH_TEST);
 			gl.glDepthMask(false);
@@ -292,7 +294,7 @@ class Scene {
 			else
 				gl.glColor3f(cb.getRed(), cb.getGreen(), cb.getBlue());
 				///gl.glColor3f(1, 1, 1);
-			drawBlock( gl, cb, false, false, false );
+			drawBlock( drawable, cb, false, false, false );
 		}
 		if ( useAlphaBlending ) {
 			gl.glDisable( GL.GL_BLEND );
@@ -307,11 +309,11 @@ class Scene {
 			}
 			if (true)
 				if (cb.blockType().equals("ball")) {
-					SmTrace.lg(String.format("ball at[%d]", id), "ball");
+					SmTrace.lg(String.format("ball at[%d]", id), "tracing ball");
 					if (cb.isSelected()) {
-						SmTrace.lg("ball selected", "ball");
+						SmTrace.lg("tracing ball selected", "ball");
 					} else {
-						SmTrace.lg("ball not selected", "ball");
+						SmTrace.lg("tracing ball not selected", "ball");
 					}
 				}
 			if ( cb.isSelected() && indexOfHilitedBox == id )
@@ -321,14 +323,14 @@ class Scene {
 			else if ( indexOfHilitedBox == id )
 				gl.glColor3f( 0, 1, 0 );
 			else continue;
-			drawBlock( gl, cb, true, true, true );
+			drawBlock(drawable, cb, true, true, true );
 		}
 	}
 
-	public void drawBoundingBoxOfScene( GL2 gl ) {
+	public void drawBoundingBoxOfScene(GLAutoDrawable drawable) {
 		AlignedBox3D box = getBoundingBoxOfScene();
 		if ( ! box.isEmpty() )
-			ColoredBox.drawBox( gl, box, false, true, false );
+			ColoredBox.drawBox(drawable, box, false, true, false );
 	}
 
 	public int addBlock(EMBCommand bcmd, int id) {

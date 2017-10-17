@@ -2,6 +2,7 @@ import java.awt.Color;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
 
 public class ColoredBox extends EMBlockBase {
 
@@ -40,24 +41,25 @@ public class ColoredBox extends EMBlockBase {
 
 
 	public void draw(
-		GL2 gl,
+		GLAutoDrawable drawable,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
 		AlignedBox3D box = getBox();
-		drawBox(gl, box, expand, drawAsWireframe, cornersOnly);
+		drawBox(drawable, box, expand, drawAsWireframe, cornersOnly);
 	}
 
 
 
 	static public void drawBox(
-		GL2 gl,
+		GLAutoDrawable drawable,
 		AlignedBox3D box,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
+		GL2 gl = (GL2) drawable.getGL();
 		if ( expand ) {
 			float diagonal = box.getDiagonal().length();
 			diagonal /= 20;

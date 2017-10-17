@@ -57,7 +57,8 @@ public class ExtendedModeler implements ActionListener {
 		BOX,
 		BALL,
 		CONE,
-		CYLINDER
+		CYLINDER,
+		TEXT
 	}
 	
 	JMenuItem deleteAllMenuItem, quitMenuItem, aboutMenuItem;
@@ -122,7 +123,7 @@ public class ExtendedModeler implements ActionListener {
 			);
 
 			if (response == JOptionPane.YES_OPTION) {
-				BlockCommand bcmd;
+				EMBCommand bcmd;
 				try {
 					bcmd = new BlkCmdAdd("deleteAllMenuItem");
 				} catch (Exception e1) {
@@ -156,7 +157,7 @@ public class ExtendedModeler implements ActionListener {
 			);
 		}
 		else if ( source == deleteSelectionButton ) {
-			BlockCommand bcmd;
+			EMBCommand bcmd;
 			try {
 				bcmd = new BlkCmdAdd("deleteSelectionButton");
 			} catch (Exception e1) {
@@ -281,7 +282,7 @@ public class ExtendedModeler implements ActionListener {
 		caps.setHardwareAccelerated(true);
 		try {
 			sceneViewer = new SceneViewer(caps, this, frame, smTrace);
-		} catch (OurBlockError e) {
+		} catch (EMBlockError e) {
 			SmTrace.lg(String.format("SceneViewer error %s", e.getMessage()));
 			e.printStackTrace();
 			return;
@@ -351,10 +352,9 @@ public class ExtendedModeler implements ActionListener {
 	 * 
 	 */
 	public void setCheckBox(String name, boolean checked) {
-		if (SmTrace.tr("checkbox"))
-			SmTrace.lg(String.format("setCheckBox(%s, %b)", name, checked));
-		if (SmTrace.tr("select")) {
-			sceneViewer.selectPrint(String.format("modeler.setCheckBox(%s): selected;", name));
+		if (SmTrace.tr("checkbox")) {
+			SmTrace.lg(String.format("setCheckBox(%s, %b)", name, checked), "checkbox");
+			sceneViewer.selectPrint(String.format("modeler.setCheckBox(%s): selected;", name), "select");
 		}
 		switch (name) {
 			case "component":
@@ -378,10 +378,8 @@ public class ExtendedModeler implements ActionListener {
 	}
 	
 	
-	public static void main( String[] args ) {
+	public static void main( String[] args ) throws EMBlockError, EMTFail {
 		int n_test = 0;				// Number of testit calls
-		int n_test_pass = 0;
-		int n_test_fail = 0;
 		boolean endAfterTest = false;	// true - end if testing
 		
 		String arg_str = "";
@@ -426,13 +424,13 @@ public class ExtendedModeler implements ActionListener {
 		 * 3 pas
 		 */
 		SmTrace.setLogName(logName); 	// Setup default log name
-		for (int npass = 1; npass <= 2; npass++) {
+		for (int npass = 1; npass <= 3; npass++) {
 			if (npass == 2) {
-				smTrace.lg("setupTest()");
+				SmTrace.lg("setupTest()");
 				SmTrace.lg(String.format("Command Args: %s", arg_str));		// Logging options are set				
 			}
-			for (mainArgIndex = 0; mainArgIndex < mainArgsLength; mainArgIndex++) {
-				String arg = args[mainArgIndex];
+			for (mainArgIndex = 0; mainArgIndex < mainArgsLength; ) {
+				String arg = args[mainArgIndex++];
 				if (arg.startsWith("--")) {
 					String str_val = "";
 					boolean boolean_val = false;
@@ -450,16 +448,12 @@ public class ExtendedModeler implements ActionListener {
 						case "logStdOut":
 						case "lgso":
 							boolean_val = booleanArg(true);
-							if (npass > 1)
-								continue;
 							SmTrace.setLogToStd(boolean_val);
 							break;
 							
 						case "logTsScreen":
 						case "lgts":
 							boolean_val = booleanArg(true);
-							if (npass > 1)
-								continue;
 							SmTrace.setLogStdTs(boolean_val);
 							break;
 					
@@ -486,10 +480,6 @@ public class ExtendedModeler implements ActionListener {
 							
 							n_test++;
 							res = testit(test_name);
-							if (res)
-								n_test_pass++;
-							else
-								n_test_fail++;
 							if (!res) {
 								SmTrace.lg(String.format("Test %s FAILED", test_name));
 							}
@@ -535,14 +525,15 @@ public class ExtendedModeler implements ActionListener {
 							break;
 					}
 				} else {
-					SmTrace.lg(String.format("Unrecognized arg(%s)", arg));
-					break;
+					SmTrace.lg(String.format("Unrecognized arg(%s) - quitting", arg));
+					System.exit(1);
 				}
 						
 			}
 		}
 		if (n_test > 0) {
-			SmTrace.lg(String.format("End of %d test runs - %d PASSES  %d FAILS", n_test, n_test_pass, n_test_fail));
+			SmTrace.lg(String.format("End of %d runs  %d Tests  %d PASSES  %d FAILS",
+						emt.getRunNo(), emt.getNTest(), emt.getNPass(), emt.getNFail()));
 			if (endAfterTest)
 				System.exit(0);
 		} else {
@@ -677,14 +668,16 @@ public class ExtendedModeler implements ActionListener {
 	/**
 	 * Testing
 	 * @return true iff PASS
+	 * @throws EMBlockError 
+	 * @throws EMTFail 
 	 */
-	public static boolean testit(String test_tag) {
+	public static boolean testit(String test_tag) throws EMBlockError, EMTFail {
 		SmTrace.lg(String.format("testit(%s)", test_tag));
 		if (emt == null)
 			setupTest();
 		try {
 			return emt.test(test_tag);
-		} catch (OurBlockError e) {
+		} catch (EMBlockError e) {
 			SmTrace.lg(String.format("Testing error in %s: %s",
 					test_tag, e.getMessage()));
 			

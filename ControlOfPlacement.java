@@ -40,7 +40,7 @@ public class ControlOfPlacement extends ControlOf {
 	 */
 	public boolean posXfieldSet(String val) {
 		if (posXfield == null) {
-			System.out.println("posXField - not initialized");
+			SmTrace.lg("posXField - not initialized");
 			return false;
 		}
 		posXfield.setText(val);
@@ -67,7 +67,7 @@ public class ControlOfPlacement extends ControlOf {
 	 */
 	public boolean posYfieldSet(String val) {
 		if (posYfield == null) {
-			System.out.println("posYField - not initialized");
+			SmTrace.lg("posYField - not initialized");
 			return false;
 		}
 		posYfield.setText(val);
@@ -93,11 +93,11 @@ public class ControlOfPlacement extends ControlOf {
 	 * @return true if no error
 	 */
 	public boolean posZfieldSet(String val) {
-		if (posYfield == null) {
-			System.out.println("posYField - not initialized");
+		if (posZfield == null) {
+			SmTrace.lg("posZField - not initialized");
 			return false;
 		}
-		posYfield.setText(val);
+		posZfield.setText(val);
 		return true;
 		
 	}
@@ -116,35 +116,35 @@ public class ControlOfPlacement extends ControlOf {
 	
 	/**
 	 * MoveTo button simulation
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public boolean MoveTo() throws OurBlockError {
+	public boolean MoveTo() throws EMBlockError {
 		boolean ret = ckDoAction("moveToButton");
 		if (!ret)
-			System.out.println("ControlOfPlacement.MoveTo failed");
+			SmTrace.lg("ControlOfPlacement.MoveTo failed");
 		return ret;
 	}
 
 	
 	/**
 	 * MoveTo location
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public boolean MoveTo(float x, float y, float z) throws OurBlockError {
+	public boolean MoveTo(float x, float y, float z) throws EMBlockError {
 		if (!posXfieldSet(x)) {
-			System.out.println(String.format("ControlOfPlacement.Moveto(x=%g) failed", x));
+			SmTrace.lg(String.format("ControlOfPlacement.Moveto(x=%g) failed", x));
 			return false;
 		}
 		if (!posYfieldSet(y)) {
-			System.out.println(String.format("ControlOfPlacement.Moveto(y=%g) failed", y));
+			SmTrace.lg(String.format("ControlOfPlacement.Moveto(y=%g) failed", y));
 			return false;
 		}
 		if (!posZfieldSet(z)) {
-			System.out.println(String.format("ControlOfPlacement.Moveto(z=%g) failed", z));
+			SmTrace.lg(String.format("ControlOfPlacement.Moveto(z=%g) failed", z));
 			return false;
 		}
 		if (!MoveTo()) {
-			System.out.println(String.format("ControlOfPlacement.Moveto move(%g, %g,%g) failed", x, y, z));
+			SmTrace.lg(String.format("ControlOfPlacement.Moveto move(%g, %g,%g) failed", x, y, z));
 			return false;
 		}
 		return true;
@@ -152,10 +152,8 @@ public class ControlOfPlacement extends ControlOf {
 
 	
 	private void traceSelected(int place) {
-		if (SmTrace.tr("select")) {
-			int bindex = scene.getSelectedBlockIndex();
-			System.out.println(String.format("ControlOfPlacement.setup place(%d) - selected(%d)", place, bindex));
-		}
+		int bindex = scene.getSelectedBlockIndex();
+			SmTrace.lg(String.format("ControlOfPlacement.setup place(%d) - selected(%d)", place, bindex), "select", "select");
 	}
 	
 	/**
@@ -164,10 +162,8 @@ public class ControlOfPlacement extends ControlOf {
 	public void setup() {
 		if (controlActive)
 			return;					// Already present
-		if (SmTrace.tr("select")) {
-			int bindex = scene.getSelectedBlockIndex();
-			System.out.println(String.format("ControlOfPlacement.setup before - selected(%d)", bindex));
-		}
+		int bindex = scene.getSelectedBlockIndex();
+		SmTrace.lg(String.format("ControlOfPlacement.setup before - selected(%d)", bindex), "select");
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 ///		controlDialog = new JDialog();
 		setTitle("Adjust/Report Position");
@@ -219,7 +215,7 @@ public class ControlOfPlacement extends ControlOf {
 
 		traceSelected(1);
 		// JComboBox<String> combo = new JComboBox<>();
-		OurBlock cb = scene.getSelectedBlock();
+		EMBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			 return;
 		
@@ -230,7 +226,7 @@ public class ControlOfPlacement extends ControlOf {
 			center = cb.getCenter();
 		traceSelected(13);
 		posXfield = new JTextField(String.format("%.2f", center.x()));
-		System.out.println(String.format("setup posXfield"));
+		SmTrace.lg(String.format("setup posXfield"));
 		traceSelected(14);
 		posXfield.setActionCommand("ENTER");
 		traceSelected(15);
@@ -295,10 +291,8 @@ public class ControlOfPlacement extends ControlOf {
 		adjpos_panel.add(adjposDownButton);
 		pack();
 
-		if (SmTrace.tr("select")) {
-			int bindex2 = scene.getSelectedBlockIndex();
-			System.out.println(String.format("ControlOfPlacement.setup after - selected(%d)", bindex2));
-		}
+		int bindex2 = scene.getSelectedBlockIndex();
+		SmTrace.lg(String.format("ControlOfPlacement.setup after - selected(%d)", bindex2), "select");
 		controlActive = true;
 	}
 	
@@ -306,7 +300,7 @@ public class ControlOfPlacement extends ControlOf {
 	
 	/**
 	 * Adjust Position
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 * 
 	 **/
 	/*
@@ -314,7 +308,7 @@ public class ControlOfPlacement extends ControlOf {
 	 * 
 	 * @param direction
 	 */
-	private void adjustPosition(BlockCommand bcmd, int direction) throws OurBlockError {
+	private void adjustPosition(EMBCommand bcmd, int direction) throws EMBlockError {
 		if (!scene.anySelected())
 			return;
 		
@@ -344,7 +338,7 @@ public class ControlOfPlacement extends ControlOf {
 				adjpos_zval *= -1;				
 			}
 		}
-		OurBlock cb = scene.getSelectedBlock();
+		EMBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -352,7 +346,7 @@ public class ControlOfPlacement extends ControlOf {
 			bcmd.addBlock(cb);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
 		}
 		bcmd.addPrevBlock(cb);				//Save copy for undo/redo
-		OurBlock cb1 = cb.duplicate();		// New or modified
+		EMBlock cb1 = cb.duplicate();		// New or modified
 		
 		Point3D base_point = cb.getBasePoint();
 		Vector3D adjpos_vector = new Vector3D(adjpos_xval, adjpos_yval, adjpos_zval);
@@ -373,9 +367,9 @@ public class ControlOfPlacement extends ControlOf {
 
 	/**
 	 * Move to position/size accordingly
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	private void moveToPosition(BlockCommand bcmd) throws OurBlockError {
+	private void moveToPosition(EMBCommand bcmd) throws EMBlockError {
 		if (scene.getSelected() == null)
 			return;
 		float xval = 0;
@@ -394,7 +388,7 @@ public class ControlOfPlacement extends ControlOf {
 			zval = Float.valueOf(text);
 		}
 
-		OurBlock cb = scene.getSelectedBlock();
+		EMBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -402,7 +396,7 @@ public class ControlOfPlacement extends ControlOf {
 			bcmd.addBlock(cb);			// Keep original also
 		}
 		bcmd.addPrevBlock(cb);			// Save original, for undo
-		OurBlock cb1 = cb.duplicate();		// New or modified
+		EMBlock cb1 = cb.duplicate();		// New or modified
 		
 		Point3D new_point = new Point3D(xval, yval, zval);
 		if (pos_size_position) {
@@ -412,7 +406,7 @@ public class ControlOfPlacement extends ControlOf {
 			cb1.resize(0, size);
 		}
 		bcmd.addBlock(cb1);				// Save new or modified
-		System.out.println(String.format("move to x=%.2f y=%.2f z=%.2f", xval, yval, zval));
+		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f", xval, yval, zval));
 		scene.repaint();
 	}
 
@@ -421,7 +415,7 @@ public class ControlOfPlacement extends ControlOf {
 	 * Adjust control based on selection
 	 */
 	public void adjustControls() {
-		OurBlock cb = scene.getSelectedBlock();
+		EMBlock cb = scene.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -443,10 +437,10 @@ public class ControlOfPlacement extends ControlOf {
 
 	/**
 	 * Check for and act on action
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public boolean ckDoAction(String action) throws OurBlockError {
-		BlockCommand bcmd;
+	public boolean ckDoAction(String action) throws EMBlockError {
+		EMBCommand bcmd;
 		try {
 			bcmd = new BlkCmdAdd(action);
 		} catch (Exception e) {
@@ -493,9 +487,7 @@ public class ControlOfPlacement extends ControlOf {
 				default:
 					return false;		// No action here
 		}
-		if (bcmd != null)
-			return bcmd.doCmd();
-		return pos_move_duplicate;
+		return bcmd.doCmd();
 
 	}
 

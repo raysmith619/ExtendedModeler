@@ -67,6 +67,12 @@ public class ControlOfComponent extends ControlOf {
 		addCylinderButton.addActionListener(scene);
 		compPanel.add(addCylinderButton);
 		blockPanel.add(compPanel);
+
+		JButton addTextButton = new JButton("Text");
+		addTextButton.setActionCommand("addTextButton");
+		addTextButton.addActionListener(scene);
+		compPanel.add(addTextButton);
+		blockPanel.add(compPanel);
 		
 		pack();
 		controlActive = true;
@@ -80,11 +86,11 @@ public class ControlOfComponent extends ControlOf {
 
 	/**
 	 * Check for and act on action
-	 * @throws OurBlockError 
+	 * @throws EMBlockError 
 	 */
-	public boolean ckDoAction(String action) throws OurBlockError {
-		scene.selectPrint(String.format("ckDoAction(%s)", action));
-		BlockCommand bcmd;
+	public boolean ckDoAction(String action) throws EMBlockError {
+		scene.selectPrint(String.format("ckDoAction(%s)", action), "select");
+		EMBCommand bcmd;
 		try {
 			bcmd = new BlkCmdAdd(action);
 		} catch (Exception e) {
@@ -99,17 +105,18 @@ public class ControlOfComponent extends ControlOf {
 			case "addBallButton":
 			case "addConeButton":
 			case "addCylinderButton":
+			case "addTextButton":
 				scene.addBlockButton(bcmd, action);
 				if (bcmd != null) {
 					boolean res = bcmd.doCmd();
-					scene.selectPrint(String.format("ckDoAction(%s) AFTER", action));
+					scene.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
 					return res;
 				}
 			
 				default:
 					break;
 		}
-		return false;
+		return false;			// Event not processed by us - possibly by someone else
 	}
 
 

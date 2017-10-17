@@ -2,6 +2,7 @@ import java.awt.Color;
 import java.util.ArrayList;
 
 import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
 
 import smTrace.SmTrace;
 
@@ -90,6 +91,8 @@ public class EMBlockBase {
 			cb_new = new ColoredCone(box, color);
 		else if (blockType.equals("cylinder"))
 			cb_new = new ColoredCylinder(box, color);
+		else if (blockType.equals("text"))
+			cb_new = new ColoredText(box, color);
 		else {
 			SmTrace.lg(String.format("Unsupported block type %s",
 					blockType));
@@ -307,7 +310,7 @@ public class EMBlockBase {
 	
 	// Overridden by all nontrivial blocks
 	public void draw(
-		GL2 gl,
+		GLAutoDrawable drawable,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly

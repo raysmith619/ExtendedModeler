@@ -2,6 +2,7 @@ import java.awt.Color;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.glu.GLUquadric;
 import com.jogamp.opengl.glu.GLU;
 
@@ -31,24 +32,26 @@ public class ColoredCone extends EMBlockBase {
 
 
 	public void draw(
-		GL2 gl,
+		GLAutoDrawable drawable,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
+		GL2 gl = (GL2) drawable.getGL();
 		AlignedBox3D box = getBox();
-		drawCone(gl, box, expand, drawAsWireframe, cornersOnly);
+		drawCone(drawable, box, expand, drawAsWireframe, cornersOnly);
 	}
 
 
 
 	static public void drawCone(
-		GL2 gl,
+		GLAutoDrawable drawable,
 		AlignedBox3D box,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
+		GL2 gl = (GL2) drawable.getGL();
 		if ( expand ) {
 			float diagonal = box.getDiagonal().length();
 			diagonal /= 20;
