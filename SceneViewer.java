@@ -88,6 +88,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public boolean displayAddControl = true;
 	public boolean displayColorControl = true;
 	public boolean displayPlacementControl = true;
+	public boolean displayTextControl = true;
 	public boolean displayWorldAxes = false;
 	public boolean displayCameraTarget = false;
 	public boolean displayBoundingBox = false;
@@ -894,9 +895,10 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		SmTrace.lg(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1],
 				viewport[2], viewport[3]), "projection");
 		
-		setControl("component", displayAddControl);
 		setControl("placement", displayPlacementControl);
 		setControl("color", displayColorControl);
+		setControl("text", displayTextControl);
+		setControl("component", displayAddControl);
 		controls.display(drawable);
 		if (displayWorldAxes) {
 			gl.glBegin(GL.GL_LINES);

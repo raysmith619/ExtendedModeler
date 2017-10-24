@@ -19,11 +19,9 @@ public class ControlOfComponent extends ControlOf {
 	 * Hopefully a model / base class of other control dialogs
 	 */
 	public void setup() {
-		if (controlActive)
-			return;					// Already present
+		if (setup)
+		return;					// Already setup
 		
-		// JPanel panel = new JPanel(new GridLayout(2,7));
-///		controlDialog = new JDialog();
 		setTitle("Add / Modify Block");
 		JPanel blockPanel = new JPanel(new GridLayout(0, 1, 2, 2));		// any rows, 1 col, sep
 		add(blockPanel);
@@ -75,7 +73,7 @@ public class ControlOfComponent extends ControlOf {
 		blockPanel.add(compPanel);
 		
 		pack();
-		controlActive = true;
+		setup = true;
 	}
 
 	/**
@@ -89,6 +87,9 @@ public class ControlOfComponent extends ControlOf {
 	 * @throws EMBlockError 
 	 */
 	public boolean ckDoAction(String action) throws EMBlockError {
+		if (!isActive())
+			return false;	// Not active
+		
 		scene.selectPrint(String.format("ckDoAction(%s)", action), "select");
 		EMBCommand bcmd;
 		try {

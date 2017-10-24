@@ -2,6 +2,10 @@ import java.awt.Point;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+
+import javax.swing.JFrame;
+
+import com.jogamp.newt.Window;
 import com.jogamp.opengl.GLAutoDrawable;
 
 import smTrace.SmTrace;
@@ -15,13 +19,11 @@ public class ControlsOfView {
 		
 	class ControlEntry {
 		public String name;				// Unique control name
-		public boolean active;			// presently active
-		public ControlOf control;			// Control object, if active
+		public ControlOf control;		// Control object, if ever active
 	
 		ControlEntry(String name, ControlOf control) {
 			this.name = name;
 			this.control = control;
-			active = false;				// Not yet activated
 		}
 	}
 
@@ -44,6 +46,7 @@ public class ControlsOfView {
 	 * @throws EMBlockError 
 	 */
 	public void setControl(String controlName, boolean on) {
+		SmTrace.lg(String.format("setControl(%s,%b)", controlName, on));
 		if (controlh == null)
 			return;
 		if (controlName == null)
@@ -54,11 +57,7 @@ public class ControlsOfView {
 		}
 		ControlEntry ctl_ent = controlh.get(controlName);
 		ControlOf control = ctl_ent.control;
-		//ControlEntry control_entry = new ControlEntry(ctl_ent.name, control);
 		control.setControl(on);
-		//control_entry.active = on;
-		ctl_ent.active = on;
-		controlh.put(controlName, ctl_ent);
 		
 		scene.setCheckBox(controlName, on);		// Have check box reflect setting
 		if (on) {
@@ -83,10 +82,11 @@ public class ControlsOfView {
 	public boolean ckDoAction(String action) throws EMBlockError {
 		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 			ControlEntry control_entry = entry.getValue();
-			if (control_entry.active)
-				if (control_entry.control.ckDoAction(action)) {
-					return true;
-				}
+			ControlOf control = control_entry.control;
+			if (!control.isActive())
+				return false;	// Not active
+			
+			return control.ckDoAction(action);
 		}
 		return false;			// No action done
 	}
@@ -99,6 +99,7 @@ public class ControlsOfView {
 		switch (controlName) {
 			case "component":
 				control = new ControlOfComponent(scene, "component");
+				control.setFull();		// Set full display 
 				break;
 			
 			case "placement":
@@ -109,13 +110,19 @@ public class ControlsOfView {
 				control = new ControlOfColor(scene, "color");
 				break;
 				
+			case "text":
+				control = new ControlOfText(scene, "text");
+				control.setFull();		// Set full display 
+				break;
+				
 			default:
 				SmTrace.lg(
 						String.format("Unrecognized control(%s) - ignored", controlName));
 				return;
 		}
 		controlh.put(controlName, new ControlEntry(controlName, control));
-		scene.controls.placeControl(controlName);
+		control.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		control.addWindowListener(control);
 	}
 
 
@@ -129,8 +136,9 @@ public class ControlsOfView {
 		
 		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 			ControlEntry centry = entry.getValue();
-			if (centry.active)
-				centry.control.adjustControls();			
+			ControlOf control = centry.control;
+			if (control.isActive())
+				control.adjustControls();			
 		}
 		
 	}
@@ -167,12 +175,11 @@ public class ControlsOfView {
 	public void display(GLAutoDrawable drawable) {
 		for (String name : controls) {
 			ControlEntry ctl_entry = controlh.get(name);
-			if (!ctl_entry.active)
-				continue;							// Ignore if not active
 			ControlOf control = ctl_entry.control;
-			if (control != null) {
-				control.display(drawable);
-			}
+			if (!control.isActive())
+				continue;							// Ignore if not active
+
+			control.display(drawable);
 		}
 	}
 
@@ -191,8 +198,10 @@ public class ControlsOfView {
 			return null;
 		}
 		ControlEntry ctl_entry = controlh.get(controlName);
-		if (!ctl_entry.active)
+		ControlOf control = ctl_entry.control;
+		if (!control.isActive())
 			return null;
+		
 		return ctl_entry.control;
 	}
 
@@ -203,17 +212,39 @@ public class ControlsOfView {
 	 * place controls as created
 	 */
 	public void placeControl(String controlName) {
-		int yloc = scene.getHeight();
+		SmTrace.lg(String.format("placeControl(%s)", controlName));
+		int xmargin = 30;
+		int ymargin = 30;
+		int yloc = scene.frame.getHeight() + 2;
+		int xloc = xmargin;
+		int ndisplayed = 0;		// Number displayed
+		ControlOf prev_control = null;
 		for (String name : controls) {
 			ControlEntry ctl_entry = controlh.get(name);
-			if (!ctl_entry.active)
-				continue;							// Ignore if not active
 			ControlOf control = ctl_entry.control;
-			if (control != null) {
-				control.setLocation(new Point(0,yloc));
-				control.setVisible(true);
-				yloc += ctl_entry.control.getHeight();
+			if (control.isInPos()) {
+				xloc = control.getX();
+				yloc = control.getY();
+				if (prev_control != null && prev_control.isFull()) {
+					yloc += prev_control.getHeight();
+				}
+			} else {
+				if (ndisplayed > 0) {
+					xloc += xmargin;		// Adjust if not first
+					yloc += ymargin;
+				}
 			}
+			ndisplayed++;
+			if (name.equals(controlName)) {
+				if (control.isInPos()) {
+					xloc = control.getX();
+					yloc = control.getY();
+				}
+				SmTrace.lg(String.format("setLocation(%d, %d)", xloc, yloc));
+				control.setLocation(xloc, yloc);
+				break;
+			}
+			prev_control = control;
 		}
 	}
 	

@@ -48,6 +48,7 @@ import java.awt.Font;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.FlatteningPathIterator;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Rectangle2D;
@@ -63,6 +64,8 @@ import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.glu.GLUtessellator;
 import com.jogamp.opengl.glu.GLUtessellatorCallback;
 import com.jogamp.opengl.util.gl2.GLUT;
+
+import smTrace.SmTrace;
 
 
 
@@ -268,7 +271,11 @@ public class TextRenderer3D
 		GeneralPath gp = (GeneralPath) gv.getOutline();
 		PathIterator pi = gp.getPathIterator(AffineTransform.getScaleInstance(1.0, -1.0), flatness);
 
-		// dumpShape(gl, gp);
+		boolean drawDebug = true;
+		if (SmTrace.tr("textrender")) {
+			SmTrace.lg(String.format("draw: %s", str));
+			dumpShape(gl, gp);
+		}
 		
 		if (calcNormals)
 			gl.glNormal3f(0, 0, -1.0f);
@@ -432,10 +439,13 @@ public class TextRenderer3D
 	// out to the depth of the extrusion
 	private void drawSides(GL2 gl, PathIterator pi, boolean justBoundary, float depth)
 	{
-		if (justBoundary)
+		if (justBoundary) {
 			gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_LINE);
-		else
+			///gl.glEnable( GL.GL_POLYGON_OFFSET_FILL );
+			///gl.glPolygonOffset( 1, 1 );
+		} else {
 			gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_FILL);
+		}
 
 		float[] lastCoord = new float[3];
 		float[] firstCoord = new float[3];
@@ -587,7 +597,7 @@ public class TextRenderer3D
 
 
 	//--------------- diagnostic utilities -----------------------------------------
-	/*
+	/*** ***/
 	private void dumpShape(GL2 gl, GeneralPath path)
 	{
 		float[] coords = new float[6];
@@ -608,25 +618,25 @@ public class TextRenderer3D
 	
 	protected void dumpSegment( int num, float[] points, int type )
 	{
-		System.out.print(num + " " + Segment[type]);
+		SmTrace.lgs(num + " " + Segment[type]);
 		
 		switch(type)
 		{
 		case PathIterator.SEG_MOVETO:
 		case PathIterator.SEG_LINETO:
-			System.out.print(" " + points[0] + "," + points[1] );
+			SmTrace.lgs(" " + points[0] + "," + points[1] );
 			break;
 			
 		case PathIterator.SEG_QUADTO:
-			System.out.print(" " + points[0] + "," + points[1] + "  " + points[2] + "," + points[3] );
+			SmTrace.lgs(" " + points[0] + "," + points[1] + "  " + points[2] + "," + points[3] );
 			break;
 			
 		case PathIterator.SEG_CUBICTO:
-			System.out.print(" " + points[0] + "," + points[1] + "  " + points[2] + "," + points[3] + "  " + points[4] + "," + points[5]  );
+			SmTrace.lgs(" " + points[0] + "," + points[1] + "  " + points[2] + "," + points[3] + "  " + points[4] + "," + points[5]  );
 			break;
 		}
 		
-		System.out.println();
+		SmTrace.lgln();
 	}
-	*/
+	/*** ***/
 }

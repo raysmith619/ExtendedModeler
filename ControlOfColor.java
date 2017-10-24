@@ -53,8 +53,8 @@ public class ControlOfColor extends ControlOf {
 	 */
 	public void setup() {
 		SmTrace.lg("ControlOfColor.setup()", "setup");
-		if (controlActive)
-			return;					// Already present
+		if (setup)
+			return;					// Already setup
 		
 		SmTrace.lg("ControlOfColor.setup()-2c", "setup");
 		setTitle("Adjust/Report Color");
@@ -91,7 +91,7 @@ public class ControlOfColor extends ControlOf {
 		pack();
 		addDigital(mdChoicePanel);
 		addMap(mdChoicePanel);
-		controlActive = true;
+		setup = true;
 	}
 
 	/**
@@ -266,7 +266,7 @@ public class ControlOfColor extends ControlOf {
 		if (cb == null)
 			return;
 
-		if (controlActive) {
+		if (setup) {
 			colorRedField.setText(String.format("%.2g", cb.getRed()));
 			colorGreenField.setText(String.format("%.2g",cb.getGreen()));
 			colorBlueField.setText(String.format("%.2g", cb.getBlue()));
@@ -343,6 +343,9 @@ public class ControlOfColor extends ControlOf {
 	 */
 	public boolean ckDoAction(String action) throws EMBlockError {
 		EMBCommand bcmd;
+		if (!isActive())
+			return false;	// Not active
+		
 		try {
 			bcmd = new BlkCmdAdd(action);
 		} catch (Exception e) {

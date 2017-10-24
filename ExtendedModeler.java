@@ -95,6 +95,7 @@ public class ExtendedModeler implements ActionListener {
 	JCheckBox displayAddControlCheckBox;
 	JCheckBox displayPlacementControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
+	JCheckBox displayTextControlCheckBox;
 	JCheckBox displayWorldAxesCheckBox;
 	JCheckBox displayCameraTargetCheckBox;
 	JCheckBox displayBoundingBoxCheckBox;
@@ -189,6 +190,11 @@ public class ExtendedModeler implements ActionListener {
 		else if ( source == displayColorControlCheckBox ) {
 			sceneViewer.displayColorControl = ! sceneViewer.displayColorControl;
 			sceneViewer.setControl("color", sceneViewer.displayColorControl);
+			sceneViewer.repaint();
+		}
+		else if ( source == displayTextControlCheckBox ) {
+			sceneViewer.displayTextControl = ! sceneViewer.displayTextControl;
+			sceneViewer.setControl("text", sceneViewer.displayTextControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayWorldAxesCheckBox ) {
@@ -322,6 +328,11 @@ public class ExtendedModeler implements ActionListener {
 		displayColorControlCheckBox.addActionListener(this);
 		toolPanel.add(displayColorControlCheckBox);
 
+		displayTextControlCheckBox = new JCheckBox("Display Text Control", sceneViewer.displayTextControl);
+		displayTextControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayTextControlCheckBox.addActionListener(this);
+		toolPanel.add(displayTextControlCheckBox);
+
 		displayWorldAxesCheckBox = new JCheckBox("Display World Axes", sceneViewer.displayWorldAxes );
 		displayWorldAxesCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
 		displayWorldAxesCheckBox.addActionListener(this);
@@ -370,6 +381,11 @@ public class ExtendedModeler implements ActionListener {
 			case "color":
 				displayColorControlCheckBox.setSelected(checked);
 				sceneViewer.displayColorControl = checked;
+				break;
+				
+			case "text":
+				displayTextControlCheckBox.setSelected(checked);
+				sceneViewer.displayTextControl = checked;
 				break;
 			
 			default:
@@ -643,7 +659,7 @@ public class ExtendedModeler implements ActionListener {
 			}
 			dur += inctime;
 			if (dur > maxtime) {
-				SmTrace.lg(String.format("Wait time(%ld) exceeded, time=%ld", maxtime, dur));
+				SmTrace.lg(String.format("Wait time(%d) exceeded, time=%d", maxtime, dur));
 				break;
 			}
 		}

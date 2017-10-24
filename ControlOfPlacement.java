@@ -160,7 +160,7 @@ public class ControlOfPlacement extends ControlOf {
 	 * Setup Control / Display  position of selected block
 	 */
 	public void setup() {
-		if (controlActive)
+		if (setup)
 			return;					// Already present
 		int bindex = scene.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfPlacement.setup before - selected(%d)", bindex), "select");
@@ -212,26 +212,13 @@ public class ControlOfPlacement extends ControlOf {
 
 		JPanel moveto_panel = new JPanel();
 		posPanel.add(moveto_panel);
-
-		traceSelected(1);
-		// JComboBox<String> combo = new JComboBox<>();
-		EMBlock cb = scene.getSelectedBlock();
-		if (cb == null)
-			 return;
 		
 		traceSelected(11);
 		Point3D center = new Point3D(0,0,0);
-		traceSelected(12);
-		if (cb != null)
-			center = cb.getCenter();
-		traceSelected(13);
 		posXfield = new JTextField(String.format("%.2f", center.x()));
 		SmTrace.lg(String.format("setup posXfield"));
-		traceSelected(14);
 		posXfield.setActionCommand("ENTER");
-		traceSelected(15);
 		posXfield.addActionListener(scene);
-		traceSelected(16);
 		posYfield = new JTextField(String.format("%.2f", center.y()));
 		posYfield.setActionCommand("ENTER");
 		posYfield.addActionListener(scene);
@@ -239,11 +226,8 @@ public class ControlOfPlacement extends ControlOf {
 		posZfield.setActionCommand("ENTER");
 		posZfield.addActionListener(scene);
 		JButton moveToButton = new JButton("MoveTo");
-		traceSelected(17);
 		moveToButton.setActionCommand("moveToButton");
-		traceSelected(18);
 		moveToButton.addActionListener(scene);
-		traceSelected(19);
 		/// panel.add(combo);
 		moveToButton.setHorizontalAlignment(SwingConstants.CENTER);
 		moveto_panel.add(new JLabel("x-coord:"));
@@ -254,7 +238,6 @@ public class ControlOfPlacement extends ControlOf {
 		moveto_panel.add(posZfield);
 		moveto_panel.add(Box.createVerticalStrut(15)); // a spacer
 		moveto_panel.add(moveToButton);
-		traceSelected(2);
 
 		// Adjust by
 		JPanel adjpos_panel = new JPanel();
@@ -262,17 +245,14 @@ public class ControlOfPlacement extends ControlOf {
 		float adjamt = .1f; // Default adjustment
 		adjpos_panel.add(Box.createVerticalStrut(15)); // a spacer
 		adjposXfield = new JTextField(String.format("%.2f", adjamt));
-		traceSelected(3);
 		adjposXfield.setActionCommand("adjposENTER");
 		adjposXfield.addActionListener(scene);
-		traceSelected(4);
 		adjposYfield = new JTextField(String.format("%.2f", adjamt));
 		adjposYfield.setActionCommand("adjposENTER");
 		adjposYfield.addActionListener(scene);
 		adjposZfield = new JTextField(String.format("%.2f", adjamt));
 		adjposZfield.setActionCommand("adjposENTER");
 		adjposZfield.addActionListener(scene);
-		traceSelected(5);
 		JButton adjposUpButton = new JButton("Up By");
 		adjposUpButton.setActionCommand("adjposUpButton");
 		adjposUpButton.addActionListener(scene);
@@ -282,7 +262,6 @@ public class ControlOfPlacement extends ControlOf {
 		adjpos_panel.add(Box.createVerticalStrut(15)); // a spacer
 		adjpos_panel.add(new JLabel("x-adj:"));
 		adjpos_panel.add(adjposXfield);
-		traceSelected(6);
 		adjpos_panel.add(new JLabel("y-adj:"));
 		adjpos_panel.add(adjposYfield);
 		adjpos_panel.add(new JLabel("z-adj:"));
@@ -293,7 +272,7 @@ public class ControlOfPlacement extends ControlOf {
 
 		int bindex2 = scene.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfPlacement.setup after - selected(%d)", bindex2), "select");
-		controlActive = true;
+		setup = true;
 	}
 	
 	
@@ -419,7 +398,7 @@ public class ControlOfPlacement extends ControlOf {
 		if (cb == null)
 			return;
 
-		if (controlActive) {
+		if (setup) {
 			Point3D min = cb.getMin();
 			posXfield.setText(String.format("%.2g", min.x()));
 			posYfield.setText(String.format("%.2g", min.y()));
@@ -441,6 +420,9 @@ public class ControlOfPlacement extends ControlOf {
 	 */
 	public boolean ckDoAction(String action) throws EMBlockError {
 		EMBCommand bcmd;
+		if (!isActive())
+			return false;	// Not active
+
 		try {
 			bcmd = new BlkCmdAdd(action);
 		} catch (Exception e) {

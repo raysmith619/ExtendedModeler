@@ -79,6 +79,14 @@ public class ColoredText extends EMBlockBase {
 		Color color
 	) {
 		GL2 gl = (GL2) drawable.getGL();
+		/*** test lighting
+		float[] 		LightDiffuse =	 { 1.0f, 1.0f, 1.0f, 1.0f };
+		float[] 		LightAmbient =	 { 0.8f, 0.8f, 0.8f, 1.0f };
+		float[] 		LightPosition =	 { 1.0f, 1.0f, 1.0f, 0.0f };
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, LightAmbient, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, LightDiffuse, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, LightPosition, 0);
+		***/
 		
 		if ( expand ) {
 			float diagonal = box.getDiagonal().length();
@@ -130,7 +138,7 @@ public class ColoredText extends EMBlockBase {
 		    float ty = base.y();
 		    float tz = base.z();
 		    int font_size = 10;
-		    float tscale = (float) (.9 * 1./font_size);
+		    float tscale = (float) (.8 * 1./font_size);
 		    float depth = 5f;
 			
 			TextRenderer3D tr3 = new TextRenderer3D(new Font("SansSerif", Font.BOLD, font_size), tscale);

@@ -1,3 +1,6 @@
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 
@@ -13,16 +16,82 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	SceneViewer scene;		// Our scene
-	String name;			// Our unique control name
-	boolean controlActive;
-
+	SceneViewer scene;			// Our scene
+	String name;				// Our unique control name
+	boolean setup;				// true - fully setup
+	private boolean active;		// true setup and visible
+	public boolean inPos;			// true - in position
+	public boolean full;		// Reserve full height
 	
 	ControlOf(SceneViewer scene, String name) {
 		super();
 		this.scene = scene;
 		this.name = name;
-		this.controlActive = false;
+		this.setup = false;
+		this.active = false;
+		this.inPos = false;
+		this.full = false;
+	}
+	
+	/**
+	 * Setup Control of object adding
+	 * Hopefully a model / base class of other control dialogs
+	 * @throws EMBlockError 
+	 */
+	public void setup(String name)  {
+		if (setup)
+			return;			// Already setup
+		
+		setup();			// Do appropriate setup
+		
+							// Do common stuff
+		addComponentListener(new ComponentListener() {
+			public void componentMoved(ComponentEvent e) {
+				updateLocation(e);
+			}
+
+			@Override
+			public void componentResized(ComponentEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void componentShown(ComponentEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void componentHidden(ComponentEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+	} );
+	}
+
+	/**
+	 * Set to display full height
+	 */
+	public void setFull() {
+		full = true;
+	}
+	
+	/**
+	 * Ck for full display
+	 */
+	public boolean isFull() {
+		return full;
+	}
+	
+	
+	/**
+	 * Update location
+	 * Generally called after move
+	 */
+	public void updateLocation(ComponentEvent e) {
+		SmTrace.lg(String.format("updateLocation(%s)",  name), "location");
+		
 	}
 	
 	/**
@@ -38,6 +107,30 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * Overridden only if necessary
 	 */
 
+
+	/**
+	 * Set as active
+	 */
+	public void setActive() {
+		setActive(true);
+	}
+	
+	
+	/**
+	 * Set active state
+	 * setup, if necessary
+	 */
+	public void setActive(boolean on ) {
+		if (on) {
+			if (!setup)
+				setup(name);
+		}
+
+		setVisible(on);
+		active = on;
+	}
+	
+	
 	/**
 	 * Required control methods
 	 * Overridden, if appropriate
@@ -48,14 +141,8 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 			int bindex = scene.getSelectedBlockIndex();
 			SmTrace.lg(String.format("ControlOf.setControl(%b) %s: before - selected(%d)", on, name, bindex),
 					"select", "select");
-	
-		if (on) {
-			setup();
-			this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-			this.addWindowListener(this);
-		} else {
-			dispose();
-		}
+			setActive(on);
+			
 			bindex = scene.getSelectedBlockIndex();
 			SmTrace.lg(String.format("ControlOf.setControl(%b) %s: after - selected(%d)", on, name, bindex),
 					"select", "select");
@@ -84,6 +171,22 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 */
 	public void adjustControls() {		
 	}
+
+	/**
+	 * Set Control window location and remember
+	 */
+	public void setLocation(int x, int y) {
+		super.setLocation(x, y);
+		this.inPos = true;
+		setActive();
+	}
+
+	/**
+	 * Check if in position
+	 */
+	public boolean isInPos() {
+		return inPos;
+	}
 	
 	
 	/**
@@ -101,9 +204,15 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
  	public void dispose() {
   		super.dispose();
 		scene.setCheckBox(name, false);			// Clear display checkbox
- 		controlActive = false;
+ 		setup = false;
 	}
 
+ 	public boolean isActive() {
+ 		if (!setup)
+ 			return false;
+ 		return active;
+ 	}
+ 	
 	@Override
 	public void windowActivated(java.awt.event.WindowEvent arg0) {
 		// TODO Auto-generated method stub
