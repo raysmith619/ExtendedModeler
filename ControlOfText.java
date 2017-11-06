@@ -1,10 +1,13 @@
 import java.awt.Component;
+import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -20,15 +23,16 @@ public class ControlOfText extends ControlOf {
 	 * Uses ControlOfPlacement for initial placement
 	 */
 	JTextField textStringTxFld;
-	JTextField fontNameTxFld;
+	JComboBox fontCBox;
 	JCheckBox boldCkBox;
 	JCheckBox italicCkBox;
 	JCheckBox underlineCkBox;
+	JTextField textFontSizeTxFld;
 	
 	JTextField textXDirTxFld;
 	JTextField textYDirTxFld;
 	JTextField textZDirTxFld;
-	JCheckBox textDirTxByCharCkBox;
+	JCheckBox textDirByCharCkBox;
 	
 	JTextField charXSizeTxFld;
 	JTextField charYSizeTxFld;
@@ -44,12 +48,10 @@ public class ControlOfText extends ControlOf {
 	JButton textNewButton;
 	JButton textDupButton;
 	JButton textSelectButton;	// Populate with selected Block's properties
-	JCheckBox positionAsNextCkBlock;		// In text direction, spacing
-	JCheckBox positionOnCurrentCkBlock;		// On current block location
+	JRadioButton positionAtNextRaButton;		// In text direction, spacing
+	JRadioButton positionAtCurrRaButton;		// On current block location
+
 	
-										// Action
-	JCheckBox actionAsNextCkBox;		// At next logical location
-	JCheckBox actionAtCurrentCkBox;		// At current position
 	
 	ControlOfText(SceneViewer scene, String name) {
 		super(scene, name);
@@ -77,15 +79,31 @@ public class ControlOfText extends ControlOf {
 		controlPanel.add(textPanel);
 
 		textPanel.add(new JLabel("Text"));
-		textStringTxFld = new JTextField("Enter text");
+		textStringTxFld = new JTextField("~~~");
 		textPanel.add(textStringTxFld);
 		textPanel.add(new JLabel("Font"));
-		fontNameTxFld = new JTextField("Font name");
-		textPanel.add(fontNameTxFld);
+		Font font = ColoredText.getFont();
+		String font_name = font.getFontName();
+		String[] font_names = getFontNames();
+		int fnindex = 0;
+		for (int i = 0; i < font_names.length; i++) {
+			if (font_name.startsWith(font_names[i])) {
+				fnindex = i;
+				break;
+			}
+		}
+		fontCBox = new JComboBox(font_names);
+		fontCBox.setSelectedIndex(fnindex);
+		textPanel.add(fontCBox);
+		///fontNameTxFld = new JTextField(font.getFontName());
+		///textPanel.add(fontNameTxFld);
+		textPanel.add(new JLabel("Size"));
+		textFontSizeTxFld = new JTextField(String.valueOf(font.getSize()));
+		textPanel.add(textFontSizeTxFld);
 
-		boldCkBox = new JCheckBox("Bold");
+		boldCkBox = new JCheckBox("Bold", font.isBold());
 		textPanel.add(boldCkBox);
-		italicCkBox = new JCheckBox("Italic");
+		italicCkBox = new JCheckBox("Italic", font.isItalic());
 		textPanel.add(italicCkBox);
 		underlineCkBox = new JCheckBox("Underline");
 		textPanel.add(underlineCkBox);
@@ -110,8 +128,8 @@ public class ControlOfText extends ControlOf {
 		textZDirTxFld = new JTextField("1");
 		textPropPanel.add(textZDirTxFld);
 		
-		textDirTxByCharCkBox = new JCheckBox("ByChar", true);
-		textPropPanel.add(textDirTxByCharCkBox);
+		textDirByCharCkBox = new JCheckBox("ByChar", true);
+		textPropPanel.add(textDirByCharCkBox);
 		
 		JPanel charPanel = new JPanel();
 		controlPanel.add(charPanel);
@@ -148,7 +166,7 @@ public class ControlOfText extends ControlOf {
 		charPanel.add(charZSizeTxFld);
 		
 		
-		charSizeByBlockCkBox = new JCheckBox("ByBlock");
+		charSizeByBlockCkBox = new JCheckBox("ByBlock", true);
 		charPanel.add(charSizeByBlockCkBox);
 		pack();
 		
@@ -156,23 +174,36 @@ public class ControlOfText extends ControlOf {
 		controlPanel.add(actionPanel);
 
 		JButton textNewButton = new JButton("New");
-		textNewButton.setActionCommand("text_new");
+		textNewButton.setActionCommand("emc_text_new");
 		textNewButton.addActionListener(scene);
 		actionPanel.add(textNewButton);
 		
 		JButton textDupButton = new JButton("Dup");
-		textNewButton.setActionCommand("text_dup");
-		textNewButton.addActionListener(scene);
+		textDupButton.setActionCommand("emc_text_dup");
+		textDupButton.addActionListener(scene);
 		actionPanel.add(textDupButton);
 		
 		JButton textSelectButton = new JButton("Select");
-		textNewButton.setActionCommand("text_select");
-		textNewButton.addActionListener(scene);
+		textSelectButton.setActionCommand("emc_text_select");
+		textSelectButton.addActionListener(scene);
 		actionPanel.add(textSelectButton);
-		actionAsNextCkBox = new JCheckBox("AsNext", true);
-		actionPanel.add(actionAsNextCkBox);
-		actionAtCurrentCkBox = new JCheckBox("AtCurrent");
-		actionPanel.add(actionAtCurrentCkBox);
+		
+
+		positionAtNextRaButton = new JRadioButton("At Next");
+		positionAtNextRaButton.setActionCommand("emc_pos_at_next");
+		positionAtNextRaButton.setSelected(true);
+		positionAtNextRaButton.addActionListener(scene);
+
+		positionAtCurrRaButton = new JRadioButton("At Current");
+		positionAtCurrRaButton.setActionCommand("emc_pos_at_current");
+		positionAtCurrRaButton.addActionListener(scene);
+
+		ButtonGroup positionAtGroup = new ButtonGroup();
+		positionAtGroup.add(positionAtNextRaButton);
+		positionAtGroup.add(positionAtCurrRaButton);
+		
+		actionPanel.add(positionAtNextRaButton);
+		actionPanel.add(positionAtCurrRaButton);
 		
 		pack();
 		setup = true;
@@ -213,13 +244,16 @@ public class ControlOfText extends ControlOf {
 			return false;
 		}
 		switch (action) {
-			case"text_new":
+			case "emc_text_new":
+				scene.addTextButton(bcmd, action);
 				break;
 				
-			case "text_dup":
+			case "emc_text_dup":
+				scene.dupTextButton(bcmd, action);
 				break;
 				
-			case "text_select":
+			case "emc_text_select":
+				scene.selectTextButton(bcmd, action);
 				break;
 			
 				default:
@@ -229,5 +263,229 @@ public class ControlOfText extends ControlOf {
 
 	}
 
+	/**
+	 * Access methods
+	 */
+	
+	/**
+	 * collect font info, creating a Font object
+	 */
+	public Font getFont() {
+		Font font = ColoredText.getFont();
+		String fontName = (String) fontCBox.getSelectedItem();
+		boolean bold = font.isBold();
+		try {
+			bold = getBold();
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		boolean italic = font.isItalic();
+		try {
+			italic = getItalic();
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		int size = font.getSize();
+		try {
+			size = getFontSize();
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		int style = Font.PLAIN;
+		if (bold)
+			style += Font.BOLD;
+		if (italic)
+			style += Font.ITALIC;
+		
+		font = new Font(fontName, style, size);
 
+		return font;
+	}
+	
+	public String getText() throws EMBlockError {
+		String val = "";
+		if (textStringTxFld != null) {
+			String text = textStringTxFld.getText();
+			val = text;
+		}
+		return val;
+	}
+	
+	public String getFontName() throws EMBlockError {
+		String val = "";
+		if (fontCBox != null) {
+			String text = (String) fontCBox.getSelectedItem();
+			val = text;
+		}
+		return val;
+	}
+	
+	public int getFontSize() throws EMBlockError {
+		int val = ColoredText.getFont().getSize();
+		if (textFontSizeTxFld != null) {
+			String text = textFontSizeTxFld.getText();
+			if (!text.equals(""))
+				val = Integer.valueOf(text);
+		}
+		return val;
+	}
+	
+	public boolean getBold() throws EMBlockError {
+		boolean val = false;
+		if (boldCkBox != null) {
+			val = boldCkBox.isSelected();
+		}
+		return val;
+	}
+	
+	public boolean getItalic() throws EMBlockError {
+		boolean val = false;
+		if (italicCkBox != null) {
+			val = italicCkBox.isSelected();
+		}
+		return val;
+	}
+	
+	public boolean getUnderline() throws EMBlockError {
+		boolean val = false;
+		if (underlineCkBox != null) {
+			val = underlineCkBox.isSelected();
+		}
+		return val;
+	}
+	
+	public float getTextXDir() throws EMBlockError {
+		float val = 0;
+		if (textXDirTxFld != null) {
+			String text = textXDirTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public float getTextYDir() throws EMBlockError {
+		float val = 0;
+		if (textYDirTxFld != null) {
+			String text = textYDirTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public float getTextZDir() throws EMBlockError {
+		float val = 0;
+		if (textZDirTxFld != null) {
+			String text = textZDirTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public boolean getTextDirByChar() throws EMBlockError {
+		boolean val = false;
+		if (textDirByCharCkBox != null) {
+			val = textDirByCharCkBox.isSelected();
+		}
+		return val;
+	}
+	
+	public float getCharXSize() throws EMBlockError {
+		float val = 0;
+		if (charXSizeTxFld != null) {
+			String text = charXSizeTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public float getCharYSize() throws EMBlockError {
+		float val = 0;
+		if (charYSizeTxFld != null) {
+			String text = charYSizeTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public float getCharZSize() throws EMBlockError {
+		float val = 0;
+		if (charZSizeTxFld != null) {
+			String text = charZSizeTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public boolean getCharSizeByBlock() throws EMBlockError {
+		boolean val = false;
+		if (charSizeByBlockCkBox != null) {
+			val = charSizeByBlockCkBox.isSelected();
+		}
+		return val;
+	}
+	
+	public boolean getCharDirWithText() throws EMBlockError {
+		boolean val = false;
+		if (charDirWithTextCkBox != null) {
+			val = charDirWithTextCkBox.isSelected();
+		}
+		return val;
+	}
+	
+	public float getCharXDir() throws EMBlockError {
+		float val = 0;
+		if (charXDirTxFld != null) {
+			String text = charXDirTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public float getCharYDir() throws EMBlockError {
+		float val = 0;
+		if (charYDirTxFld != null) {
+			String text = charYDirTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public float getCharZDir() throws EMBlockError {
+		float val = 0;
+		if (charZDirTxFld != null) {
+			String text = charZDirTxFld.getText();
+			val = Float.valueOf(text);
+		}
+		return val;
+	}
+	
+	public boolean getCharDirByBlockCkBox() throws EMBlockError {
+		boolean val = false;
+		if (charDirByBlockCkBox != null) {
+			val = charDirByBlockCkBox.isSelected();
+		}
+		return val;
+	}
+
+	public boolean getPosAtNext() throws EMBlockError {
+		if (positionAtNextRaButton == null)
+			return false;
+		if (positionAtNextRaButton.isSelected())
+			return true;
+		return false;
+	}
+	
+	/**
+	 * Get font names
+	 * 
+	 */
+	public String[] getFontNames() {
+		String fonts[] = 
+		      GraphicsEnvironment.getLocalGraphicsEnvironment()
+		      .getAvailableFontFamilyNames();
+		return fonts;
+	}
 }

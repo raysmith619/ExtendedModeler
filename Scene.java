@@ -57,6 +57,11 @@ class Scene {
 	 */
 	public void insertBlock(EMBlock cb) {
 		if (cb != null) {
+			if (genBlocks.getBlock(cb.iD()) == null) {
+				// Shouldn't really happen
+				SmTrace.lg(String.format("Adding new block %s id=%d", cb, cb.iD()));
+				genBlocks.putBlock(cb);
+			}
 			displayedBlocks.putBlock(cb);
 			isBoundingBoxOfSceneDirty = true;
 		}

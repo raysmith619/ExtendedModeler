@@ -102,7 +102,7 @@ public class EMBCommandManager {
 	 * Get block, given index
 	 */
 	public EMBlock cb(int id) {
-		return scene.cb(id);
+		return scene.getCb(id);
 	}
 
 	

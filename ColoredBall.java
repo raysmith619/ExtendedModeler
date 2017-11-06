@@ -57,7 +57,10 @@ public class ColoredBall extends EMBlockBase {
 		boolean cornersOnly
 	) {
 		GL2 gl = (GL2) drawable.getGL();
-		drawAsWireframe = true;			// Force frame
+		drawAsWireframe = true;			/// Force frame
+		///drawAsWireframe = false;		/// Force not frame
+		cornersOnly = false;			/// Force no corners
+		cornersOnly = true;				/// Force corners
 		if ( expand ) {
 			float diagonal = box.getDiagonal().length();
 			diagonal /= 20;
@@ -65,6 +68,7 @@ public class ColoredBall extends EMBlockBase {
 			box = new AlignedBox3D( Point3D.diff(box.getMin(),v), Point3D.sum(box.getMax(),v) );
 		}
 		if ( drawAsWireframe ) {
+			/***
 			if ( cornersOnly ) {
 				gl.glBegin( GL.GL_LINES );
 				for ( int dim = 0; dim < 3; ++dim ) {
@@ -104,6 +108,7 @@ public class ColoredBall extends EMBlockBase {
 					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
 				gl.glEnd();
 			}
+			***/
 			Vector3D diagonal = box.getDiagonal();
 			float xlen = Math.abs(diagonal.x());
 			float ylen = Math.abs(diagonal.y());

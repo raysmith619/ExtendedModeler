@@ -2,6 +2,7 @@ import java.awt.Point;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.JFrame;
 
@@ -84,9 +85,10 @@ public class ControlsOfView {
 			ControlEntry control_entry = entry.getValue();
 			ControlOf control = control_entry.control;
 			if (!control.isActive())
-				return false;	// Not active
+				continue;			// Skip if not active
 			
-			return control.ckDoAction(action);
+			if (control.ckDoAction(action))
+				return true;				// Return if action performed
 		}
 		return false;			// No action done
 	}
@@ -205,6 +207,14 @@ public class ControlsOfView {
 		return ctl_entry.control;
 	}
 
+	/**
+	 * Get array of control names
+	 */
+	public String[] getControlNames() {
+		Set<String> nameset = controlh.keySet();
+		String[] names = nameset.toArray(new String[nameset.size()]);
+		return names;
+	}
 	
 	/**
 	 * Place control component by name
@@ -247,6 +257,32 @@ public class ControlsOfView {
 			prev_control = control;
 		}
 	}
+
+	/**
+	 * Adjust object based on controls and new object
+	 * @throws EMBlockError 
+	 */
+	public void adjustByControl(EMBlock cb, EMBCommand bcmd) throws EMBlockError {
+		ControlOfPlacement cop = (ControlOfPlacement) getControl("placement");
+		Vector3D adj = cop.getAdj();
+		cb.translate(adj);
+	}
 	
+	/**
+	 * Update controls based on display update
+	 * @param new_select
+	 * @param prev_select
+	 */
+	public void displayUpdate(BlockSelect new_select, BlockSelect prev_select) {
+		int[] cbis = new_select.getIds();
+		if (cbis.length != 1)
+			return;			// Ignore if not 1
+		
+		EMBlock cb = scene.getCb(cbis[0]);
+		if (cb == null)
+			return;					// Not displayed
+		
+		cb.setControls(this);
+	}
 	
 }

@@ -385,9 +385,10 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		for (int id : new_select.getIds()) {
 			scene.setSelectionStateOfBox(id, true);
 		}
-		///if (!new_select.isEmpty()) {
-		///	selectStack.push(new_select);		// Remember if deleting
-		///}
+		/**
+		 * Update control display
+		 */
+		controls.displayUpdate(new_select, prev_select);
 		display();
 		repaint();
 		return true;
@@ -562,39 +563,31 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		addBlock(bcmd, cbnew);
 	}
 
-	public int createNewBlock(EMBCommand bcmd, String blockType) {
-		Vector3D halfDiagonalOfNewBox = new Vector3D(EMBlockBase.DEFAULT_SIZE * 0.5f, EMBlockBase.DEFAULT_SIZE * 0.5f,
-				EMBlockBase.DEFAULT_SIZE * 0.5f);
-		EMBlock cb = getSelectedBlock();
-		if (cb != null) {
-			Point3D centerOfNewBox = Point3D.sum(
-					Point3D.sum(cb.getCenter(),
-							Vector3D.mult(normalAtSelectedPoint,
-									0.5f * (float) Math.abs(Vector3D.dot(cb.getDiagonal(), normalAtSelectedPoint)))),
-					Vector3D.mult(normalAtSelectedPoint, EMBlockBase.DEFAULT_SIZE * 0.5f));
-			float alpha = cb.getAlpha();
-			SmTrace.lg("alpha=" + alpha, "color");
-			Color color = new Color(clamp(cb.getRed() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
-					clamp(cb.getGreen() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
-					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), alpha);
-			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
-					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
-			cb = EMBlock.newBlock(blockType, box, color);
-		} else {
-			Point3D centerOfNewBox = camera.target;
-			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
-					EMBlockBase.DEFAULT_ALPHA);
-			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
-					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
-			cb = EMBlock.newBlock(blockType, box, color);
-			normalAtSelectedPoint = new Vector3D(1, 0, 0);
+	public int createNewBlock(EMBCommand bcmd, String blockType) throws EMBlockError  {
+		EMBlock cb_sel = getSelectedBlock();
+		if (cb_sel != null) {
+			cb_sel.setControls(controls);
 		}
-		if (cb != null) {
-			int id = bcmd.addBlock(cb);
-			bcmd.selectBlock(id);		// Select new block
-			return id;
+		EMBlock cb = null;
+		try {
+			cb = EMBlock.newBlock(blockType);
+		} catch (EMBlockError e) {
+			SmTrace.lg(String.format("createNewBlock %s error: %s",
+					blockType, e.getMessage()));
+			return -1;
 		}
-		return -1;			// No block
+		try {
+			cb.setFromControls(controls);
+		} catch (EMBlockError e) {
+			SmTrace.lg(String.format("createNewBlock %s error: %s",
+					blockType, e.getMessage()));
+			return -1;
+		}
+		
+		cb.adjustFromControls(controls, bcmd);
+		int id = bcmd.addBlock(cb);
+		bcmd.selectBlock(id);		// Select new block
+		return id;
 		
 	}
 
@@ -641,7 +634,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	/**
 	 * Get block, given index
 	 */
-	public EMBlock cb(int id) {
+	public EMBlock getCb(int id) {
 		return scene.cb(id);
 	}
 
@@ -679,7 +672,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * @throws EMBlockError 
 	 */
 	public int duplicateBlock(EMBCommand bcmd, int id) throws EMBlockError {
-		String blockType = cb(id).blockType();
+		String blockType = getCb(id).blockType();
 		int idnew = createNewBlock(bcmd, blockType);
 		return idnew;
 	}
@@ -956,7 +949,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		if (indexOfHilitedBox >= 0) {
 			if (e.isControlDown()) {
 				EMBCommand bcmd;
-				String action = "mouseAddSelect";
+				String action = "emc_mouseAddSelect";
 				try {
 					bcmd = new BlkCmdAdd(action);
 				} catch (Exception e2) {
@@ -967,7 +960,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				bcmd.doCmd();
 			} else {
 				EMBCommand bcmd;
-				String action = "mouseNewSelect";
+				String action = "emc_mouseNewSelect";
 				try {
 					bcmd = new BlkCmdAdd(action);
 				} catch (Exception e2) {
@@ -995,107 +988,112 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		mouse_x = e.getX();
 		mouse_y = e.getY();
 		SmTrace.lg(String.format("mousePressed(%d,%d)", mouse_x, mouse_y), "mouse");
-		if (autoAdd != ExtendedModeler.AutoAddType.NONE) {
-			// Placement point assuming z == 0
-			double world_z = 0;
-			double wcoord[] = new double[4];
-			screen2WorldCoord(mouse_x, mouse_y, world_z, wcoord);
-			Point3D p = new Point3D((float) wcoord[0], (float) wcoord[1], (float) world_z);
-			if (anySelected()) {
-				Point3D pnew = new Point3D((float) wcoord[0], (float) wcoord[1], (float) wcoord[2]);
-				p = pnew;
+		try {
+			if (autoAdd != ExtendedModeler.AutoAddType.NONE) {
+				// Placement point assuming z == 0
+				double world_z = 0;
+				double wcoord[] = new double[4];
+				screen2WorldCoord(mouse_x, mouse_y, world_z, wcoord);
+				Point3D p = new Point3D((float) wcoord[0], (float) wcoord[1], (float) world_z);
+				if (anySelected()) {
+					Point3D pnew = new Point3D((float) wcoord[0], (float) wcoord[1], (float) wcoord[2]);
+					p = pnew;
+				}
+				camera.lookAt(p);
+				EMBCommand bcmd = null;
+				switch (autoAdd) {
+				case DUPLICATE:
+					try {
+						bcmd = new BlkCmdAdd("emc_duplicate");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					try {
+						duplicateBlock(bcmd);
+					} catch (EMBlockError e2) {
+						e2.printStackTrace();
+						SmTrace.lg("duplicateBlock error");
+						return;
+					}
+					break;
+	
+				case BOX:
+					try {
+						bcmd = new BlkCmdAdd("emc_duplicate");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "box");
+					break;
+	
+				case BALL:
+					try {
+						bcmd = new BlkCmdAdd("ball");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "ball");
+					break;
+	
+				case CONE:
+					try {
+						bcmd = new BlkCmdAdd("emc_cone");
+					} catch (Exception e1) {
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "cone");
+					break;
+	
+				case CYLINDER:
+					try {
+						bcmd = new BlkCmdAdd("emc_cylinder");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "cylinder");
+					break;
+	
+				case TEXT:
+					try {
+						bcmd = new BlkCmdAdd("emc_text");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "text");
+					break;
+					
+				default:
+					SmTrace.lg("Unrecognized AutoAdd value - ignored");
+				}
+				if (bcmd != null)
+					bcmd.doCmd();
+				return;
 			}
-			camera.lookAt(p);
-			EMBCommand bcmd = null;
-			switch (autoAdd) {
-			case DUPLICATE:
-				try {
-					bcmd = new BlkCmdAdd("duplicate");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+			if (radialMenu.isVisible()
+					|| (SwingUtilities.isRightMouseButton(e) && !e.isShiftDown() && !e.isControlDown())) {
+				int returnValue = radialMenu.pressEvent(mouse_x, mouse_y);
+				if (returnValue == CustomWidget.S_REDRAW)
+					repaint();
+				if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
 					return;
-				}
-				try {
-					duplicateBlock(bcmd);
-				} catch (EMBlockError e2) {
-					e2.printStackTrace();
-					SmTrace.lg("duplicateBlock error");
-					return;
-				}
-				break;
-
-			case BOX:
-				try {
-					bcmd = new BlkCmdAdd("duplicate");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				createNewBlock(bcmd, "box");
-				break;
-
-			case BALL:
-				try {
-					bcmd = new BlkCmdAdd("ball");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				createNewBlock(bcmd, "ball");
-				break;
-
-			case CONE:
-				try {
-					bcmd = new BlkCmdAdd("cone");
-				} catch (Exception e1) {
-					e1.printStackTrace();
-					return;
-				}
-				createNewBlock(bcmd, "cone");
-				break;
-
-			case CYLINDER:
-				try {
-					bcmd = new BlkCmdAdd("cylinder");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				createNewBlock(bcmd, "cylinder");
-				break;
-
-			case TEXT:
-				try {
-					bcmd = new BlkCmdAdd("text");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				createNewBlock(bcmd, "text");
-				break;
-				
-			default:
-				SmTrace.lg("Unrecognized AutoAdd value - ignored");
 			}
-			if (bcmd != null)
-				bcmd.doCmd();
+	
+			updateHiliting();
+		} catch (EMBlockError eb) {
+			SmTrace.lg(String.format("mousePressed error %s", eb.getMessage()));
 			return;
 		}
-		if (radialMenu.isVisible()
-				|| (SwingUtilities.isRightMouseButton(e) && !e.isShiftDown() && !e.isControlDown())) {
-			int returnValue = radialMenu.pressEvent(mouse_x, mouse_y);
-			if (returnValue == CustomWidget.S_REDRAW)
-				repaint();
-			if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
-				return;
-		}
-
-		updateHiliting();
 	}
 
 		
@@ -1104,130 +1102,135 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		old_mouse_y = mouse_y;
 		mouse_x = e.getX();
 		mouse_y = e.getY();
-		SmTrace.lg(String.format("mouseReleased(%d,%d)", mouse_x, mouse_y), "mouse");
-
-		if (radialMenu.isVisible()) {
-			int returnValue = radialMenu.releaseEvent(mouse_x, mouse_y);
-
-			int itemID = radialMenu.getItemID(radialMenu.getSelection());
-			SmTrace.lg(String.format("itemID=%d returnValue=%d", itemID, returnValue), "select");
-			EMBCommand bcmd = null;
-			switch (itemID) {
-			case COMMAND_DUPLICATE_BLOCK:
-				try {
-					bcmd = new BlkCmdAdd("duplicate_block");
-				} catch (Exception e1) {
-					e1.printStackTrace();
-					return;
+		try {
+			SmTrace.lg(String.format("mouseReleased(%d,%d)", mouse_x, mouse_y), "mouse");
+	
+			if (radialMenu.isVisible()) {
+				int returnValue = radialMenu.releaseEvent(mouse_x, mouse_y);
+	
+				int itemID = radialMenu.getItemID(radialMenu.getSelection());
+				SmTrace.lg(String.format("itemID=%d returnValue=%d", itemID, returnValue), "select");
+				EMBCommand bcmd = null;
+				switch (itemID) {
+				case COMMAND_DUPLICATE_BLOCK:
+					try {
+						bcmd = new BlkCmdAdd("duplicate_block");
+					} catch (Exception e1) {
+						e1.printStackTrace();
+						return;
+					}
+					try {
+						duplicateBlock(bcmd);
+					} catch (EMBlockError e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+						SmTrace.lg("duplicateBlock error");
+						return;
+					} // Duplicate selected block
+					break;
+				case COMMAND_CREATE_BOX:
+					try {
+						bcmd = new BlkCmdAdd("emc_create_box");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "box");
+					break;
+				case COMMAND_CREATE_BALL:
+					try {
+						bcmd = new BlkCmdAdd("emc_create_ball");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "ball");
+					break;
+				case COMMAND_CREATE_CONE:
+					try {
+						bcmd = new BlkCmdAdd("emc_create_cone");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "cone");
+					break;
+				case COMMAND_CREATE_CYLINDAR:
+					try {
+						bcmd = new BlkCmdAdd("emc_create_cylinder");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					createNewBlock(bcmd, "cylinder");
+					break;
+				case COMMAND_COLOR_RED:
+					try {
+						bcmd = new BlkCmdAdd("emc_color_red");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					setColorOfSelection(bcmd, 1, 0, 0);
+					break;
+				case COMMAND_COLOR_YELLOW:
+					try {
+						bcmd = new BlkCmdAdd("emc_color_yello");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					setColorOfSelection(bcmd, 1, 1, 0);
+					break;
+				case COMMAND_COLOR_GREEN:
+					try {
+						bcmd = new BlkCmdAdd("emc_color_green");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					setColorOfSelection(bcmd, 0, 1, 0);
+					break;
+				case COMMAND_COLOR_BLUE:
+					try {
+						bcmd = new BlkCmdAdd("emc_color_blue");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					setColorOfSelection(bcmd, 0, 0, 1);
+					break;
+				case COMMAND_DELETE:
+					try {
+						bcmd = new BlkCmdAdd("emc_delete");
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+						return;
+					}
+					deleteSelection(bcmd);
+					break;
 				}
-				try {
-					duplicateBlock(bcmd);
-				} catch (EMBlockError e2) {
-					// TODO Auto-generated catch block
-					e2.printStackTrace();
-					SmTrace.lg("duplicateBlock error");
+	
+				repaint();
+	
+				if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
 					return;
-				} // Duplicate selected block
-				break;
-			case COMMAND_CREATE_BOX:
-				try {
-					bcmd = new BlkCmdAdd("create_box");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
+				if (bcmd != null) {
+					bcmd.saveCmd();
 				}
-				createNewBlock(bcmd, "box");
-				break;
-			case COMMAND_CREATE_BALL:
-				try {
-					bcmd = new BlkCmdAdd("create_ball");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				createNewBlock(bcmd, "ball");
-				break;
-			case COMMAND_CREATE_CONE:
-				try {
-					bcmd = new BlkCmdAdd("create_cone");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				createNewBlock(bcmd, "cone");
-				break;
-			case COMMAND_CREATE_CYLINDAR:
-				try {
-					bcmd = new BlkCmdAdd("create_cylinder");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				createNewBlock(bcmd, "cylinder");
-				break;
-			case COMMAND_COLOR_RED:
-				try {
-					bcmd = new BlkCmdAdd("color_red");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				setColorOfSelection(bcmd, 1, 0, 0);
-				break;
-			case COMMAND_COLOR_YELLOW:
-				try {
-					bcmd = new BlkCmdAdd("color_yello");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				setColorOfSelection(bcmd, 1, 1, 0);
-				break;
-			case COMMAND_COLOR_GREEN:
-				try {
-					bcmd = new BlkCmdAdd("color_green");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				setColorOfSelection(bcmd, 0, 1, 0);
-				break;
-			case COMMAND_COLOR_BLUE:
-				try {
-					bcmd = new BlkCmdAdd("color_blue");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				setColorOfSelection(bcmd, 0, 0, 1);
-				break;
-			case COMMAND_DELETE:
-				try {
-					bcmd = new BlkCmdAdd("delete");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				deleteSelection(bcmd);
-				break;
 			}
-
-			repaint();
-
-			if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
-				return;
-			if (bcmd != null) {
-				bcmd.saveCmd();
-			}
+		} catch (EMBlockError eb) {
+			SmTrace.lg(String.format("mouseReleased error %s", eb.getMessage()));
+			return;
 		}
 	}
 
@@ -1444,35 +1447,35 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			return;
 		}
 		switch(action) {
-			case "duplicateBlockButton":
+			case "emc_duplicateBlockButton":
 				duplicateBlock(bcmd); 			// Duplicate selected block
 				break;
 				
-			case "deleteBlockButton":
+			case "emc_deleteBlockButton":
 				deleteSelection(bcmd);
 				break;
 				
-			case "deleteBlockAllButton":
+			case "emc_deleteBlockAllButton":
 				deleteAll(bcmd);
 				break;
 			
-			case "addBoxButton":
+			case "emc_addBoxButton":
 				createNewBlock(bcmd, "box");
 				break;
 				
-			case "addBallButton":
+			case "emc_addBallButton":
 				createNewBlock(bcmd, "ball");
 				break;
 				
-			case "addConeButton":
+			case "emc_addConeButton":
 				createNewBlock(bcmd, "cone");
 				break;
 				
-			case "addCylinderButton":
+			case "emc_addCylinderButton":
 				createNewBlock(bcmd, "cylinder");
 				break;
 				
-			case "addTextButton":
+			case "emc_addTextButton":
 				createNewBlock(bcmd, "text");
 				break;
 				
@@ -1482,6 +1485,48 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				return;
 		}
 	}
+
+	
+	/**
+	 * Add new text
+	 * @throws EMBlockError 
+	 */
+	public void addTextButton(EMBCommand bcmd, String action) throws EMBlockError {
+		selectPrint(String.format("addTextButton(%s) select", action), "action");
+		if (bcmd == null) {
+			SmTrace.lg(String.format(
+					"addTextButton(%s) with no cmd - ignored",
+					action));
+			return;
+		}
+		
+		EMBlock cb = new EMBlock(new ColoredText(controls));
+		if (cb != null) {
+			int id = bcmd.addBlock(cb);
+			bcmd.selectBlock(id);		// Select new block
+		}
+	}
+
+	
+	/**
+	 * Add new text, duplicate of selected
+	 * @throws EMBlockError 
+	 */
+	public void dupTextButton(EMBCommand bcmd, String action) throws EMBlockError {
+		selectPrint(String.format("dupTextButton(%s) select", action), "action");
+		selectTextButton(bcmd, action);
+		addTextButton(bcmd, action);
+	}
+
+	
+	/**
+	 * Populate ControlOfText with currently selected block
+	 * @throws EMBlockError 
+	 */
+	public void selectTextButton(EMBCommand bcmd, String action) throws EMBlockError {
+		selectPrint(String.format("selectTextButton(%s) select", action), "action");
+	}
+
 	
 	/**
 	 * Add/Remove Control/Display

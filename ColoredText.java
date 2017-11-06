@@ -9,6 +9,28 @@ import com.jogamp.opengl.util.gl2.GLUT;
 public class ColoredText extends EMBlockBase {
 	private boolean isOk = false;	// Set OK upon successful construction
 	private String text = "BLANK";
+	private Font font;
+	
+	
+	private float textXDir;
+	private float textYDir;
+	private float textZDir;
+	private boolean textDirByChar;
+	
+	private float charXDir;
+	private float charYDir;
+	private float charZDir;
+	private boolean charDirWithText;
+	
+	private float charXSize;
+	private float charYSize;
+	private float charZSize;
+	private boolean charSizeByBlock;
+	
+	private static int def_font_size = 10;
+	private static Font defaultFont = new Font(
+			"Tahoma", Font.BOLD, def_font_size);
+
 	static int nt = 0;				// nextText base
 	
 	public boolean intersects(
@@ -29,11 +51,21 @@ public class ColoredText extends EMBlockBase {
 	public ColoredText(
 		AlignedBox3D box,
 		Color color,
-		String text
+		String text,
+		Font font
 	) {
 		super(box, color);
 		this.text = text;
+		this.font = font;
 		isOk = true;
+	}
+	
+	public ColoredText(
+		AlignedBox3D box,
+		Color color,
+		String text
+	) {
+		this(box, color, text, defaultFont);
 	}
 	
 	public ColoredText(
@@ -43,6 +75,12 @@ public class ColoredText extends EMBlockBase {
 		this(box, color, nextText());
 	}
 
+	
+	public ColoredText(ControlsOfView controls) throws EMBlockError {
+		this(new AlignedBox3D(), new Color(1,1,1,1), "*");
+		
+		setFromControls(controls);
+	}
 	
 	private static String nextText() {
 		nt++;
@@ -60,7 +98,7 @@ public class ColoredText extends EMBlockBase {
 		AlignedBox3D box = getBox();
 		drawText(drawable, box, expand,
 				drawAsWireframe, cornersOnly,
-				text, color);
+				text, font, color);
 	}
 
 	public String blockType() {
@@ -76,6 +114,7 @@ public class ColoredText extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly,
 		String text,
+		Font font,
 		Color color
 	) {
 		GL2 gl = (GL2) drawable.getGL();
@@ -137,13 +176,11 @@ public class ColoredText extends EMBlockBase {
 		    float tx = base.x();
 		    float ty = base.y();
 		    float tz = base.z();
-		    int font_size = 10;
-		    float tscale = (float) (.8 * 1./font_size);
+		    int font_size = font.getSize();
+		    float tscale = (float) (.7 * 1./font_size);
 		    float depth = 5f;
 			
-			TextRenderer3D tr3 = new TextRenderer3D(new Font("SansSerif", Font.BOLD, font_size), tscale);
-			tr3 = new TextRenderer3D(new Font("TimesRoman", Font.BOLD, font_size), tscale);
-			tr3 = new TextRenderer3D(new Font("Tahoma", Font.BOLD, font_size), tscale);
+			TextRenderer3D tr3 = new TextRenderer3D(font, tscale);
 
 			float[] colors = new float[4];
 			color.getComponents(colors);
@@ -157,6 +194,72 @@ public class ColoredText extends EMBlockBase {
 			///gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 	}
+
+	/**
+	 * Set from text control
+	 * @throws EMBlockError 
+	 */
+	public void setFromControl(ControlOfText cot) throws EMBlockError {
+		text = cot.getText();
+		if (text.equals("~~~"))
+			text = nextText();		// Default sequence
+		font = cot.getFont();
+		textXDir = cot.getTextXDir();
+		textYDir = cot.getTextYDir();
+		textZDir = cot.getTextZDir();
+		textDirByChar = cot.getTextDirByChar();
+		
+		charXDir = cot.getCharXDir();
+		charYDir = cot.getCharYDir();
+		charZDir = cot.getCharZDir();
+		charDirWithText = cot.getCharDirWithText();
+		
+		charXSize = cot.getCharXSize();
+		charYSize = cot.getCharYSize();
+		charZSize = cot.getCharZSize();
+		charSizeByBlock = cot.getCharSizeByBlock();
+		
+		boolean at_next = cot.getPosAtNext();
+		if (at_next) {
+			float text_x = textXDir;
+			float text_y = textYDir;
+			float text_z = textZDir;
+			if (textDirByChar) {
+				float char_x = charXSize;
+				float char_y = charYSize;
+				float char_z = charZSize;
+				if (charSizeByBlock) {
+					float bx = this.getSize().x();
+					float by = this.getSize().y();
+					float bz = this.getSize().z();
+					char_x *= bx;
+					char_y *= by;
+					char_z *= bz;
+				
+				}
+				text_x *= char_x;
+				text_y *= char_y;
+				text_z *= char_z;
+			}
+			this.translate(new Vector3D(text_x, text_y, text_z));
+		}
+	}
+	
+	/**
+	 * Get default font
+	 */
+	public static Font getFont() {
+		return defaultFont;
+	}
+	
+	/**
+	 * Set default font
+	 */
+	public static void setFont(Font font) {
+		defaultFont = font;
+	}
+	
+	
 	@Override
 	public EMBlockBase copy() {
 		super.copy();

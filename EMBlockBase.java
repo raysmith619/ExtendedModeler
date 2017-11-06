@@ -33,17 +33,133 @@ public class EMBlockBase {
 	}
 
 	public EMBlockBase(EMBlockBase cb) {
-		this(cb.box, cb.color);
+		this(cb.box, cb.color, cb.iD());
 		this.isOk = cb.isOk();
-		this.setId(cb.iD());
 	}
 
+	
+	/**
+	 * Adjust from control settings based on command
+	 */
 
+
+	/**
+	 * Adjust from color control
+	 * @throws EMBlockError 
+	 */
+	public void adjustFromControl(ControlOfColor ctl, EMBCommand bcmd) throws EMBlockError {
+		setFromControl(ctl);
+	}
+		
+	/**
+	 * Set from placement control
+	 * @throws EMBlockError 
+	 */
+	public void adjustFromControl(ControlOfPlacement ctl, EMBCommand bcmd) throws EMBlockError {
+		setFromControl(ctl);
+
+	}
+	
+	/**
+	 * Adjust from text control
+	 * @throws EMBlockError 
+	 */
+	// Overridden for objects with text control e.g. ColoredText
+	public void adjustFromControl(ControlOfText ctl, EMBCommand bcmd) throws EMBlockError {
+	}
+
+	/**
+	 * Set from color control
+	 * @throws EMBlockError 
+	 */
+	public void setFromControl(ControlOfColor ctl) throws EMBlockError {
+		Color color = ctl.getColor();
+		this.color = color;
+	}
+		
+	/**
+	 * Set from placement control
+	 * @throws EMBlockError 
+	 */
+	public void setFromControl(ControlOfPlacement ctl) throws EMBlockError {
+		this.box = ctl.getBox();
+	}
+	
+/**
+ * Set from text control
+ * @throws EMBlockError 
+ */
+// Overridden for objects with text control e.g. ColoredText
+public void setFromControl(ControlOfText ctl) throws EMBlockError {
+}
+
+	/**
+	 * Set block from controls
+	 * @throws EMBlockError 
+	 */
+	public void setFromControls(ControlsOfView cov) throws EMBlockError {
+
+		ControlOfPlacement cop = (ControlOfPlacement) cov.getControl("placement");
+		if (cop == null)
+			throw new EMBlockError("No controlOfPlacement");
+		setFromControl(cop);
+
+		ControlOfColor coc = (ControlOfColor) cov.getControl("color");
+		if (coc == null)
+			throw new EMBlockError("No controlOfColor");
+		setFromControl(coc);
+
+		ControlOfText cot = (ControlOfText) cov.getControl("text");
+		if (cot == null)
+			throw new EMBlockError("No controlOfText");
+		setFromControl(cot);
+	}
+
+	/**
+	 * Set controls based on block settings
+	 */
+
+
+	/**
+	 * Set controls based on current state
+	 */
+	public void setControls(ControlsOfView cov) {
+		ControlOfPlacement cop = (ControlOfPlacement) cov.getControl("placement");
+		setControl(cop);
+		
+		ControlOfColor coc = (ControlOfColor) cov.getControl("color");
+		setControl(coc);
+		
+		ControlOfText cot = (ControlOfText) cov.getControl("text");
+		setControl(cot);
+		
+	}
+
+	public void setControl(ControlOfPlacement ctl) {
+		ctl.setControl(this);
+	}
+
+	public void setControl(ControlOfColor ctl) {
+		
+	}
+
+	// Overridden by those who control text
+	public void setControl(ControlOfText ctl) {
+		return;
+	}
+	
 	/**
 	 * Base constructor
 	 */
 	public EMBlockBase(AlignedBox3D box, Color color) {
-		
+		this.iD = EMBlock.nextId();
+		this.box = box;
+		this.color = color;
+		colorCheck(color, "EMBlock");
+	}
+	
+	public EMBlockBase(AlignedBox3D box, Color color, int iD) {
+		this.iD = iD;
 		this.box = box;
 		this.color = color;
 		colorCheck(color, "EMBlock");
@@ -284,6 +400,15 @@ public class EMBlockBase {
 
 	
 	/**
+	 * Get position - point of x,y,z min
+	 */
+	public Point3D getPos() {
+		Point3D minp = box.getMin();
+		return minp;
+	}
+
+	
+	/**
 	 * Get size - vector of x,y,z extent
 	 */
 	public Vector3D getSize() {
@@ -454,7 +579,7 @@ public class EMBlockBase {
 	 * @param red
 	 * @param green
 	 * @param blue
-	 * @retur color
+	 * @return color
 	 */
 	public Color setColor(float red, float green, float blue) {
 		Color new_color = new Color(red, green, blue);

@@ -256,10 +256,19 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 
 	/**
 	 * Derived types override, if needing special display
-	 * Do control displays when approriate
+	 * Do control displays when appropriate
 	 * @param drawable
 	 */
 	public void display(GLAutoDrawable drawable) {
 	}
-	
+
+	/**
+	 * Adjust block based on control settings and command
+	 * @param cb
+	 * @param bcmd
+	 * @throws EMBlockError 
+	 */
+	// Overridden by appropriate controls
+	public void adjustFromControl(EMBlock cb, EMBCommand bcmd) throws EMBlockError {
+	}
 }

@@ -28,6 +28,13 @@ public class EMBlock{
 	}
 
 	/**
+	 * Get base
+	 */
+	public EMBlockBase getBase() {
+		return baseBlock;
+	}
+
+	/**
 	 * Setup base
 	 */
 	EMBlock setBase(EMBlock cb) {
@@ -50,12 +57,15 @@ public class EMBlock{
 	 * Add block to database
 	 */
 	public static EMBlock addBlock(EMBlock cb) {
-		cb.baseBlock.setId(++blockId);
+		cb.baseBlock.setId(nextId());
 		blocks.putBlock(cb);
 		colorCheck(cb.baseBlock.color, "EMBlock");
 		return cb;
 	}
 
+	public static int nextId() {
+		return ++blockId;
+	}
 	
 	/**
 	 * Set our id
@@ -258,6 +268,14 @@ public class EMBlock{
 		return baseBlock.getSize();
 	}
 
+	
+	/**
+	 * Get position - Point of x,y,z minimum
+	 */
+	public Point3D getPos() {
+		return baseBlock.getPos();
+	}
+
 	/**
 	 * Unique id
 	 */
@@ -271,6 +289,7 @@ public class EMBlock{
 	public boolean isOk() {
 		return baseBlock.isOk();
 	}
+
 	
 	public void draw(
 		GLAutoDrawable drawable,
@@ -450,6 +469,43 @@ public class EMBlock{
 	// Overridden by all nontrivial blocks
 	public Vector3D getDiagonal() {
 		return baseBlock.getDiagonal();
+	}
+
+	/**
+	 * Adjust from control settings
+	 * @throws EMBlockError 
+	 */
+	public void adjustFromControls(ControlsOfView controls, EMBCommand bcmd) throws EMBlockError {
+		String[] ctl_names = controls.getControlNames();
+		for (int i = 0; i < ctl_names.length; i++) {
+			String ctl_name = ctl_names[i];
+			ControlOf ctl = controls.getControl(ctl_name);
+			if (ctl == null)
+				continue;		// Ignore if not up
+			
+			ctl.adjustFromControl(this, bcmd);
+		}
+	}
+
+	
+	/**
+	 * Set block from controls
+	 * @throws EMBlockError 
+	 */
+	public void setFromControls(ControlsOfView cov) throws EMBlockError {
+		baseBlock.setFromControls(cov);
+	}
+
+	/**
+	 * Set controls based on current state
+	 */
+	public void setControls(ControlsOfView cov) {
+		baseBlock.setControls(cov);
+	}
+	
+
+	public void setControl(ControlOfPlacement ctl) {
+		baseBlock.setControl(ctl);
 	}
 
 }
