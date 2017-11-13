@@ -36,7 +36,7 @@ public class ControlOfPlacement extends ControlOf {
 
 	ControlOfPlacement(SceneViewer scene, String name) {
 		super(scene, name);
-		setup();
+		///setup();
 	}
 
 	/**
@@ -461,7 +461,8 @@ public class ControlOfPlacement extends ControlOf {
 	 * @param direction
 	 */
 	private void adjustPosition(EMBCommand bcmd, int direction) throws EMBlockError {
-		if (!scene.anySelected())
+		EMBlock[] cbs = scene.getSelectedBlocks();
+		if (cbs.length == 0)
 			return;
 
 		float adj_xval = 0;
@@ -490,31 +491,34 @@ public class ControlOfPlacement extends ControlOf {
 				adj_zval *= -1;
 			}
 		}
-		EMBlock cb = scene.getSelectedBlock();
-		if (cb == null)
-			return;
 
-		if (!pos_move_duplicate) {
-			bcmd.addBlock(cb); // Duplicate --> add original to new blocks ( as well as the newly positioned
-								// block)
+		BlockSelect new_selected = new BlockSelect();	// Record newly selected
+		for (int i = 0; i < cbs.length; i++) {
+			EMBlock cb = cbs[i];
+			if (!pos_move_duplicate) {
+				bcmd.addBlock(cb); // Duplicate --> add original to new blocks ( as well as the newly positioned
+									// block)
+			}
+			
+			bcmd.addPrevBlock(cb); // Save copy for undo/redo
+			EMBlock cb1 = cb.duplicate(); // New or modified
+	
+			Point3D base_point = cb.getBasePoint();
+			Vector3D adj_vector = new Vector3D(adj_xval, adj_yval, adj_zval);
+			Point3D adj_point = Point3D.sum(base_point, adj_vector);
+			if (pos_size_position) {
+				cb1.moveTo(adj_point);
+				System.out.println(
+						String.format("adjust to x=%.2f y=%.2f z=%.2f", adj_point.x(), adj_point.y(), adj_point.z()));
+			} else {
+				cb1.resize(adj_vector);
+				Vector3D size = cb1.getSize();
+				System.out.println(String.format("adjust size to x=%.2f y=%.2f z=%.2f", size.x(), size.y(), size.z()));
+			}
+			bcmd.addBlock(cb1); // Add New / modified block
+			new_selected.addIndex(cb1.iD());
 		}
-		bcmd.addPrevBlock(cb); // Save copy for undo/redo
-		EMBlock cb1 = cb.duplicate(); // New or modified
-
-		Point3D base_point = cb.getBasePoint();
-		Vector3D adj_vector = new Vector3D(adj_xval, adj_yval, adj_zval);
-		Point3D adj_point = Point3D.sum(base_point, adj_vector);
-		if (pos_size_position) {
-			cb1.moveTo(adj_point);
-			System.out.println(
-					String.format("adjust to x=%.2f y=%.2f z=%.2f", adj_point.x(), adj_point.y(), adj_point.z()));
-		} else {
-			cb1.resize(adj_vector);
-			Vector3D size = cb1.getSize();
-			System.out.println(String.format("adjust size to x=%.2f y=%.2f z=%.2f", size.x(), size.y(), size.z()));
-		}
-		bcmd.addBlock(cb1); // Add New / modified block
-		bcmd.setSelect(new BlockSelect(cb1.iD()));
+		bcmd.setSelect(new_selected);
 	}
 
 	/**
@@ -627,15 +631,15 @@ public class ControlOfPlacement extends ControlOf {
 			moveToPosition(bcmd);
 			break;
 
-		case "emc_adjposUpButton":
+		case "emc_adjUpButton":
 			adjustPosition(bcmd, 1);
 			break;
 
-		case "emc_adjposENTER":
+		case "emc_adjENTER":
 			adjustPosition(bcmd, 1);
 			break;
 
-		case "emc_adjposDownButton":
+		case "emc_adjDownButton":
 			adjustPosition(bcmd, -1);
 			break;
 

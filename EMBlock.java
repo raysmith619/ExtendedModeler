@@ -471,6 +471,15 @@ public class EMBlock{
 		return baseBlock.getDiagonal();
 	}
 
+
+	/**
+	 * Adjust from text control
+	 * @throws EMBlockError 
+	 */
+	public void adjustFromControl(ControlOfText ctl, EMBCommand bcmd) throws EMBlockError {
+		baseBlock.adjustFromControl(ctl, bcmd);
+	}
+
 	/**
 	 * Adjust from control settings
 	 * @throws EMBlockError 

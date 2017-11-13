@@ -211,7 +211,20 @@ public class EMBCommandManager {
 			return null;
 		return cb(prev_select.getIndex(0));
 	}
+
 	
+	/**
+	 * Get currently selected blocks
+	 */
+	public EMBlock[] getSelectedBlocks() {
+		BlockSelect select = getSelected();
+		int ids[] = select.getIds();
+		EMBlock[] cbs = new EMBlock[ids.length];
+		for (int i = 0; i < cbs.length; i++) {
+			cbs[i] = cb(ids[i]);
+		}
+		return cbs;
+	}
 	
 	/**
 	 * Get currently selected

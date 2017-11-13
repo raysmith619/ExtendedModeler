@@ -227,57 +227,10 @@ public class ExtendedModeler implements ActionListener {
 		}
 		frame = new JFrame( applicationName );
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
-
 		JMenuBar menuBar = new JMenuBar();
-			JMenu menu = new JMenu("File");
-				deleteAllMenuItem = new JMenuItem("Delete All");
-				deleteAllMenuItem.addActionListener(this);
-				menu.add(deleteAllMenuItem);
-
-				menu.addSeparator();
-
-				quitMenuItem = new JMenuItem("Quit");
-				quitMenuItem.addActionListener(this);
-				menu.add(quitMenuItem);
-			menuBar.add(menu);
-		
-			menu = new JMenu("CMD");
-				undoMenuItem = new JMenuItem("Undo");
-				undoMenuItem.addActionListener(this);
-				menu.add(undoMenuItem);
-				redoMenuItem = new JMenuItem("Redo");
-				redoMenuItem.addActionListener(this);
-				menu.add(redoMenuItem);
-				repeatMenuItem = new JMenuItem("Repeat");
-				repeatMenuItem.addActionListener(this);
-				menu.add(repeatMenuItem);
-			menuBar.add(menu);
-	
-			menu = new JMenu("Help");
-				aboutMenuItem = new JMenuItem("About");
-				aboutMenuItem.addActionListener(this);
-				menu.add(aboutMenuItem);
-			menuBar.add(menu);
-			
-			menuBar.add(new JSeparator());
-			undoButton = new JButton("Undo");
-			undoButton.addActionListener(this);
-			menuBar.add(undoButton);
-			
-			redoButton = new JButton("Redo");
-			redoButton.addActionListener(this);
-			menuBar.add(redoButton);
-			
-			repeatButton = new JButton("Repeat");
-			repeatButton.addActionListener(this);
-			menuBar.add(repeatButton);
-					
-					
 		frame.setJMenuBar(menuBar);
 
-		toolPanel = new JPanel();
-		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
-
+		
 		// Need to set visible first before starting the rendering thread due
 		// to a bug in JOGL. See JOGL Issue #54 for more information on this
 		// https://jogl.dev.java.net/issues/show_bug.cgi?id=54
@@ -291,18 +244,84 @@ public class ExtendedModeler implements ActionListener {
 		} catch (EMBlockError e) {
 			SmTrace.lg(String.format("SceneViewer error %s", e.getMessage()));
 			e.printStackTrace();
-			return;
+			System.exit(1);
 		}
+		
 
+		JMenu menu = new JMenu("File");
+			deleteAllMenuItem = new JMenuItem("Delete All");
+			deleteAllMenuItem.addActionListener(this);
+			menu.add(deleteAllMenuItem);
+
+			menu.addSeparator();
+
+			quitMenuItem = new JMenuItem("Quit");
+			quitMenuItem.addActionListener(this);
+			menu.add(quitMenuItem);
+		menuBar.add(menu);
+		
+		menu =  toolMenu();
+		menuBar.add(menu);
+
+		menu = new JMenu("Help");
+			aboutMenuItem = new JMenuItem("About");
+			aboutMenuItem.addActionListener(this);
+			menu.add(aboutMenuItem);
+		menuBar.add(menu);
+		
+		menuBar.add(new JSeparator());
+		undoButton = new JButton("Undo");
+		undoButton.addActionListener(this);
+		menuBar.add(undoButton);
+		
+		redoButton = new JButton("Redo");
+		redoButton.addActionListener(this);
+		menuBar.add(redoButton);
+		
+		repeatButton = new JButton("Repeat");
+		repeatButton.addActionListener(this);
+		menuBar.add(repeatButton);
+		frame.setJMenuBar(menuBar);
+					
 		Container pane = frame.getContentPane();
 		// We used to use a BoxLayout as the layout manager here,
 		// but it caused problems with resizing behavior due to
 		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
 		pane.setLayout( new BorderLayout() );
-		pane.add( toolPanel, BorderLayout.LINE_START );
 		pane.add( sceneViewer, BorderLayout.CENTER );
+		frame.setSize(800, 600);
+		///sceneViewer.setSize(300,400);
+		///pane.setVisible(true);
+		///sceneViewer.setVisible(true);
+		sceneViewer.setControl("component", sceneViewer.displayAddControl);
+		sceneViewer.setControl("placement", sceneViewer.displayPlacementControl);
+		sceneViewer.setControl("color", sceneViewer.displayColorControl);
+		sceneViewer.setControl("text", sceneViewer.displayTextControl);
 
 
+	}
+
+	/**
+	 * Create display menu drop down
+	 * @retun - display menu item
+	 */
+	private JMenu toolMenu() {
+		JMenu menu = new JMenu("Tools");
+		JFrame toolFrame = new JFrame();
+
+		Container toolPane = toolFrame.getContentPane();
+		JPanel toolPanel = new JPanel();
+		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
+		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
+		///menu.add(pane);
+		// We used to use a BoxLayout as the layout manager here,
+		// but it caused problems with resizing behavior due to
+		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
+		toolPane.setLayout( new BorderLayout() );
+		toolPane.add( toolPanel, BorderLayout.LINE_START );
+		toolPane.add( sceneViewer, BorderLayout.CENTER );
+		///toolPane.add(toolPanel);
+		menu.add(toolPane);
 		lookAtSelectionButton = new JButton("Look At Selection");
 		lookAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
 		lookAtSelectionButton.addActionListener(this);
@@ -313,22 +332,22 @@ public class ExtendedModeler implements ActionListener {
 		resetCameraButton.addActionListener(this);
 		toolPanel.add( resetCameraButton );
 
-		displayAddControlCheckBox = new JCheckBox("Display Add Control", sceneViewer.displayAddControl);
+		displayAddControlCheckBox = new JCheckBox("Display Add Control");
 		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
 		displayAddControlCheckBox.addActionListener(this);
 		toolPanel.add(displayAddControlCheckBox);
 
-		displayPlacementControlCheckBox = new JCheckBox("Display Placement Control", sceneViewer.displayPlacementControl);
+		displayPlacementControlCheckBox = new JCheckBox("Display Placement Control");
 		displayPlacementControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
 		displayPlacementControlCheckBox.addActionListener(this);
 		toolPanel.add(displayPlacementControlCheckBox);
 
-		displayColorControlCheckBox = new JCheckBox("Display Color Control", sceneViewer.displayColorControl);
+		displayColorControlCheckBox = new JCheckBox("Display Color Control");
 		displayColorControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
 		displayColorControlCheckBox.addActionListener(this);
 		toolPanel.add(displayColorControlCheckBox);
 
-		displayTextControlCheckBox = new JCheckBox("Display Text Control", sceneViewer.displayTextControl);
+		displayTextControlCheckBox = new JCheckBox("Display Text Control");
 		displayTextControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
 		displayTextControlCheckBox.addActionListener(this);
 		toolPanel.add(displayTextControlCheckBox);
@@ -355,8 +374,11 @@ public class ExtendedModeler implements ActionListener {
 
 		frame.pack();
 		frame.setVisible( true );
-	}
 
+		return menu;
+	}
+	
+	
 	/**
 	 * Set/Clear check box
 	 * and associated indicator variable
@@ -440,6 +462,7 @@ public class ExtendedModeler implements ActionListener {
 		 * 3 pas
 		 */
 		SmTrace.setLogName(logName); 	// Setup default log name
+		SmTrace.setProps("ExtendedModeler");
 		for (int npass = 1; npass <= 3; npass++) {
 			if (npass == 2) {
 				SmTrace.lg("setupTest()");
@@ -649,6 +672,7 @@ public class ExtendedModeler implements ActionListener {
 		);
 		int inctime = 1000;				// milliseconds
 		int maxtime = 10000;			// Max wait in milliseconds
+		///maxtime = 1000000;				/// lengthen for debugging
 		int dur = 0;					// Current duration
 		while (em_base == null) {
 			try {

@@ -398,11 +398,11 @@ public class ControlOfColor extends ControlOf {
 	 * @throws EMBlockError 
 	 */
 	public void colorMapSelect(EMBCommand bcmd) throws EMBlockError {
-		EMBlock cb = scene.getSelectedBlock();
+		EMBlock[] cbs = scene.getSelectedBlocks();
 		
         final JColorChooser chooser = new JColorChooser();
-        if (cb != null)
-        	chooser.setColor(cb.getColor());
+        if (cbs.length > 0)
+        	chooser.setColor(cbs[0].getColor());
         chooser.setLocation(400,400);
         JDialog dialog = JColorChooser.createDialog(null, "Color Chooser",
                  true, chooser, null, null);
@@ -413,19 +413,24 @@ public class ControlOfColor extends ControlOf {
         	return;
         
        SmTrace.lg(String.format("Chose color: %s", c));
-        if (cb == null) {
+        if (cbs.length == 0) {
             SmTrace.lg(String.format("Nothing selected to color"));
         	return;
         }
-		
-		if (!color_move_duplicate) {
-			bcmd.addBlock(cb);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
-		}
-		bcmd.addPrevBlock(cb);				//Save copy for undo/redo
-		EMBlock cb1 = cb.duplicate();		// New or modified
-		cb1.setColor(c);
-		bcmd.addBlock(cb1);					// Add New / modified block
-		bcmd.setSelect(new BlockSelect(cb1.iD()));
+
+        BlockSelect new_select = new BlockSelect();
+        for (int i = 0; i < cbs.length; i++) {
+			if (!color_move_duplicate) {
+				bcmd.addBlock(cbs[i]);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
+			}
+			bcmd.addPrevBlock(cbs[i]);			//Save copy for undo/redo
+			EMBlock cb1 = cbs[i].duplicate();	// New or modified
+			cb1.setColor(c);
+			bcmd.addBlock(cb1);					// Add New / modified block
+			new_select.addIndex(cb1.iD());
+        }
+		bcmd.setSelect(new_select);
+
 	}
 
 	/**

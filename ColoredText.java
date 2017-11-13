@@ -196,6 +196,32 @@ public class ColoredText extends EMBlockBase {
 	}
 
 	/**
+	 * Change attributes from text control
+	 * @throws EMBlockError 
+	 */
+	public void adjustFromControl(ControlOfText cot, EMBCommand bcmd) throws EMBlockError {
+		///text = cot.getText();
+		///if (text.equals("~~~"))
+		///	text = nextText();		// Default sequence
+		font = cot.getFont();
+		textXDir = cot.getTextXDir();
+		textYDir = cot.getTextYDir();
+		textZDir = cot.getTextZDir();
+		textDirByChar = cot.getTextDirByChar();
+		
+		charXDir = cot.getCharXDir();
+		charYDir = cot.getCharYDir();
+		charZDir = cot.getCharZDir();
+		charDirWithText = cot.getCharDirWithText();
+		
+		charXSize = cot.getCharXSize();
+		charYSize = cot.getCharYSize();
+		charZSize = cot.getCharZSize();
+		charSizeByBlock = cot.getCharSizeByBlock();
+	}
+
+	
+	/**
 	 * Set from text control
 	 * @throws EMBlockError 
 	 */

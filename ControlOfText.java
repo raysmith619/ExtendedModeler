@@ -55,7 +55,7 @@ public class ControlOfText extends ControlOf {
 	
 	ControlOfText(SceneViewer scene, String name) {
 		super(scene, name);
-		setup();
+		///setup();
 	}	
 	
 	/**
@@ -178,8 +178,8 @@ public class ControlOfText extends ControlOf {
 		textNewButton.addActionListener(scene);
 		actionPanel.add(textNewButton);
 		
-		JButton textDupButton = new JButton("Dup");
-		textDupButton.setActionCommand("emc_text_dup");
+		JButton textDupButton = new JButton("Change");
+		textDupButton.setActionCommand("emc_text_change");
 		textDupButton.addActionListener(scene);
 		actionPanel.add(textDupButton);
 		
@@ -248,8 +248,8 @@ public class ControlOfText extends ControlOf {
 				scene.addTextButton(bcmd, action);
 				break;
 				
-			case "emc_text_dup":
-				scene.dupTextButton(bcmd, action);
+			case "emc_text_change":
+				scene.changeTextButton(bcmd, action);
 				break;
 				
 			case "emc_text_select":

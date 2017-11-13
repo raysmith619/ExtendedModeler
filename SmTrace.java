@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -29,35 +30,37 @@ import java.util.regex.Matcher;
  *
  */
 public class SmTrace {
-	private static SmTrace traceObj;
 
-	/**
-	 * Logging Support
-	 */
-	private static String logName;					// Logfile name
-	private static String logExt = "emlog";			// Logfile extension (without ".")
-	private static BufferedWriter logWriter;
-	private static boolean logToScreen = true;		// true - log, additionally to STDOUT
-	private static boolean stdOutHasTs = false;		// true - timestamp prefix on STDOUT
 	
 	/**
 	 * Create private constructor
 	 */
-	private SmTrace() {
-		this.traceFlags = new HashMap<String, Integer>();
+	/*** No constructors
+	public SmTrace(String propName) {
+		SmTrace.traceFlags = new HashMap<String, Integer>();
 		// flags added as observed
 		// create and load default properties
-		this.defaultProps = new Properties();		
+		if (propName == null)
+			SmTrace.propName = propName;
+		setProps(propName);
 	}
+	***/
 	
-	
+	/**
+	 * Create default constructor
+	 */
+	/*** No constructors
+	public SmTrace() {
+		SmTrace(propName);
+	}
+	***/
 	/**
 	 * Setup access via singleton
 	 */
 	private static void init() {
-		if (traceObj == null) {
-			traceObj = new SmTrace();
-		}
+		///if (traceObj == null) {
+		///	traceObj = new SmTrace();
+		///}
 	}
 	/**
 	 * Shorthands
@@ -237,6 +240,32 @@ public class SmTrace {
 			System.out.println("IOException in lg write");
 		}
 	}
+	
+	
+	/**
+	 * Append string to log to be logged via next lgln() call
+	 * @throws IOException 
+	 */
+	public static void lgs(String msg) {
+		if (lgsString == null) {
+			lgsString = msg;
+		} else {
+			lgsString += msg;
+		}
+	}
+	
+	
+	/**
+	 * Output staged string to log
+	 * @throws IOException 
+	 */
+	public static void lgln() {
+		if (lgsString == null) {
+			lgsString = "";
+		}
+		lg(lgsString);
+		lgsString = null;		// Flush pending
+	}
 
 	
 	/**
@@ -255,12 +284,34 @@ public class SmTrace {
 	 * 
 	 * @throws IOException
 	 */
-	public static void setProps(String propFile) {
-		init();		// Setup singleton
-		// Setup trace flags
+	public static void setProps(String propName) {
+		///init();		// Setup singleton
+		defaultProps = new Properties();
 		FileInputStream in;
 		try {
-			in = new FileInputStream(propFile);
+			if (propName == null)
+				propName = SmTrace.propName;
+			if (propName == null)
+				propName = "temp";
+			if (!propName.contains("."))
+				propName = propName + ".properties";	// Default ext
+			SmTrace.propFile = propName;		// Save name for saving
+			in = new FileInputStream(propName);
+			try {
+				defaultProps.load(in);
+			} catch (IOException e) {
+				System.err.println("Can't load Properties file " + propFile);
+				e.printStackTrace();
+				return;
+			}
+			try {
+				in.close();
+			} catch (IOException e) {
+				System.err.println("Can't load Properties file " + propFile);
+				e.printStackTrace();
+				return;
+			}
+			
 		} catch (FileNotFoundException e) {
 			File inf = new File(propFile);
 			String abs_path;
@@ -271,23 +322,24 @@ public class SmTrace {
 				e1.printStackTrace();
 			}
 
-			System.err.println("Properties file " + abs_path + " not found");
-			// e.printStackTrace();
-			return;
+			SmTrace.lg("Properties file " + abs_path + " not found");
 		}
-		try {
-			traceObj.defaultProps.load(in);
-		} catch (IOException e) {
-			System.err.println("Can't load Properties file " + propFile);
-			e.printStackTrace();
-			return;
-		}
-		try {
-			in.close();
-		} catch (IOException e) {
-			System.err.println("Can't load Properties file " + propFile);
-			e.printStackTrace();
-		}
+								// Write out updated properties file
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				try {
+					FileOutputStream out;
+					lg(String.format("Savings properties file %s",  propFile));
+					out = new FileOutputStream(propFile);
+			    	defaultProps.store(out, propFile);
+				} catch (IOException e) {
+					lg(String.format("Shutdown propfile %s store failed %s",
+							propFile, e.getMessage()));	
+					e.printStackTrace();
+				}
+		    	
+			}
+		});
 
 	}
 
@@ -298,27 +350,27 @@ public class SmTrace {
 	 * This facilitates easier tracing of all trace(flag) calls by setLevel("ALL")
 	 */
 
-	public int getLevel(String trace_name) {
+	public static int getLevel(String trace_name) {
 		if (traceAll > 0)
 			return traceAll;		// ALL specified - all get this level
 		trace_name = trace_name.toLowerCase();		
-		Integer v = this.traceFlags.get(trace_name);
+		Integer v = SmTrace.traceFlags.get(trace_name);
 		if (v == null)
 			return 0;		// Not there == 0
 		
 		return (int)v;
 	}
 	
-	public void setLevel(String trace_name) {
+	public static void setLevel(String trace_name) {
 		setLevel(trace_name, 1);
 	}
 
-	public void setLevel(String trace_name, int level) {
+	public static void setLevel(String trace_name, int level) {
 		trace_name = trace_name.toLowerCase();
 		if (trace_name.equals("all"))
-			this.traceAll = level;
+			SmTrace.traceAll = level;
 		else
-			this.traceFlags.put(trace_name, level);
+			SmTrace.traceFlags.put(trace_name, level);
 	}
 
 	public boolean traceVerbose(int... levels) {
@@ -350,7 +402,7 @@ public class SmTrace {
 	/**
 	 * Trace if at or above this level
 	 */
-	public boolean trace(String flag, int... levels) {
+	public static boolean trace(String flag, int... levels) {
 		int level = 1;
 		if (levels.length > 0)
 			level = levels[0];
@@ -363,7 +415,7 @@ public class SmTrace {
 	/**
 	 * Return trace level
 	 */
-	public int traceLevel(String flag) {
+	public static int traceLevel(String flag) {
 		int traceLevel = getLevel(flag);
 		return traceLevel;
 	}
@@ -375,12 +427,12 @@ public class SmTrace {
 	 *            - property key
 	 * @return property value, "" if none
 	 */
-	public String getProperty(String key) {
-		return this.defaultProps.getProperty(key, "");
+	public static String getProperty(String key) {
+		return defaultProps.getProperty(key, "");
 	}
 
-	public void setProperty(String key, String value) {
-		this.defaultProps.setProperty(key, value);
+	public static void setProperty(String key, String value) {
+		defaultProps.setProperty(key, value);
 	}
 
 	/**
@@ -485,7 +537,19 @@ public class SmTrace {
 		return vals;
 	}
 
-	private Properties defaultProps; 	// program properties
-	private int traceAll;				// For "all" trace
-	private HashMap<String, Integer> traceFlags; // tracing flag/levels
+	/**
+	 * Logging Support
+	 */
+	private static String propName = "SmTrace";		// Properties file name
+	private static String propFile = "temp";		// Actual file name
+	private static String logName;					// Logfile name
+	private static String logExt = "emlog";			// Logfile extension (without ".")
+	private static BufferedWriter logWriter;
+	private static boolean logToScreen = true;		// true - log, additionally to STDOUT
+	private static boolean stdOutHasTs = false;		// true - timestamp prefix on STDOUT
+	private static String lgsString;				// Staging area for lgs, lgln
+	private static SmTrace traceObj;
+	private static Properties defaultProps; 	// program properties
+	private static int traceAll;				// For "all" trace
+	private static HashMap<String, Integer> traceFlags; // tracing flag/levels
 }

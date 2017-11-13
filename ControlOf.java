@@ -1,3 +1,4 @@
+import java.awt.Point;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 
@@ -90,7 +91,10 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * Generally called after move
 	 */
 	public void updateLocation(ComponentEvent e) {
-		SmTrace.lg(String.format("updateLocation(%s)",  name), "location");
+		Point pt = e.getComponent().getLocation();
+		recordLocation(pt.x, pt.y);
+		SmTrace.lg(String.format(String.format("updateLocation(%s: %d, %d)"
+				,  name, pt.x, pt.y)));
 		
 	}
 	
@@ -106,6 +110,40 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * Required control methods
 	 * Overridden only if necessary
 	 */
+
+	
+	/** our control locations
+	 * 
+	 */
+	private String getPosKeyX() {
+		String key = "control." + name + ".pos.x";
+		return key;
+	}
+	private String getPosKeyY() {
+		String key = "control." + name + ".pos.y";
+		return key;
+	}
+	
+	
+	/**
+	 * Return position, -1 if none
+	 */
+	public int getXFromProp() {
+		String posstr = SmTrace.getProperty(getPosKeyX());
+		if (posstr.equals(""))
+			return -1;
+		
+		return Integer.valueOf(posstr);
+	}
+
+	
+	public int getYFromProp() {
+		String posstr = SmTrace.getProperty(getPosKeyY());
+		if (posstr.equals(""))
+			return -1;
+		
+		return Integer.valueOf(posstr);
+	}
 
 
 	/**
@@ -177,10 +215,23 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 */
 	public void setLocation(int x, int y) {
 		super.setLocation(x, y);
+		recordLocation(x, y);
 		this.inPos = true;
 		setActive();
 	}
 
+	
+	/**
+	 * Record current location
+	 */
+	public void recordLocation(int x, int y) {
+		String pos_key_x = getPosKeyX();
+		SmTrace.setProperty(pos_key_x, String.valueOf(x));
+		String pos_key_y = getPosKeyY();
+		SmTrace.setProperty(pos_key_y, String.valueOf(y));
+	}
+	
+	
 	/**
 	 * Check if in position
 	 */

@@ -229,33 +229,29 @@ public class ControlsOfView {
 		int xloc = xmargin;
 		int ndisplayed = 0;		// Number displayed
 		ControlOf prev_control = null;
-		for (String name : controls) {
-			ControlEntry ctl_entry = controlh.get(name);
-			ControlOf control = ctl_entry.control;
-			if (control.isInPos()) {
-				xloc = control.getX();
-				yloc = control.getY();
-				if (prev_control != null && prev_control.isFull()) {
-					yloc += prev_control.getHeight();
-				}
-			} else {
-				if (ndisplayed > 0) {
-					xloc += xmargin;		// Adjust if not first
+		ControlEntry ctl_entry = controlh.get(controlName);
+		if (ctl_entry == null)
+			return;
+		ControlOf control = ctl_entry.control;
+		if(control.isInPos()) {
+			xloc = control.getX();
+			yloc = control.getY();
+		} else if (control.getXFromProp() >= 0) {
+			xloc = control.getXFromProp();
+			yloc = control.getYFromProp();
+		} else {
+			for (String name : controls) {
+				if (name.equals(controlName))
+					continue;
+				ControlEntry ctl_ent = controlh.get(name);
+				ControlOf ctl = ctl_entry.control;
+				if (ctl.isInPos()) {
+					xloc += xmargin;
 					yloc += ymargin;
 				}
 			}
-			ndisplayed++;
-			if (name.equals(controlName)) {
-				if (control.isInPos()) {
-					xloc = control.getX();
-					yloc = control.getY();
-				}
-				SmTrace.lg(String.format("setLocation(%d, %d)", xloc, yloc));
-				control.setLocation(xloc, yloc);
-				break;
-			}
-			prev_control = control;
 		}
+		control.setLocation(xloc, yloc);	
 	}
 
 	/**

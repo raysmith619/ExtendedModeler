@@ -161,6 +161,14 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public EMBlock getSelectedBlock() {
 		return commandManager.getSelectedBlock();
 	}
+
+	/**
+	 * Get currently selected
+	 */
+	public EMBlock[] getSelectedBlocks() {
+		EMBlock[] cbs = commandManager.getSelectedBlocks();
+		return cbs;
+	}
 	
 
 	/**
@@ -1277,8 +1285,8 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			repaint();
 		} else if (SwingUtilities.isLeftMouseButton(e) && !e.isControlDown() && anySelected()) {
 			if (!e.isShiftDown()) {
-				EMBlock cb = getSelectedBlock();
-				if (cb == null)
+				EMBlock[] cbs = getSelectedBlocks();
+				if (cbs.length == 0)
 					return;
 				// translate a box
 
@@ -1296,14 +1304,20 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 						e2.printStackTrace();
 						return;
 					}
-					bcmd.addPrevBlock(cb);
 					Vector3D translation = Point3D.diff(intersection2, intersection1);
-					scene.translateBlock(getSelectedBlockIndex(), translation);
-					bcmd.addBlock(cb);
+					for (int i = 0; i < cbs.length; i++) {
+						EMBlock cb = cbs[i];
+						bcmd.addPrevBlock(cb);
+						cb.translate(translation);
+						bcmd.addBlock(cb);
+					}
 					bcmd.doCmd();
 				}
 			} else {
 				// resize a box
+				EMBlock[] cbs = getSelectedBlocks();
+				if (cbs.length == 0)
+					return;
 				SmTrace.lg("resize");
 				Ray3D ray1 = camera.computeRay(old_mouse_x, old_mouse_y);
 				Ray3D ray2 = camera.computeRay(mouse_x, mouse_y);
@@ -1313,6 +1327,15 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 				Vector3D v2 = Vector3D.cross(normalAtSelectedPoint, v1);
 				Plane plane = new Plane(v2, selectedPoint);
 				if (plane.intersects(ray1, intersection1, true) && plane.intersects(ray2, intersection2, true)) {
+					EMBCommand bcmd;
+					String action = "mouseSizeBlock";
+					try {
+						bcmd = new BlkCmdAdd(action);
+					} catch (Exception e2) {
+						e2.printStackTrace();
+						return;
+					}
+					
 					Vector3D translation = Point3D.diff(intersection2, intersection1);
 					SmTrace.lg(String.format("resize translation: %s", translation));
 
@@ -1320,9 +1343,12 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 					// only along one axis
 					translation = Vector3D.mult(normalAtSelectedPoint,
 							Vector3D.dot(normalAtSelectedPoint, translation));
-					scene.resizeBlock(getSelectedBlockIndex(), getSelectedBlock().getBox()
-							.getIndexOfExtremeCorner(normalAtSelectedPoint), translation);
-					repaint();
+					for (int i = 0; i < cbs.length; i++) {
+						EMBlock cb = cbs[i];
+						bcmd.addPrevBlock(cb);
+						cb.resize(0, translation);
+					}
+					bcmd.doCmd();
 				}
 			}
 		}
@@ -1504,6 +1530,24 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		if (cb != null) {
 			int id = bcmd.addBlock(cb);
 			bcmd.selectBlock(id);		// Select new block
+		}
+	}
+
+	
+	/**
+	 * Change selected text, based on control settings
+	 * @throws EMBlockError 
+	 */
+	public void changeTextButton(EMBCommand bcmd, String action) throws EMBlockError {
+		selectPrint(String.format("changeTextButton(%s) select", action), "action");
+		BlockSelect bg = getSelected();
+		int[] ids = bg.getIds();
+		for (int i = 0; i < ids.length; i++) {
+			int id = ids[i];
+			EMBlock cb = getCb(id);
+			bcmd.addPrevBlock(cb);
+			cb.adjustFromControl((ControlOfText)controls.getControl("text"), bcmd);
+			bcmd.addBlock(cb);
 		}
 	}
 
