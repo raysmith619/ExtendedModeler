@@ -1,6 +1,8 @@
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -12,13 +14,15 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import com.jogamp.newt.event.KeyEvent;
 import com.jogamp.opengl.GLAutoDrawable;
 import smTrace.SmTrace;
 
 
-public class ControlOfColor extends ControlOf {
+public class ControlOfColor extends ControlOf implements ChangeListener {
 	/**
 	 * 
 	 */
@@ -41,6 +45,7 @@ public class ControlOfColor extends ControlOf {
 	///GLCanvas canvas;			// Map canvas
 	JPanel colorMapCanvas;		// Color map canvas
 	ColorTriangle  triangle;	// triangle object
+	JColorChooser colorChooser;	// Dynamic color chooser if not null
 	
 	ControlOfColor(SceneViewer scene, String name) {
 		super(scene, name);
@@ -400,37 +405,16 @@ public class ControlOfColor extends ControlOf {
 	public void colorMapSelect(EMBCommand bcmd) throws EMBlockError {
 		EMBlock[] cbs = scene.getSelectedBlocks();
 		
-        final JColorChooser chooser = new JColorChooser();
+        colorChooser = new JColorChooser();
         if (cbs.length > 0)
-        	chooser.setColor(cbs[0].getColor());
-        chooser.setLocation(400,400);
+        	colorChooser.setColor(cbs[0].getColor());
+        colorChooser.setLocation(400,400);
+        boolean model = false;		// false - modeless
         JDialog dialog = JColorChooser.createDialog(null, "Color Chooser",
-                 true, chooser, null, null);
+                 model, colorChooser, null, null);
         dialog.setVisible(true);
-        Color c;
-        c = chooser.getColor();
-        if (c == null)
-        	return;
         
-       SmTrace.lg(String.format("Chose color: %s", c));
-        if (cbs.length == 0) {
-            SmTrace.lg(String.format("Nothing selected to color"));
-        	return;
-        }
-
-        BlockSelect new_select = new BlockSelect();
-        for (int i = 0; i < cbs.length; i++) {
-			if (!color_move_duplicate) {
-				bcmd.addBlock(cbs[i]);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
-			}
-			bcmd.addPrevBlock(cbs[i]);			//Save copy for undo/redo
-			EMBlock cb1 = cbs[i].duplicate();	// New or modified
-			cb1.setColor(c);
-			bcmd.addBlock(cb1);					// Add New / modified block
-			new_select.addIndex(cb1.iD());
-        }
-		bcmd.setSelect(new_select);
-
+        colorChooser.getSelectionModel().addChangeListener(this);
 	}
 
 	/**
@@ -486,6 +470,53 @@ public class ControlOfColor extends ControlOf {
 		
 		val = new Color(getRed(), getGreen(), getBlue(), getAlpha());
 		return val;
+	}
+
+	public void stateChanged(ChangeEvent e) {
+		System.out.println(String.format("ControlOfColor stateChange %s",
+				e));
+        
+		if (colorChooser == null)
+			return;
+		
+        Color c;
+        c = colorChooser.getColor();
+        if (c == null)
+        	return;
+       
+       EMBlock[] cbs = scene.getSelectedBlocks();
+       SmTrace.lg(String.format("Chose color: %s", c));
+        if (cbs.length == 0) {
+            SmTrace.lg(String.format("Nothing selected to color"));
+        	return;
+        }
+
+        BlockSelect new_select = new BlockSelect();
+		EMBCommand bcmd;
+		try {
+			bcmd = new BlkCmdAdd("ecm_color_choice");
+		} catch (Exception e2) {
+			e2.printStackTrace();
+			return;
+		}
+        for (int i = 0; i < cbs.length; i++) {
+			if (!color_move_duplicate) {
+				bcmd.addBlock(cbs[i]);			// Duplicate --> add original to new blocks ( as well as the newly positioned block)
+			}
+			bcmd.addPrevBlock(cbs[i]);			//Save copy for undo/redo
+			EMBlock cb1 = null;
+			try {
+				cb1 = cbs[i].duplicate();
+			} catch (EMBlockError e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}	// New or modified
+			cb1.setColor(c);
+			bcmd.addBlock(cb1);					// Add New / modified block
+			new_select.addIndex(cb1.iD());
+        }
+		bcmd.setSelect(new_select);
+		bcmd.doCmd();
 	}
 
 	

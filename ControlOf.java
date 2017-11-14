@@ -1,4 +1,5 @@
 import java.awt.Point;
+import java.awt.event.ActionEvent;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 
@@ -110,6 +111,10 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * Required control methods
 	 * Overridden only if necessary
 	 */
+
+	public void actionPerformed(ActionEvent evt) {
+    	System.out.println("ControlOf Action");
+    }
 
 	
 	/** our control locations
