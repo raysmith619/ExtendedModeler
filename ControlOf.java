@@ -48,14 +48,17 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 		
 							// Do common stuff
 		addComponentListener(new ComponentListener() {
-			public void componentMoved(ComponentEvent e) {
-				updateLocation(e);
-			}
 
 			@Override
 			public void componentResized(ComponentEvent e) {
+				System.out.println("ControlOf resized");
 				// TODO Auto-generated method stub
 				
+			}
+ 			@Override
+			public void componentMoved(ComponentEvent e) {
+				System.out.println("ControlOf moved");
+				updateLocation(e);
 			}
 
 			@Override

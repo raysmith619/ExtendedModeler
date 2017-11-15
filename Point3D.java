@@ -7,6 +7,10 @@ public class Point3D {
 		p[0] = p[1] = p[2] = 0;
 	}
 
+	public Point3D( Point3D pt ) {
+		copy(pt);
+	}
+
 	public Point3D( float x, float y, float z ) {
 		p[0] = x;
 		p[1] = y;

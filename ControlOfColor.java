@@ -1,7 +1,11 @@
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Container;
 import java.awt.GridLayout;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -206,7 +210,71 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		colorMapButton.addActionListener(scene);
 		pack();
 		colorMapPanel.setVisible(true);
+		
+		
+		// Do common stuff
+		addComponentListener(new ComponentListener() {
+		public void componentMoved(ComponentEvent e) {
+		updateLocation(e);
+		}
+		
+		@Override
+		public void componentResized(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		
+		@Override
+		public void componentShown(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		
+		@Override
+		public void componentHidden(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		} );
 	}
+
+	
+	/**
+	 * Update location
+	 * Generally called after move
+	 */
+	public void updateMapLocation(ComponentEvent e) {
+		Point pt = e.getComponent().getLocation();
+		recordMapLocation(pt.x, pt.y);
+		SmTrace.lg(String.format(String.format("updateMapLocation(%s: %d, %d)"
+				,  name, pt.x, pt.y)));
+		
+	}
+
+	
+	/**
+	 * Record current location
+	 */
+	public void recordMapLocation(int x, int y) {
+		String pos_key_x = getMapPosKeyX();
+		SmTrace.setProperty(pos_key_x, String.valueOf(x));
+		String pos_key_y = getMapPosKeyY();
+		SmTrace.setProperty(pos_key_y, String.valueOf(y));
+	}
+
+	
+	/** our control locations
+	 * 
+	 */
+	private String getMapPosKeyX() {
+		String key = "control." + name + "map.pos.x";
+		return key;
+	}
+	private String getMapPosKeyY() {
+		String key = "control." + name + "map.pos.y";
+		return key;
+	}
+	
 	
 	/**
 	 * Adjust by increments in direction 1- positive, -1 negative
@@ -408,15 +476,76 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
         colorChooser = new JColorChooser();
         if (cbs.length > 0)
         	colorChooser.setColor(cbs[0].getColor());
-        colorChooser.setLocation(400,400);
+        setMapLocation(400, 400);
         boolean model = false;		// false - modeless
         JDialog dialog = JColorChooser.createDialog(null, "Color Chooser",
                  model, colorChooser, null, null);
         dialog.setVisible(true);
         
         colorChooser.getSelectionModel().addChangeListener(this);
+        colorChooser.addComponentListener(new ComponentListener() {
+
+			@Override
+			public void componentResized(ComponentEvent e) {
+				System.out.println("resized");
+				// TODO Auto-generated method stub
+				
+			}
+        	@Override
+			public void componentMoved(ComponentEvent e) {
+				System.out.println("moved");
+				updateMapLocation(e);
+			}
+
+			@Override
+			public void componentShown(ComponentEvent e) {
+				System.out.println("shown");
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void componentHidden(ComponentEvent e) {
+				System.out.println("hidden");
+				// TODO Auto-generated method stub
+				
+			}}
+        );
+
 	}
 
+	/**
+	 * Get map location
+	 */
+	public Point getMapLocation() {
+		
+		int x = -1;			// Not set
+		int y = -1;
+		String mapx = SmTrace.getProperty(getMapPosKeyX());
+		String mapy = SmTrace.getProperty(getMapPosKeyY());
+		if (!mapx.equals("")) {
+			x = Integer.valueOf(mapx);
+			y = Integer.valueOf(mapy);
+		}
+		return new Point(x, y);
+	}
+
+	/**
+	 * set map location
+	 */
+	public void setMapLocation(int x0, int y0) {
+		
+		int x = x0;
+		int y = y0;
+		String mapx = SmTrace.getProperty(getMapPosKeyX());
+		String mapy = SmTrace.getProperty(getMapPosKeyY());
+		if (!mapx.equals("")) {
+			x = Integer.valueOf(mapx);
+			y = Integer.valueOf(mapy);
+		}
+        colorChooser.setLocation(x, y);
+	}
+	
 	/**
 	 * Update display
 	 */
@@ -490,7 +619,10 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
             SmTrace.lg(String.format("Nothing selected to color"));
         	return;
         }
-
+        int ccx = colorChooser.getX();
+        int ccy = colorChooser.getY();
+        SmTrace.lg(String.format("Setting ColorChooser to x=%d,  y=%d",  ccx, ccy));
+        recordMapLocation(ccx, ccy);	// Because componentMoved doesn't work for me
         BlockSelect new_select = new BlockSelect();
 		EMBCommand bcmd;
 		try {

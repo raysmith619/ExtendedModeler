@@ -93,6 +93,7 @@ public class ExtendedModeler implements ActionListener {
 	JButton lookAtSelectionButton;
 	JButton resetCameraButton;
 	JCheckBox displayAddControlCheckBox;
+	JCheckBox displayLookAtControlCheckBox;
 	JCheckBox displayPlacementControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
 	JCheckBox displayTextControlCheckBox;
@@ -180,6 +181,11 @@ public class ExtendedModeler implements ActionListener {
 		else if ( source == displayAddControlCheckBox ) {
 			sceneViewer.displayAddControl = ! sceneViewer.displayAddControl;
 			sceneViewer.setControl("component", sceneViewer.displayAddControl);
+			sceneViewer.repaint();
+		}
+		else if ( source == displayLookAtControlCheckBox ) {
+			sceneViewer.displayLookAtControl = ! sceneViewer.displayLookAtControl;
+			sceneViewer.setControl("lookat", sceneViewer.displayLookAtControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayPlacementControlCheckBox ) {
@@ -337,6 +343,11 @@ public class ExtendedModeler implements ActionListener {
 		displayAddControlCheckBox.addActionListener(this);
 		toolPanel.add(displayAddControlCheckBox);
 
+		displayLookAtControlCheckBox = new JCheckBox("Display LookAt Control");
+		displayLookAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayLookAtControlCheckBox.addActionListener(this);
+		toolPanel.add(displayLookAtControlCheckBox);
+
 		displayPlacementControlCheckBox = new JCheckBox("Display Placement Control");
 		displayPlacementControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
 		displayPlacementControlCheckBox.addActionListener(this);
@@ -395,6 +406,11 @@ public class ExtendedModeler implements ActionListener {
 				sceneViewer.displayAddControl = checked;
 				break;
 				
+			case "lookat":
+				displayLookAtControlCheckBox.setSelected(checked);
+				sceneViewer.displayLookAtControl = checked;
+				break;
+					
 			case "placement":
 				displayPlacementControlCheckBox.setSelected(checked);
 				sceneViewer.displayPlacementControl = checked;

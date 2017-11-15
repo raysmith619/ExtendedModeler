@@ -103,6 +103,10 @@ public class ControlsOfView {
 				control = new ControlOfComponent(scene, "component");
 				control.setFull();		// Set full display 
 				break;
+				
+			case "lookat":
+				control = new ControlOfLookAt(scene, "lookat");
+				break;
 			
 			case "placement":
 				control = new ControlOfPlacement(scene, "placement");
@@ -130,7 +134,7 @@ public class ControlsOfView {
 
 	/**
 	 * Adjust controls based on current selection
-	 * @param bindex - indes of currently selected block
+	 * @param bindex - index of currently selected block
 	 */
 	public void adjustControls() {
 		if (controlh == null)
