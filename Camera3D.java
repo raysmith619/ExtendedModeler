@@ -30,7 +30,7 @@ public class Camera3D {
 
 	private float sceneRadius = 10;
 
-	// point of view, or center of camera; the ego-center; the eye-point
+	// point of view, or center of camera; the ego-center; the eyeAt-point
 	public Point3D position = new Point3D();
 
 	// point of interest; what the camera is looking at; the exo-center
@@ -200,6 +200,16 @@ public class Camera3D {
 		// TODO XXX assert here that ``up'' is normalized
 	}
 
+	/**
+	 * Set our camera location
+	 * @param eyeAt
+	 */
+	public void eyeAt(Point3D eyeAt) {
+		position = eyeAt;
+		if (target != null)
+			lookAt(target);			// Orient
+	}
+	
 	// Returns the ray through the center of the given pixel.
 	public Ray3D computeRay(
 		float pixel_x, float pixel_y

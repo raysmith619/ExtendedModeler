@@ -104,6 +104,10 @@ public class ControlsOfView {
 				control.setFull();		// Set full display 
 				break;
 				
+			case "eyeat":
+				control = new ControlOfEye(scene, "eyeat");
+				break;
+				
 			case "lookat":
 				control = new ControlOfLookAt(scene, "lookat");
 				break;

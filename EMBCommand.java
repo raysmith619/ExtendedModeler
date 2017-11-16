@@ -10,6 +10,8 @@ import smTrace.SmTrace;
 public abstract class EMBCommand {
 	static EMBCommandManager commandManager;
 	String action;				// Unique action name
+	Point3D prevEyeAt;			// Previous eyeAt point
+	Point3D newEyeAt;				// New eyeAt point
 	Point3D prevLookAt;			// Previous viewing point
 	Point3D newLookAt;			// New viewing point
 	BlockSelect prevSelect;		// Previously selected
@@ -23,6 +25,8 @@ public abstract class EMBCommand {
 			throw new EMBlockError("No EMBCommandManager");
 			
 		}
+		prevEyeAt = commandManager.scene.camera.position;	// refs by default
+		newLookAt = prevEyeAt;			// refs by default - Don't modify
 		prevLookAt = commandManager.scene.camera.target;	// refs by default
 		newLookAt = prevLookAt;			// refs by default - Don't modify
 		prevSelect = new BlockSelect(commandManager.scene.getSelected());
@@ -68,7 +72,12 @@ public abstract class EMBCommand {
 	public boolean execute() {
 		commandManager.currentCmd = this;
 		if (newLookAt != prevLookAt) {
-			commandManager.scene.camera.lookAt(newLookAt);
+			if (newLookAt != null)
+				commandManager.scene.camera.lookAt(newLookAt);
+		}
+		if (newEyeAt != prevEyeAt) {
+			if (newEyeAt != null)
+				commandManager.scene.camera.eyeAt(newEyeAt);
 		}
 		int[] prev_ids = prevBlocks.getIds();
 		commandManager.scene.removeBlocks(prev_ids);
@@ -100,6 +109,10 @@ public abstract class EMBCommand {
 			e.printStackTrace();
 			return false;
 		}
+		Point3D temp_eyeAt = cmd.newEyeAt;
+		cmd.newEyeAt = cmd.prevEyeAt;
+		cmd.prevEyeAt = temp_eyeAt;
+		
 		Point3D temp_lookAt = cmd.newLookAt;
 		cmd.newLookAt = cmd.prevLookAt;
 		cmd.prevLookAt = temp_lookAt;
@@ -162,10 +175,14 @@ public abstract class EMBCommand {
 	private EMBlock cb(int id) {
 		return commandManager.cb(id);
 	}
+	
+	public void setEyeAt(Point3D pt) {
+		newEyeAt = new Point3D(pt);
+	}
 
 	
 	public void setLookAt(Point3D pt) {
-		newLookAt.copy(pt);
+		newLookAt = new Point3D(pt);
 	}
 	
 	public BlockSelect setSelect(BlockSelect select) {

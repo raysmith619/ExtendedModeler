@@ -81,12 +81,12 @@ public class Matrix4x4 {
 
 
 	public void setToLookAt(
-		Point3D eye, Point3D target, Vector3D up,
+		Point3D eyeAt, Point3D target, Vector3D up,
 		boolean inverted
 	) {
 		// step one: generate a rotation matrix
 
-		Vector3D z = (Point3D.diff(eye,target)).normalized();
+		Vector3D z = (Point3D.diff(eyeAt,target)).normalized();
 		Vector3D y = up;
 		Vector3D x = Vector3D.cross(y,z);
 		y = Vector3D.cross(z,x);
@@ -106,7 +106,7 @@ public class Matrix4x4 {
 			m[ 3] = 0;     m[ 7] = 0;     m[11] = 0;     m[15] = 1;
 
 			// step two: premultiply by a translation matrix
-			m2.setToTranslation( new Vector3D(eye) );
+			m2.setToTranslation( new Vector3D(eyeAt) );
 			copy( Matrix4x4.mult(m2,this) );
 		}
 		else {
@@ -117,7 +117,7 @@ public class Matrix4x4 {
 			m[ 3] = 0;     m[ 7] = 0;     m[11] = 0;     m[15] = 1;
 
 			// step two: postmultiply by a translation matrix
-			m2.setToTranslation( (new Vector3D(eye)).negated() );
+			m2.setToTranslation( (new Vector3D(eyeAt)).negated() );
 			copy( Matrix4x4.mult(this,m2) );
 		}
 	}

@@ -87,6 +87,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 	public boolean displayAddControl = true;
 	public boolean displayColorControl = true;
+	public boolean displayEyeAtControl = true;
 	public boolean displayLookAtControl = true;
 	public boolean displayPlacementControl = true;
 	public boolean displayTextControl = true;
@@ -741,6 +742,14 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		indexOfHilitedBox = -1;
 	}
 
+	public void eyeAtSelection() {
+		int id = getSelectedBlockIndex();
+		if (id >= 0) {
+			Point3D p = scene.getBox(id).getCenter();
+			camera.eyeAt(p);
+		}
+	}
+
 	public void lookAtSelection() {
 		int id = getSelectedBlockIndex();
 		if (id >= 0) {
@@ -897,6 +906,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		SmTrace.lg(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1],
 				viewport[2], viewport[3]), "projection");
 		
+		setControl("eyeat", displayEyeAtControl);
 		setControl("lookat", displayLookAtControl);
 		setControl("placement", displayPlacementControl);
 		setControl("color", displayColorControl);

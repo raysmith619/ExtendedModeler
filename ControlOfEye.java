@@ -13,7 +13,7 @@ import com.jogamp.newt.event.KeyEvent;
 
 import smTrace.SmTrace;
 
-public class ControlOfLookAt extends ControlOf {
+public class ControlOfEye extends ControlOf {
 	/**
 	 * 
 	 */
@@ -26,7 +26,7 @@ public class ControlOfLookAt extends ControlOf {
 	JTextField adjYfield;
 	JTextField adjZfield;
 
-	ControlOfLookAt(SceneViewer scene, String name) {
+	ControlOfEye(SceneViewer scene, String name) {
 		super(scene, name);
 		///setup();
 	}
@@ -38,10 +38,10 @@ public class ControlOfLookAt extends ControlOf {
 		if (setup)
 			return; // Already present
 		int bindex = scene.getSelectedBlockIndex();
-		SmTrace.lg(String.format("ControlOfLookAt.setup before - selected(%d)", bindex), "select");
+		SmTrace.lg(String.format("ControlOfEyeAt.setup before - selected(%d)", bindex), "select");
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 		/// controlDialog = new JDialog();
-		setTitle("LookAt - Adjust/Report");
+		setTitle("EyeAt - Adjust/Report");
 		JPanel posPanel = new JPanel(new GridLayout(0, 1));
 		///JPanel posPanel = new JPanel();
 		add(posPanel);
@@ -70,10 +70,10 @@ public class ControlOfLookAt extends ControlOf {
 		moveto_panel.add(posYfield);
 		moveto_panel.add(new JLabel("z:"));
 		moveto_panel.add(posZfield);
-		JButton lookAtButton = new JButton("LookAt");
-		lookAtButton.setActionCommand("emc_lookAtButton");
-		lookAtButton.addActionListener(scene);
-		moveto_panel.add(lookAtButton);
+		JButton eyeAtButton = new JButton("EyeAt");
+		eyeAtButton.setActionCommand("emc_eyeAtButton");
+		eyeAtButton.addActionListener(scene);
+		moveto_panel.add(eyeAtButton);
 
 		///JPanel sizeto_panel = new JPanel();
 		///posPanel.add(sizeto_panel);
@@ -94,10 +94,10 @@ public class ControlOfLookAt extends ControlOf {
 		adjZfield.addActionListener(scene);
 
 		JButton adjUpButton = new JButton("Up By");
-		adjUpButton.setActionCommand("emc_lookAtAdjUpButton");
+		adjUpButton.setActionCommand("emc_eyeAtAdjUpButton");
 		adjUpButton.addActionListener(scene);
 		JButton adjDownButton = new JButton("Down By");
-		adjDownButton.setActionCommand("emc_lookAtAdjDownButton");
+		adjDownButton.setActionCommand("emc_eyeAtAdjDownButton");
 		adjDownButton.addActionListener(scene);
 		adj_panel.add(new JLabel("Adj:"));
 		adj_panel.add(new JLabel("x:"));
@@ -111,7 +111,7 @@ public class ControlOfLookAt extends ControlOf {
 		pack();
 
 		int bindex2 = scene.getSelectedBlockIndex();
-		SmTrace.lg(String.format("ControlOfLookAt.setup after - selected(%d)", bindex2), "select");
+		SmTrace.lg(String.format("ControlOfEyeAt.setup after - selected(%d)", bindex2), "select");
 		setup = true;
 	}
 
@@ -284,10 +284,10 @@ public class ControlOfLookAt extends ControlOf {
 	 * 
 	 * @throws EMBlockError
 	 */
-	public boolean LookAt() throws EMBlockError {
-		boolean ret = ckDoAction("lookAtButton");
+	public boolean EyeAt() throws EMBlockError {
+		boolean ret = ckDoAction("eyeAtButton");
 		if (!ret)
-			SmTrace.lg("ControlOfLookAt.lookAt failed");
+			SmTrace.lg("ControlOfEyeAt.eyeAt failed");
 		return ret;
 	}
 
@@ -296,21 +296,21 @@ public class ControlOfLookAt extends ControlOf {
 	 * 
 	 * @throws EMBlockError
 	 */
-	public boolean LookAt(float x, float y, float z) throws EMBlockError {
+	public boolean EyeAt(float x, float y, float z) throws EMBlockError {
 		if (!posXfieldSet(x)) {
-			SmTrace.lg(String.format("ControlOfLookAt.Moveto(x=%g) failed", x));
+			SmTrace.lg(String.format("ControlOfEyeAt.Moveto(x=%g) failed", x));
 			return false;
 		}
 		if (!posYfieldSet(y)) {
-			SmTrace.lg(String.format("ControlOfLookAt.Moveto(y=%g) failed", y));
+			SmTrace.lg(String.format("ControlOfEyeAt.Moveto(y=%g) failed", y));
 			return false;
 		}
 		if (!posZfieldSet(z)) {
-			SmTrace.lg(String.format("ControlOfLookAt.Moveto(z=%g) failed", z));
+			SmTrace.lg(String.format("ControlOfEyeAt.Moveto(z=%g) failed", z));
 			return false;
 		}
-		if (!LookAt()) {
-			SmTrace.lg(String.format("ControlOfLookAt.Moveto move(%g, %g,%g) failed", x, y, z));
+		if (!EyeAt()) {
+			SmTrace.lg(String.format("ControlOfEyeAt.Moveto move(%g, %g,%g) failed", x, y, z));
 			return false;
 		}
 		return true;
@@ -318,7 +318,7 @@ public class ControlOfLookAt extends ControlOf {
 
 	private void traceSelected(int place) {
 		int bindex = scene.getSelectedBlockIndex();
-		SmTrace.lg(String.format("ControlOfLookAt.setup place(%d) - selected(%d)", place, bindex), "select",
+		SmTrace.lg(String.format("ControlOfEyeAt.setup place(%d) - selected(%d)", place, bindex), "select",
 				"select");
 	}
 
@@ -333,7 +333,7 @@ public class ControlOfLookAt extends ControlOf {
 	 * 
 	 * @param direction
 	 */
-	private void lookAtAdjustPosition(EMBCommand bcmd, int direction) throws EMBlockError {
+	private void eyeAtAdjustPosition(EMBCommand bcmd, int direction) throws EMBlockError {
 
 		float adj_xval = 0;
 		float adj_yval = 0;
@@ -361,7 +361,7 @@ public class ControlOfLookAt extends ControlOf {
 		posXfieldSet(xval + adj_xval);
 		posYfieldSet(yval + adj_yval);
 		posZfieldSet(zval + adj_zval);
-		lookAtPosition(bcmd);
+		eyeAtPosition(bcmd);
 	}
 
 	/**
@@ -369,7 +369,7 @@ public class ControlOfLookAt extends ControlOf {
 	 * 
 	 * @throws EMBlockError
 	 */
-	private void lookAtPosition(EMBCommand bcmd) throws EMBlockError {
+	private void eyeAtPosition(EMBCommand bcmd) throws EMBlockError {
 		float xval = 0;
 		float yval = 0;
 		float zval = 0;
@@ -386,7 +386,7 @@ public class ControlOfLookAt extends ControlOf {
 			zval = Float.valueOf(text);
 		}
 		SmTrace.lg(String.format("look at x=%.2f y=%.2f z=%.2f", xval, yval, zval));
-		bcmd.setLookAt(new Point3D(xval, yval, zval));
+		bcmd.setEyeAt(new Point3D(xval, yval, zval));
 		bcmd.doCmd();
 	}
 
@@ -414,24 +414,24 @@ public class ControlOfLookAt extends ControlOf {
 		}
 		switch (action) {
 
-		case "emc_lookAtButton":
-			lookAtPosition(bcmd);
+		case "emc_eyeAtButton":
+			eyeAtPosition(bcmd);
 			break;
 
 		case "emc_ENTER":
-			lookAtPosition(bcmd);
+			eyeAtPosition(bcmd);
 			break;
 
-		case "emc_lookAtAdjUpButton":
-			lookAtAdjustPosition(bcmd, 1);
+		case "emc_eyeAtAdjUpButton":
+			eyeAtAdjustPosition(bcmd, 1);
 			break;
 
 		case "emc_adjENTER":
-			lookAtAdjustPosition(bcmd, 1);
+			eyeAtAdjustPosition(bcmd, 1);
 			break;
 
-		case "emc_lookAtAdjDownButton":
-			lookAtAdjustPosition(bcmd, -1);
+		case "emc_eyeAtAdjDownButton":
+			eyeAtAdjustPosition(bcmd, -1);
 			break;
 
 		default:

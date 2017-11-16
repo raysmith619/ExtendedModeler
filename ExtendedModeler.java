@@ -90,9 +90,11 @@ public class ExtendedModeler implements ActionListener {
 	JButton createConeButton;
 	JButton createCylinderButton;
 	JButton deleteSelectionButton;
+	JButton eyeAtSelectionButton;
 	JButton lookAtSelectionButton;
 	JButton resetCameraButton;
 	JCheckBox displayAddControlCheckBox;
+	JCheckBox displayEyeAtControlCheckBox;
 	JCheckBox displayLookAtControlCheckBox;
 	JCheckBox displayPlacementControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
@@ -170,6 +172,10 @@ public class ExtendedModeler implements ActionListener {
 			sceneViewer.deleteSelection(bcmd);
 			bcmd.doCmd();
 		}
+		else if ( source == eyeAtSelectionButton ) {
+			sceneViewer.eyeAtSelection();
+			sceneViewer.repaint();
+		}
 		else if ( source == lookAtSelectionButton ) {
 			sceneViewer.lookAtSelection();
 			sceneViewer.repaint();
@@ -181,6 +187,11 @@ public class ExtendedModeler implements ActionListener {
 		else if ( source == displayAddControlCheckBox ) {
 			sceneViewer.displayAddControl = ! sceneViewer.displayAddControl;
 			sceneViewer.setControl("component", sceneViewer.displayAddControl);
+			sceneViewer.repaint();
+		}
+		else if ( source == displayEyeAtControlCheckBox ) {
+			sceneViewer.displayEyeAtControl = ! sceneViewer.displayEyeAtControl;
+			sceneViewer.setControl("eyeAt", sceneViewer.displayEyeAtControl);
 			sceneViewer.repaint();
 		}
 		else if ( source == displayLookAtControlCheckBox ) {
@@ -328,6 +339,12 @@ public class ExtendedModeler implements ActionListener {
 		toolPane.add( sceneViewer, BorderLayout.CENTER );
 		///toolPane.add(toolPanel);
 		menu.add(toolPane);
+		
+		eyeAtSelectionButton = new JButton("EyeAt Selection");
+		eyeAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		eyeAtSelectionButton.addActionListener(this);
+		toolPanel.add( eyeAtSelectionButton );
+		
 		lookAtSelectionButton = new JButton("Look At Selection");
 		lookAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
 		lookAtSelectionButton.addActionListener(this);
@@ -342,6 +359,11 @@ public class ExtendedModeler implements ActionListener {
 		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
 		displayAddControlCheckBox.addActionListener(this);
 		toolPanel.add(displayAddControlCheckBox);
+
+		displayEyeAtControlCheckBox = new JCheckBox("Display EyeAt Control");
+		displayEyeAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayEyeAtControlCheckBox.addActionListener(this);
+		toolPanel.add(displayEyeAtControlCheckBox);
 
 		displayLookAtControlCheckBox = new JCheckBox("Display LookAt Control");
 		displayLookAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
@@ -404,6 +426,11 @@ public class ExtendedModeler implements ActionListener {
 			case "component":
 				displayAddControlCheckBox.setSelected(checked);
 				sceneViewer.displayAddControl = checked;
+				break;
+				
+			case "eyeat":
+				displayEyeAtControlCheckBox.setSelected(checked);
+				sceneViewer.displayEyeAtControl = checked;
 				break;
 				
 			case "lookat":
