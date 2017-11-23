@@ -106,13 +106,22 @@ public class ControlOfComponent extends ControlOf {
 			case "emc_addBallButton":
 			case "emc_addConeButton":
 			case "emc_addCylinderButton":
-			case "emc_addTextButton":
 				scene.addBlockButton(bcmd, action);
 				if (bcmd != null) {
 					boolean res = bcmd.doCmd();
 					scene.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
 					return res;
 				}
+				break;
+				
+			case "emc_addTextButton":		// Emulate Text control
+				scene.addTextButton(bcmd, action);
+				if (bcmd != null) {
+					boolean res = bcmd.doCmd();
+					scene.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
+					return res;
+				}
+				break;
 			
 				default:
 					break;

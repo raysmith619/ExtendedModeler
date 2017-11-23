@@ -51,7 +51,7 @@ public class ControlOfLookAt extends ControlOf {
 		posPanel.add(moveto_panel);
 
 		traceSelected(11);
-		Point3D center = new Point3D(-2, -2, -2);
+		Point3D center = new Point3D(scene.camera.target);
 		posXfield = new JTextField(String.format("%.2f", center.x()));
 		SmTrace.lg(String.format("setup posXfield"));
 		posXfield.setActionCommand("emc_ENTER");

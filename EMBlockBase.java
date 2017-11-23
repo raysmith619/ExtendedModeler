@@ -324,7 +324,20 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * @throws EMBlockError 
 	 */
 	public EMBlockBase duplicate() throws EMBlockError {
-		return duplicate(null, null, null, null);
+		SmTrace.lg(String.format("Un-overidden duplicate - possible error: %s",
+				this.blockType()));
+		return null;
+	}
+	
+	
+	/**
+	 * duplicate block
+	 * @throws EMBlockError 
+	 */
+	public EMBlockBase duplicate(String blockType) throws EMBlockError {
+		SmTrace.lg(String.format("Un-overidden duplicate - possible error: %s",
+				this.blockType()));
+		return null;
 	}
 
 	/**
@@ -371,6 +384,15 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		return colorAdj(red, green, blue, alpha);
 	}
 	
+	
+	/**
+	 * @param cb - existing block
+	 * @return new block with these attributes
+	 * @throws EMBlockError 
+	 */
+	public EMBlockBase duplicate(EMBlockBase cb) throws EMBlockError {
+		return newBlock(cb);
+	}
 	
 	/**
 	 * @param blockType type string default: our type

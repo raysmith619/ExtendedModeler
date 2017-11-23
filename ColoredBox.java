@@ -4,6 +4,8 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 
+import smTrace.SmTrace;
+
 public class ColoredBox extends EMBlockBase {
 
 	public boolean intersects(
@@ -22,6 +24,17 @@ public class ColoredBox extends EMBlockBase {
 		isOk = true;
 	}
 
+	
+	
+	/**
+	 * duplicate block
+	 * @throws EMBlockError 
+	 */
+	@Override
+	public EMBlockBase duplicate() throws EMBlockError {
+		EMBlockBase cb = copy();
+		return cb;
+	}
 
 	
 	/**

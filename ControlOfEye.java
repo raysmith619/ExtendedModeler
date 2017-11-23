@@ -50,8 +50,8 @@ public class ControlOfEye extends ControlOf {
 		JPanel moveto_panel = new JPanel();
 		posPanel.add(moveto_panel);
 
-		traceSelected(11);
-		Point3D center = new Point3D(-2, -2, -2);
+
+		Point3D center = new Point3D(scene.camera.position);
 		posXfield = new JTextField(String.format("%.2f", center.x()));
 		SmTrace.lg(String.format("setup posXfield"));
 		posXfield.setActionCommand("emc_ENTER");

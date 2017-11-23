@@ -142,6 +142,19 @@ public class ColoredBall extends EMBlockBase {
 			gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 	}
+
+	
+	/**
+	 * duplicate block
+	 * @throws EMBlockError 
+	 */
+	@Override
+	public EMBlockBase duplicate() throws EMBlockError {
+		EMBlockBase cb = copy();
+		return cb;
+	}
+
+	
 	@Override
 	public EMBlockBase copy() {
 		super.copy();

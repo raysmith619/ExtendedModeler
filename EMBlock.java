@@ -178,7 +178,10 @@ public class EMBlock{
 	 * @throws EMBlockError 
 	 */
 	public EMBlock duplicate() throws EMBlockError {
-		return duplicate(null, null, null, null);
+		///return duplicate(null, null, null, null);
+		EMBlock cb = new EMBlock(baseBlock);
+		addBlock(cb);
+		return cb;
 	}
 
 	/**

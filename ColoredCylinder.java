@@ -123,6 +123,16 @@ public class ColoredCylinder extends EMBlockBase {
 		}
 	}
 	
+	
+	/**
+	 * duplicate block
+	 * @throws EMBlockError 
+	 */
+	@Override
+	public EMBlockBase duplicate() throws EMBlockError {
+		EMBlockBase cb = copy();
+		return cb;
+	}
 
 	
 }

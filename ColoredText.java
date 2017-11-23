@@ -284,14 +284,42 @@ public class ColoredText extends EMBlockBase {
 	public static void setFont(Font font) {
 		defaultFont = font;
 	}
+
+	
+	/**
+	 * duplicate block
+	 * @throws EMBlockError 
+	 */
+	@Override
+	public EMBlockBase duplicate() throws EMBlockError {
+		EMBlockBase cb = copy();
+		return cb;
+	}
 	
 	
 	@Override
 	public EMBlockBase copy() {
-		super.copy();
-		return null;
+		ColoredText cb = (ColoredText) super.copy();
+		setText(getText());
+		setFont(getFont());
+		cb.charXDir = this.charXDir;
+		cb.charYDir = this.charYDir;
+		cb.charZDir = this.charZDir;
+		cb.charDirWithText = this.charDirWithText;
+		cb.charSizeByBlock = this.charSizeByBlock;
+		cb.textXDir = this.textXDir;
+		cb.textYDir = this.textYDir;
+		cb.textZDir = this.textZDir;
+		cb.textDirByChar = this.textDirByChar;
+		
+		return cb;
 	}
 	
+	public String getText() {
+		return this.text;
+	}
 
-	
+	public void setText(String text) {
+		this.text = text;
+	}
 }
