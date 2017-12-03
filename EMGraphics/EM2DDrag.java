@@ -34,12 +34,16 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
 
 import com.jogamp.opengl.GLCapabilities;
 
 import smTrace.SmTrace;
 
-public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListener{
+public class EM2DDrag  extends JPanel
+						implements MouseListener, MouseMotionListener {
+	String title;		// Display title
+	String emType = "xy";	// xy, xz
 	JFrame frame;		// Enclosing frame
 	String xLabel;		// Descriptive label
 	float xMin;
@@ -52,22 +56,39 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 	float yMax;
 	final String iffmt = "%.2f";
 	int xLabelHeight = 20;		// Top (x) label height
-	int yLabelWidth = 100;		// Left (y) label width
+	int yLabelWidth = 400;		// Left (y) label width
 	int xValueSize = 200;		// x plotting surface (min)
 	int yValueSize = 200;		// y plotting surface (min)
+	static boolean setupDone = false;	// Set true when setup complete
 	static EM2DDrag em_base;	// flag indicating complete
 	JPanel xyRegionPanel;		// xy plotting field
+	
+	JTextField xMinField;
 	JTextField xCurrentField;	// current xvalue field 
+	JTextField xMaxField;
+	
 	JTextField yCurrentField;	// current yvalue field
+	
+	private static int mainArgIndex;					// current Arg index
+	private static String[] mainArgs;						// Args array
+	private static int mainArgsLength;					// Number of args
+	private static EM3DPosition em3Dbase = null;					// Set to 3D testing
+	
+	private EM3DPosition emPosition;		// cooperative collection, if any
+	
 	public EM2DDrag(
-		JFrame frame,
+		String title,
+		String emType,
 		String xLabel, float xMin, float xMax,
 		String yLabel, float yMin, float yMax) {
-		this.frame = frame;
+		setLayout(new BorderLayout());
+		this.title = title;
+		this.emType = emType;
 		this.xLabel = xLabel;
 		this.xMin = xMin;
 		this.xMax = xMax;
 		this.xCurrent = (xMin+xMax)/2;
+		
 		this.yLabel = yLabel;
 		this.yMin = yMin;
 		this.yMax = yMax;
@@ -79,96 +100,103 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 	 * Setup two dimensional slider with setable/trackable values
 	 */
 	public void setup() {
-		frame.setLayout(new BorderLayout());
-		JPanel xyField = new JPanel(new BorderLayout());
-		xyField.setBackground(Color.gray);  
-		frame.setSize(400, 400);
-		xyField.setSize(300, 400);
-		//GridBagConstraints gbc = new GridBagConstraints();
-		//gbc.fill = GridBagConstraints.BOTH;
-		//gbc.weightx = 1.0;
-		//gbc.weighty = 0;
-
-		//frame.getContentPane().add(xyField);
-		frame.add(xyField);
+		///JPanel xyField = new JPanel(new BorderLayout());
+		///add(xyField, BorderLayout.CENTER);
+		setBackground(Color.gray);
+		setBorder(new BevelBorder(1));
+		///xyField.setSize(200, 200);
+		///setMinimumSize(new Dimension(500,500));
 		
-		JPanel xrow_panel = new JPanel(new BorderLayout());			// blank, x-labels
+		JPanel xrow_panel = new JPanel(new BorderLayout());			// top row: blank, x-labels
 		xrow_panel.setBackground(Color.yellow);
+		add(xrow_panel, BorderLayout.NORTH);
+		
 		JPanel ulcorner = new JPanel(new BorderLayout());
-		ulcorner.add(new JTextField(String.format("%26s", "")));	// kluge to make ulcorner take some space
+		JTextField title_field = new JTextField(String.format("%s", title));
+		ulcorner.add(title_field, BorderLayout.CENTER);	// Now contains title
 		ulcorner.setBackground(Color.white);
-		ulcorner.setMinimumSize(new Dimension(xLabelHeight, yLabelWidth));
+		ulcorner.setMaximumSize(new Dimension(xLabelHeight, yLabelWidth));
 		ulcorner.setSize(new Dimension(xLabelHeight, yLabelWidth));
 		xrow_panel.add(ulcorner, BorderLayout.WEST);			// Upper left corner - blank
-		JPanel xLabelingPanel = new JPanel(new BorderLayout());  // values/label
-		///xLabelingPanel.setMinimumSize(new Dimension(xValueSize, xLabelHeight));
+		
+		JPanel xLabelingPanel = new JPanel(new GridLayout(2,1));  // values/label
+		
+		JPanel xValuesPanel = new JPanel(new GridLayout(1, 3));
+		xValuesPanel.setBorder(new EmptyBorder(0,0,0,0));
+
+		JPanel xLabelPanel = new JPanel(new BorderLayout());
+
+		JTextField xLabelField = new JTextField(xLabel);
+		xLabelField.setHorizontalAlignment(JTextField.CENTER);
+		xLabelPanel.add(xLabelField, BorderLayout.CENTER);
+		
+		xMinField = new JTextField(String.format(iffmt, xMin));
+		xMinField.setHorizontalAlignment(JTextField.LEFT);
+		xMinField.setBorder(new EmptyBorder(0,0,0,0));
+		///JPanel xCurrentPanel = new JPanel(new BorderLayout());
+		xCurrentField = new JTextField(String.format(iffmt, xCurrent));
+		xCurrentField.setHorizontalAlignment(JTextField.CENTER);
+		xCurrentField.setBorder(new EmptyBorder(0,0,0,0));
+		///xCurrentPanel.add(xCurrentField, BorderLayout.CENTER);
+		xMaxField = new JTextField(String.format(iffmt, xMax));
+		xMaxField.setHorizontalAlignment(JTextField.CENTER);		// Why does RIGHT make the value disappear?
+		xMaxField.setBorder(new EmptyBorder(0,0,0,0));
+		
+
+		
+		
+		xValuesPanel.add(xMinField);
+		xValuesPanel.add(xCurrentField);
+		xValuesPanel.add(xMaxField, BorderLayout.CENTER);
+		
+		xLabelingPanel.add(xValuesPanel);
+		xLabelingPanel.add(xLabelPanel);
+
 		xrow_panel.add(xLabelingPanel, BorderLayout.CENTER);
 
 		
-		xyField.add(xrow_panel, BorderLayout.NORTH);
 		JPanel yrow_xy_region_panel = new JPanel(new BorderLayout());	// y-labels, x-y region
 		///yrow_xy_region_panel.setSize(100, 200);
 		yrow_xy_region_panel.setBackground(Color.GREEN);
-		xyField.add(yrow_xy_region_panel, BorderLayout.CENTER);
+		add(yrow_xy_region_panel, BorderLayout.CENTER);
 		
 		
-
-		JPanel xValuesPanel = new JPanel(new BorderLayout());
-		JPanel xLabelPanel = new JPanel(new BorderLayout());
-		JTextField xLabelField = new JTextField(xLabel);
-		xLabelField.setHorizontalAlignment(JTextField.CENTER);
-
-		JTextField xMinField = new JTextField(String.format(iffmt, xMin));
-		JPanel xCurrentPanel = new JPanel(new BorderLayout());
-		xCurrentField = new JTextField(String.format(iffmt, xCurrent));
-		xCurrentField.setHorizontalAlignment(JTextField.CENTER);
-		xCurrentPanel.add(xCurrentField, BorderLayout.CENTER);
-		JTextField xMaxField = new JTextField(String.format(iffmt, xMax));
-		xValuesPanel.add(xMinField, BorderLayout.WEST);
-		///xValuesPanel.add(new JPanel());	// spacer
-		xValuesPanel.add(xCurrentPanel, BorderLayout.CENTER);
-		///xValuesPanel.add(new JPanel());	// spacer
-		xValuesPanel.add(xMaxField, BorderLayout.EAST);
-		xLabelingPanel.add(xValuesPanel, BorderLayout.NORTH);
-		xLabelingPanel.add(xLabelPanel, BorderLayout.SOUTH);
-		xLabelPanel.add(xLabelField, BorderLayout.CENTER);
-		xLabelingPanel.add(xLabelPanel, BorderLayout.CENTER);
 
 
 		JPanel yLabelingPanel = new JPanel(new BorderLayout());
 		yLabelingPanel.setBackground(Color.WHITE);
 		yrow_xy_region_panel.add(yLabelingPanel, BorderLayout.WEST);
 		xyRegionPanel = new JPanel(new BorderLayout());
-		xyRegionPanel.setMinimumSize(new Dimension(xValueSize, yValueSize));
+		///xyRegionPanel.setMinimumSize(new Dimension(xValueSize, yValueSize));
 
 		xyRegionPanel.setBorder(new BevelBorder(1));
 		yrow_xy_region_panel.add(xyRegionPanel);
 		//xyRegionPanel.setSize(200,200);
-		
+
 		JLabel yLabelField = new JLabel(yLabel);
-		JPanel yValuesPanel = new JPanel(new BorderLayout());
+		JPanel yValuesPanel = new JPanel(new GridLayout(3,1));
+		
+		JTextField yMinField = new JTextField(String.format(iffmt, yMin));
+		yMinField.setBorder(new EmptyBorder(0,0,0,0));
+		yCurrentField = new JTextField(String.format(iffmt, yCurrent));
+		yCurrentField.setBorder(new EmptyBorder(0,0,0,0));
+		JTextField yMaxField = new JTextField(String.format(iffmt, yMax));
+		yMaxField.setBorder(new EmptyBorder(0,0,0,0));
+		
 		yLabelingPanel.add(yValuesPanel, BorderLayout.WEST);
 		yLabelingPanel.add(yLabelField, BorderLayout.CENTER);
 		yLabelField.setBackground(Color.WHITE);
 		
-		JTextField yMinField = new JTextField(String.format(iffmt, yMin));
-		yCurrentField = new JTextField(String.format(iffmt, yCurrent));
-		JTextField yMaxField = new JTextField(String.format(iffmt, yMax));
-
 		yValuesPanel.add(yMinField, BorderLayout.NORTH);
 		//yValuesPanel.add(new JPanel());	// spacer
 		yValuesPanel.add(yCurrentField, BorderLayout.CENTER);
 		//yValuesPanel.add(new JPanel());	// spacer
 		yValuesPanel.add(yMaxField, BorderLayout.SOUTH);
 
-		setVisible(true);
 		addMouseListener(this);
-		frame.addMouseListener(this);
 		xyRegionPanel.addMouseListener(this);
 		xyRegionPanel.addMouseMotionListener(this);
-		
-		///xyRegionPanel.addMouseMotionListener(new EMMouseMotionListener());
-		frame.setVisible(true);
+		setVisible(true);
 	}
 	/*** enabled by xyRegionPanel.addMouseMotionListener(new EMMouseMotionListener());
 	class EMMouseMotionListener implements MouseMotionListener {
@@ -214,8 +242,12 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 	public void setxCurrent(float xCurrent) {
 		this.xCurrent = xCurrent;
 		xCurrentField.setText(String.format("%.2g", this.xCurrent)); 
+		SmTrace.lg(String.format("setxCurrent %s Loc x: %.2f (%.2f, %.2f) y: %.2f (%.2f, %.2f)", title,
+				getxCurrent(),  xMin, xMax,
+				getyCurrent(), yMin, yMax));
 	}
 
+	
 	public float getyCurrent() {
 		return yCurrent;
 	}
@@ -223,18 +255,25 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 	public void setyCurrent(float yCurrent) {
 		this.yCurrent = yCurrent;
 		yCurrentField.setText(String.format("%.2g", this.yCurrent)); 
+		SmTrace.lg(String.format("setyCurrent %s Loc x: %.2f (%.2f, %.2f) y: %.2f (%.2f, %.2f)", title,
+				getxCurrent(),  xMin, xMax,
+				getyCurrent(), yMin, yMax));
 	}
+	
+	/***
 	@Override
 	public Dimension getPreferredSize()
 	{
 	    return new Dimension(120, 120);
 	}
+	***/
 	@Override
 	public void mouseDragged(MouseEvent e) {
 		int x = xyRegionGetX(e);
 		int y = xyRegionGetY(e);
 		SmTrace.lg(String.format("mouseDragged at(%d, %d)", x,  y));
 		setAtMouseXY(x, y);
+		em2DLocationNotify();
 		paintIt();
 	}
 
@@ -287,7 +326,7 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 		SmTrace.lg(String.format("mouse at(%d, %d)", x,  y));
 		setAtMouseX(x);
 		setAtMouseY(y);
-		SmTrace.lg(String.format("Loc x: %.2f (%.2f, %.2f) y: %.2f (%.2f, %.2f)",
+		SmTrace.lg(String.format("mouse %s Loc x: %.2f (%.2f, %.2f) y: %.2f (%.2f, %.2f)", title,
 				getxCurrent(),  xMin, xMax,
 				getyCurrent(), yMin, yMax));
 	}
@@ -313,6 +352,7 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 		int y = xyRegionGetY(e);
 		SmTrace.lg(String.format("mouseClicked at(%d, %d)", x,  y));
 		setAtMouseXY(x,y);
+		em2DLocationNotify();
 		paintIt();
 	}
 
@@ -380,13 +420,65 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 	
 	/**
 	 * Selftest program
-	 * @return 
 	 */
 	
 	public static void main(String[] args) {
+		SmTrace.setLogName("EM2DDrag");
 		SmTrace.lg("Begin Test");
-		setupSelfTest("EM2DDrag Test");
+		mainArgs = args;
+		mainArgsLength = args.length;
+		String test_name = "basic";
+		for (mainArgIndex = 0; mainArgIndex < args.length; ) {
+			String arg = args[mainArgIndex++];
+			if (arg.startsWith("--")) {
+				String str_val = "";
+				boolean boolean_val = false;
+				String opt = arg.substring(2).toLowerCase();
+				switch (opt) {
+					case "test":
+					case "t":
+						test_name = strArg("1");
+						break;
+						
+					case "trace":
+						str_val = strArg("ALL");
+						SmTrace.setFlags(str_val);
+						break;
+						
+					default:
+						SmTrace.lg(String.format("Unrecognized flag(%s)", opt));
+						break;
+				}
+			} else {
+				SmTrace.lg(String.format("Unrecognized arg(%s) - quitting", arg));
+				System.exit(1);
+			}
+					
+		}
+		SmTrace.lg(String.format("test: %s",  test_name));
+		if (test_name.equals("basic") || test_name.equals("1")) {
+			setupSelfTest("basic test");
+		} else if (test_name.equals("2")) {
+			setup2Test("3D testing with 2D controls");
+		} else {
+			SmTrace.lg(String.format("Unrecognized test name %s - quitting",  test_name));
+		}
 	}
+
+	
+	/**
+	 * Get next arg if exists, or default
+	 * @param def_str - default value
+	 */
+	private static String strArg(String def_str) {
+		if (mainArgIndex >= mainArgsLength)
+			return def_str;		// No more args
+		if (mainArgs[mainArgIndex].startsWith("--"))
+			return def_str;		// Next is an option name
+		String val_str = mainArgs[mainArgIndex++];
+		return val_str;
+	}
+
 	
 	/**
 	 * Setup EM2DDrag test for execution
@@ -398,12 +490,18 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 			new Runnable() {
 				public void run() {
 					JFrame frame = new JFrame(title);
+					frame.setLayout(new BorderLayout());
+					frame.setMinimumSize(new Dimension(500, 500));
+
 					EM2DDrag em = new EM2DDrag(
-							frame,
+							"x-y ctl",
+							"xy",
 							"x-values", 0f,10f,
 							"y-values", 0f, 10f);
-					em.createUI(title);
-					em_base = em;		// 
+					frame.add(em, BorderLayout.CENTER);
+					setupDone = true;
+					frame.setVisible(true);
+					em.createUI(title,  frame);
 				}
 			}
 		);
@@ -411,7 +509,7 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 		int maxtime = 10000;			// Max wait in milliseconds
 		///maxtime = 1000000;				/// lengthen for debugging
 		int dur = 0;					// Current duration
-		while (em_base == null) {
+		while (!setupDone) {
 			try {
 				Thread.sleep(inctime);
 			} catch (InterruptedException e) {
@@ -425,24 +523,17 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 			}
 		}
 		SmTrace.lg("Completed Setup");
+
 		return em_base;
 	}
-
 
 
 
 	// For thread safety, this should be invoked
 	// from the event-dispatching thread.
 	//
-	private void createUI(String title) {
-		if ( ! SwingUtilities.isEventDispatchThread() ) {
-			SmTrace.lg(
-				"Warning: UI is not being created in the Event Dispatch Thread!");
-			assert false;
-		}
-		frame = new JFrame(title);
+	private void createUI(String title, JFrame frame) {
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
-
 		
 		// Need to set visible first before starting the rendering thread due
 		// to a bug in JOGL. See JOGL Issue #54 for more information on this
@@ -452,9 +543,66 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 		GLCapabilities caps = new GLCapabilities(null);
 		caps.setDoubleBuffered(true);
 		caps.setHardwareAccelerated(true);
+		if ( ! SwingUtilities.isEventDispatchThread() ) {
+			SmTrace.lg(
+				"Warning: UI is not being created in the Event Dispatch Thread!");
+			assert false;
+		}
+		if ( ! SwingUtilities.isEventDispatchThread() ) {
+			SmTrace.lg(
+				"Warning: UI is not being created in the Event Dispatch Thread!");
+			assert false;
+		}
 
 	}
 	
+	/**
+	 * Setup EM2DDrag with two coordinated instances x-y, x-z
+	 * Waits for setup to complete so we can use it for testing
+	 */
+	public static EM3DPosition setup2Test(String title) {
+		// Schedule the creation of the UI for the event-dispatching thread.
+		javax.swing.SwingUtilities.invokeLater(
+			new Runnable() {
+				public void run() {
+					JFrame frame = new JFrame(title);
+					frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+					
+					EM3DPosition emp = new EM3DPosition(title, frame);
+					if (emp != null)
+						em3Dbase = emp;
+						setupDone = true;
+				}
+			}
+		);
+		int inctime = 1000;				// milliseconds
+		int maxtime = 10000;			// Max wait in milliseconds
+		///maxtime = 1000000;				/// lengthen for debugging
+		int dur = 0;					// Current duration
+		while (!setupDone) {
+			try {
+				Thread.sleep(inctime);
+			} catch (InterruptedException e) {
+				SmTrace.lg("setupModeler interupt exception");
+				e.printStackTrace();
+			}
+			dur += inctime;
+			if (dur > maxtime) {
+				SmTrace.lg(String.format("Setup wait time(%d) exceeded, time=%d", maxtime, dur));
+				System.exit(1);
+			}
+		}
+		SmTrace.lg("Completed Setup");
+		JFrame tframe = new JFrame("test pod frame");
+		EM3DPosition em3Dtest = new EM3DPosition("test pod", null);
+		em3Dbase.addEM3DEventListener(em3Dtest);
+		
+		return em3Dbase;
+	}
+
+	public void setSize(int width, int height) {
+		super.setSize(width, height);
+	}
 	
 	public static void delay(float time) {
 		long ticsize = 100;
@@ -474,5 +622,16 @@ public class EM2DDrag  extends JPanel implements MouseListener, MouseMotionListe
 	  public void display(){
 		SmTrace.lg("display");
 	    repaint();
-	  } 
+	  }
+	
+	public void addEM2DEventListener(EM3DPosition emp) {
+		this.emPosition = emp;
+	}
+	
+	public void em2DLocationNotify() {
+		EM2DLocationEvent evt = new EM2DLocationEvent(emType,
+			xCurrent, yCurrent);	
+		if (emPosition != null)
+			emPosition.location2DEvent(evt);
+	}
 }
