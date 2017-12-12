@@ -1,8 +1,10 @@
+package ExtendedModeler;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.GridLayout;
 import java.awt.Point;
+import java.awt.color.ColorSpace;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
@@ -54,6 +56,16 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 	ControlOfColor(SceneViewer scene, String name) {
 		super(scene, name);
 	}
+
+	/**
+	 * reset to default setting
+	 */
+	public void reset() {
+		nextColor = 0;		// Reset generated colors
+		setup = false;
+		setup();
+	}
+	
 	
 	/**
 	 * Setup Control of object adding
@@ -594,7 +606,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		return val;
 	}
 	
-	public Color getColor() throws EMBlockError {
+	public Color getColor(String string) throws EMBlockError {
 		Color val = null;
 		
 		val = new Color(getRed(), getGreen(), getBlue(), getAlpha());

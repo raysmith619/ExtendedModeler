@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.GridLayout;
 
 import javax.swing.JButton;
@@ -13,6 +14,15 @@ public class ControlOfComponent extends ControlOf {
 	ControlOfComponent(SceneViewer scene, String name) {
 		super(scene, name);
 	}
+
+	/**
+	 * reset to default setting
+	 */
+	public void reset() {
+		setup = false;
+		setup();
+	}
+	
 	
 	/**
 	 * Setup Control of object adding
@@ -22,10 +32,23 @@ public class ControlOfComponent extends ControlOf {
 		if (setup)
 		return;					// Already setup
 		
-		setTitle("Block - Add / Modify");
+		setTitle("Block - Select / Add / Modify");
 		JPanel blockPanel = new JPanel(new GridLayout(0, 1, 2, 2));		// any rows, 1 col, sep
 		add(blockPanel);
 
+		JPanel selectPanel = new JPanel(new GridLayout(1, 0));		// Modifiers in one row
+		JButton addSelectAllButton = new JButton("Select All");
+		addSelectAllButton.setActionCommand("emc_selectAllButton");
+		addSelectAllButton.addActionListener(scene);
+		selectPanel.add(addSelectAllButton);
+		/***
+		JButton addToggleSelectButton = new JButton("Toggle Select");
+		addToggleSelectButton.setActionCommand("emc_toggleSelectButton");
+		addToggleSelectButton.addActionListener(scene);
+		selectPanel.add(addToggleSelectButton);
+		***/
+		blockPanel.add(selectPanel);
+		
 		JPanel modPanel = new JPanel(new GridLayout(1, 0));		// Modifiers in one row
 		JButton addDuplicateButton = new JButton("Duplicate");
 		addDuplicateButton.setActionCommand("emc_duplicateBlockButton");
@@ -99,6 +122,8 @@ public class ControlOfComponent extends ControlOf {
 			return false;
 		}
 		switch (action) {
+			case "emc_selectAllButton":
+			case "emc_toggleSelectButton":
 			case "emc_deleteBlockButton":
 			case "emc_deleteBlockAllButton":
 			case "emc_duplicateBlockButton":

@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Color;
 import java.awt.Font;
 
@@ -26,7 +27,8 @@ public class ColoredText extends EMBlockBase {
 	private float charYSize;
 	private float charZSize;
 	private boolean charSizeByBlock;
-	
+
+								// Set via reset static function
 	private static int def_font_size = 10;
 	private static Font defaultFont = new Font(
 			"Tahoma", Font.BOLD, def_font_size);
@@ -88,6 +90,15 @@ public class ColoredText extends EMBlockBase {
 		return text;
 	}
 
+	/**
+	 * Reset to initial context
+	 */
+	public static void reset() {
+		def_font_size = 10;
+		defaultFont = new Font(
+				"Tahoma", Font.BOLD, def_font_size);
+		nt = 0;
+	}
 
 	public void draw(
 		GLAutoDrawable drawable,

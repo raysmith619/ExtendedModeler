@@ -1,8 +1,16 @@
+package ExtendedModeler;
+import java.awt.Color;
 import java.awt.GridLayout;
+import java.awt.Point;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+
+import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -11,6 +19,8 @@ import javax.swing.SwingConstants;
 
 import com.jogamp.newt.event.KeyEvent;
 
+import EMGraphics.EM3DLocationEvent;
+import EMGraphics.EM3DPosition;
 import smTrace.SmTrace;
 
 public class ControlOfEye extends ControlOf {
@@ -25,6 +35,8 @@ public class ControlOfEye extends ControlOf {
 	JTextField adjXfield;
 	JTextField adjYfield;
 	JTextField adjZfield;
+	
+	EM3DPosition m3DPos;		// 3D setting if non-null
 
 	ControlOfEye(SceneViewer scene, String name) {
 		super(scene, name);
@@ -110,10 +122,65 @@ public class ControlOfEye extends ControlOf {
 		adj_panel.add(adjDownButton);
 		pack();
 
+		JPanel m3D_panel = new JPanel();
+		m3D_panel.setBorder(BorderFactory.createLineBorder(Color.green));
+		posPanel.add(m3D_panel);
+		pack();
+		add3DPositioning(m3D_panel);
+ 
+		pack();
+
+
 		int bindex2 = scene.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfEyeAt.setup after - selected(%d)", bindex2), "select");
 		setup = true;
 	}
+	
+	
+	/**
+	 * Add 3D positioning
+	 * @param panel
+	 */
+	public void add3DPositioning(JPanel panel) {
+		SmTrace.lg("addMap - adding 3D positioning");
+		JPanel m3D_panel = new JPanel();
+		m3D_panel.setBorder(BorderFactory.createLineBorder(Color.black));
+		panel.add(m3D_panel);
+		pack();
+		JButton m3D_positioning_Button = new JButton("3D Positioning");
+		m3D_positioning_Button.setActionCommand("emc_m3D_eyeAt_PositionButton");
+		m3D_panel.add(m3D_positioning_Button);
+		m3D_positioning_Button.addActionListener(scene);
+		pack();
+		m3D_panel.setVisible(true);
+		
+		
+		// Do common stuff
+		addComponentListener(new ComponentListener() {
+		public void componentMoved(ComponentEvent e) {
+		updateLocation(e);
+		}
+		
+		@Override
+		public void componentResized(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		
+		@Override
+		public void componentShown(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		
+		@Override
+		public void componentHidden(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		} );
+	}
+	
 
 	/**
 	 * get fields
@@ -221,7 +288,7 @@ public class ControlOfEye extends ControlOf {
 	 * @return true if no error
 	 */
 	public boolean posXfieldSet(float val) {
-		String val_str = Float.toString(val);
+		String val_str = String.format("%.2g", val);
 		return posXfieldSet(val_str);
 	}
 
@@ -248,7 +315,7 @@ public class ControlOfEye extends ControlOf {
 	 * @return true if no error
 	 */
 	public boolean posYfieldSet(float val) {
-		String val_str = Float.toString(val);
+		String val_str = String.format("%.2g", val);
 		return posYfieldSet(val_str);
 	}
 
@@ -275,7 +342,7 @@ public class ControlOfEye extends ControlOf {
 	 * @return true if no error
 	 */
 	public boolean posZfieldSet(float val) {
-		String val_str = Float.toString(val);
+		String val_str = String.format("%.2g", val);
 		return posZfieldSet(val_str);
 	}
 
@@ -365,7 +432,55 @@ public class ControlOfEye extends ControlOf {
 	}
 
 	/**
-	 * Look at position
+	 * Set eye(camera target) at position
+	 * creating command, setting values, updating controls
+	 * @throws EMBlockError
+	 */
+	public void setEyeAtPosition(Point3D pt) throws EMBlockError {
+		if (!posXfieldSet(pt.x()))
+			return;
+		
+		if (!posYfieldSet(pt.y()))
+			return;
+		
+		if (!posZfieldSet(pt.z()))
+			return;
+		
+		if (m3DPos != null)
+			m3DPos.updatePoint(pt);
+	}
+
+	/**
+	 * Place eye at position
+	 * creating command, setting values, updating controls
+	 * @throws EMBlockError
+	 */
+	public void eyeAtPosition(float x, float y, float z) throws EMBlockError {
+		if (!posXfieldSet(x))
+			return;
+		
+		if (!posYfieldSet(y))
+			return;
+		
+		if (!posZfieldSet(z))
+			return;
+
+		
+		EMBCommand bcmd;
+		try {
+			bcmd = new BlkCmdAdd("emc_eyeAt");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return;
+		}
+		
+		SmTrace.lg(String.format("eyeAtPosition cmd x=%.2f y=%.2f z=%.2f", x, y, z));
+		bcmd.setEyeAt(new Point3D(x, y, z));
+		bcmd.doCmd();
+	}
+
+	/**
+	 * Set eye at position (command)
 	 * 
 	 * @throws EMBlockError
 	 */
@@ -433,11 +548,45 @@ public class ControlOfEye extends ControlOf {
 		case "emc_eyeAtAdjDownButton":
 			eyeAtAdjustPosition(bcmd, -1);
 			break;
+			
+		case "emc_m3D_eyeAt_PositionButton":
+			m3DPositionSelect(bcmd);
+			break;
 
 		default:
 			return false; // No action here
 		}
 		return bcmd.doCmd();
+
+	}
+
+	
+	/**
+	 * Select eyeAt via 3DPosition widget
+	 * @throws EMBlockError 
+	 */
+	public void m3DPositionSelect(EMBCommand bcmd) throws EMBlockError {
+		int width = 350;
+		int height = 2*width+20;
+		float xMin = -20;
+		float xMax = 20;
+		float yMin = xMin;
+		float yMax = xMax;
+		float zMin = xMin;
+		float zMax = xMax;
+		
+		Point lapt = this.getLocation();
+		lapt.translate(0, -height);
+		JFrame frame = new JFrame();
+		frame.setLocation(lapt);
+        m3DPos = new EM3DPosition("EyeAt Position", frame,
+			width,
+			height,
+			"xEyeAT", xMin, xMax,
+			"yEyeAT", yMin, yMax,
+			"zEyeAT", zMin, zMax
+			);
+		m3DPos.addEM3DEventListener(this);
 
 	}
 
@@ -471,6 +620,14 @@ public class ControlOfEye extends ControlOf {
 	public void setControl(EMBlockBase cb) {
 	}
 
+	/**
+	 * reset to default setting
+	 */
+	public void reset() {
+		setup = false;
+		setup();
+	}
+
 	public void setPos(Point3D cbPos) {
 		Float val;
 		String text;
@@ -487,4 +644,22 @@ public class ControlOfEye extends ControlOf {
 		text = String.format("%.2g", val);
 		posZfield.setText(text);
 	}
+
+	@Override
+	public void location3DEvent(EM3DLocationEvent e) {
+		float x = e.getX();
+		float y = e.getY();
+		float z = e.getZ();
+
+		SmTrace.lg(String.format("ControlOfLookAt.location3DEvent: %s x=%.2g y=%.2g z=%.2g",
+									"", x, y, z));
+		try {
+			eyeAtPosition(x,y,z);
+		} catch (EMBlockError e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	}
+	
+	
 }

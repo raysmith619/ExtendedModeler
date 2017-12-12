@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
@@ -57,6 +58,14 @@ public class ControlOfText extends ControlOf {
 		super(scene, name);
 		///setup();
 	}	
+
+	/**
+	 * reset to default setting
+	 */
+	public void reset() {
+		setup = false;
+		setup();
+	}
 	
 	/**
 	 * Setup Control / Display  position of selected block

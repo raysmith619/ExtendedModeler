@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Point;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -41,13 +42,23 @@ public class ControlsOfView {
 		this.trace = trace;
 		this.controlh = new HashMap<String, ControlEntry>();
 	}
+
 	
+	/**
+	 * 
+	 */
+	public void reset() {
+			for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
+				String controlName = entry.getKey();
+				ControlOf control = getControl(controlName);
+				control.reset();
+			}
+	}
 	/**
 	 * Add/Remove Control/Display
 	 * @throws EMBlockError 
 	 */
 	public void setControl(String controlName, boolean on) {
-		SmTrace.lg(String.format("setControl(%s,%b)", controlName, on));
 		if (controlh == null)
 			return;
 		if (controlName == null)
@@ -58,6 +69,12 @@ public class ControlsOfView {
 		}
 		ControlEntry ctl_ent = controlh.get(controlName);
 		ControlOf control = ctl_ent.control;
+		
+		if (on == control.isOn()) {
+			return;						// No need to change
+		}
+		
+		SmTrace.lg(String.format("setControl(%s,%b)", controlName, on));
 		control.setControl(on);
 		
 		scene.setCheckBox(controlName, on);		// Have check box reflect setting

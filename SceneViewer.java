@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -49,6 +50,9 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	GLAutoDrawable drawable; 		// Save base
 	GLU glu; // Needed for scene2WorldCoord
 	GLUT glut;
+	
+	boolean toggleBlockSelection = false;	// short cut for toggling block selection
+
 	// Updated each display() call
 	int viewport[] = new int[4];
 	double mvmatrix[] = new double[16];
@@ -416,14 +420,8 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	 * Check if block at this index is already selected
 	 */
 	public boolean isSelected(int id) {
-		if (selectStack.isEmpty())
-			return false;			// Nothing is selected
-		
-		BlockSelect select = selectStack.peek();
-		if (select.hasIndex(id))
-			return true;
-
-		return false;
+		EMBlock cb = getCb(id);
+		return cb.isSelected();
 	}
 
 	/**
@@ -707,6 +705,17 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		}
 		
 	}
+
+	/**
+	 * Select blocks
+	 * Add blocks to selected list
+	 */
+	public void selectBlocks(EMBCommand bcmd, int[] ids) {
+		for (int id : ids) {
+			selectBlock(bcmd, id);
+		}
+		
+	}
 	
 	
 	/**
@@ -742,6 +751,35 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		indexOfHilitedBox = -1;
 	}
 
+	public void selectAll(EMBCommand bcmd) {
+		int[] allids = getDisplayedIds();
+		selectBlocks(bcmd, allids);
+		indexOfHilitedBox = -1;
+	}
+
+	/**
+	 * Toggle selected state of blocks
+	 * as clicked 
+	 * @param bcmd
+	 */
+	public void toggleSelection(EMBCommand bcmd) {
+		if (!toggleBlockSelection) {
+			toggleBlockSelection = true;
+		} else {
+			toggleBlockSelection = false;
+		}
+	}
+	
+	/**
+	 * Select block, as part of a command
+	 * @param bcmd
+	 * @param id
+	 */
+	public void selectBlock(EMBCommand bcmd, int id) {
+		SmTrace.lg(String.format("selectBlock(%s)", getCb(id).toString()));
+		bcmd.selectBlock(id, true);
+	}
+
 	public void eyeAtSelection() {
 		int id = getSelectedBlockIndex();
 		if (id >= 0) {
@@ -750,11 +788,48 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		}
 	}
 
+	
+	/**
+	 * Set camera(target) at a point
+	 * Updates visible controls
+	 * @param pt
+	 */
+	public void eyeAt(Point3D pt) {
+		camera.eyeAt(pt);
+		ControlOfEye eac = (ControlOfEye) controls.getControl("eyeat");
+		if (eac != null)
+			try {
+				eac.setEyeAtPosition(pt);
+			} catch (EMBlockError e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	}
+
+	
+	/**
+	 * Set camera to look at a point
+	 * Updates visible controls
+	 * @param pt
+	 */
+	public void lookAt(Point3D pt) {
+		camera.lookAt(pt);
+		ControlOfLookAt lac = (ControlOfLookAt) controls.getControl("lookat");
+		if (lac != null)
+			try {
+				lac.setLookAtPosition(pt);
+			} catch (EMBlockError e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	}
+	
+	
 	public void lookAtSelection() {
 		int id = getSelectedBlockIndex();
 		if (id >= 0) {
 			Point3D p = scene.getBox(id).getCenter();
-			camera.lookAt(p);
+			lookAt(p);
 		}
 	}
 	
@@ -781,10 +856,23 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		
 	}
 
+	/**
+	 * Reset graphics
+	 */
+	public void reset() {
+		SmTrace.lg("Reset");
+		scene.reset();
+		resetCamera();
+		controls.reset();
+		commandManager = new EMBCommandManager(this);
+		repaint();
+	}
+	
 	public void resetCamera() {
 		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
 				scene.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
 		camera.reset();
+		ColoredText.reset();
 	}
 
 	
@@ -965,7 +1053,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	public void mouseClicked(MouseEvent e) {
 		SmTrace.lg("mouseClick", "mouse");
 		if (e.isControlDown())
-			SmTrace.lg("isControlDown");
+			SmTrace.lg("isControlDown", "mouse");
 		if (indexOfHilitedBox >= 0) {
 			if (e.isControlDown()) {
 				EMBCommand bcmd;
@@ -976,7 +1064,11 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 					e2.printStackTrace();
 					return;
 				}
-				selectAdd(bcmd, indexOfHilitedBox, true);		// keep with selected
+				if (isSelected(indexOfHilitedBox)) {
+					bcmd.removeSelect(indexOfHilitedBox);
+				} else {
+					selectAdd(bcmd, indexOfHilitedBox, true);		// keep with selected
+				}
 				bcmd.doCmd();
 			} else {
 				EMBCommand bcmd;
@@ -1485,6 +1577,14 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 			return;
 		}
 		switch(action) {
+			case "emc_selectAllButton":
+				selectAll(bcmd);
+				break;
+				
+			case "emc_toggleSelectButton":
+				toggleSelection(bcmd);
+				break;
+			
 			case "emc_duplicateBlockButton":
 				duplicateBlock(bcmd); 			// Duplicate selected block
 				break;

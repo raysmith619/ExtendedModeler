@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.GridLayout;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -39,6 +40,16 @@ public class ControlOfPlacement extends ControlOf {
 		///setup();
 	}
 
+	/**
+	 * Reset context to support repeatable operation
+	 * from reset
+	 */
+	public void reset() {
+		 setup = false;
+		 setup();
+	}
+	
+	
 	/**
 	 * Setup Control / Display position of selected block
 	 */

@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.util.ArrayList;
 
 import smTrace.SmTrace;
@@ -22,8 +23,7 @@ public abstract class EMBCommand {
 	public EMBCommand(String action) throws EMBlockError {
 		this.action = action;
 		if (commandManager == null) {
-			throw new EMBlockError("No EMBCommandManager");
-			
+			throw new EMBlockError("No EMBCommandManager");			
 		}
 		prevEyeAt = commandManager.scene.camera.position;	// refs by default
 		newLookAt = prevEyeAt;			// refs by default - Don't modify
@@ -35,13 +35,12 @@ public abstract class EMBCommand {
 		newBlocks = new EMBlockGroup();
 	}
 
-	public EMBCommand(EMBCommand cmd) throws Exception  {
+	public EMBCommand(EMBCommand cmd) throws Exception, EMBlockError   {
 		this(cmd.action);
 		prevSelect = cmd.prevSelect;
 		newSelect = cmd.newSelect;
 		prevBlocks = cmd.prevBlocks;
 		newBlocks = cmd.newBlocks;
-		setManager(commandManager);
 	}
 	
 	
@@ -73,11 +72,11 @@ public abstract class EMBCommand {
 		commandManager.currentCmd = this;
 		if (newLookAt != prevLookAt) {
 			if (newLookAt != null)
-				commandManager.scene.camera.lookAt(newLookAt);
+				commandManager.scene.lookAt(newLookAt);
 		}
 		if (newEyeAt != prevEyeAt) {
 			if (newEyeAt != null)
-				commandManager.scene.camera.eyeAt(newEyeAt);
+				commandManager.scene.eyeAt(newEyeAt);
 		}
 		int[] prev_ids = prevBlocks.getIds();
 		commandManager.scene.removeBlocks(prev_ids);

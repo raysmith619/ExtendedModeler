@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Color;
 import java.util.ArrayList;
 
@@ -73,7 +74,7 @@ public class EMBlockBase {
 	 * @throws EMBlockError 
 	 */
 	public void setFromControl(ControlOfColor ctl) throws EMBlockError {
-		Color color = ctl.getColor();
+		Color color = ctl.nextColor();
 		this.color = color;
 	}
 		
@@ -588,6 +589,8 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * @return
 	 */
 	public Color getColor() {
+		if (color == null)
+			color = ControlOf.nextColor();
 		return color;
 	}
 

@@ -1,23 +1,40 @@
+package ExtendedModeler;
+import java.awt.Color;
 import java.awt.GridLayout;
+import java.awt.Point;
+import java.awt.Window;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+
+import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JColorChooser;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 
 import com.jogamp.newt.event.KeyEvent;
 
+import EMGraphics.EM3DLocationEvent;
+import EMGraphics.EM3DLocationListner;
+import EMGraphics.EM3DPosition;
+
 import smTrace.SmTrace;
 
-public class ControlOfLookAt extends ControlOf {
+public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	JPanel posPanel;
 	JTextField posXfield;
 	JTextField posYfield;
 	JTextField posZfield;
@@ -25,10 +42,19 @@ public class ControlOfLookAt extends ControlOf {
 	JTextField adjXfield;
 	JTextField adjYfield;
 	JTextField adjZfield;
-
+	EM3DPosition m3DPos;		// 3D setting if non-null
+	
 	ControlOfLookAt(SceneViewer scene, String name) {
 		super(scene, name);
-		///setup();
+		setup();
+	}
+
+	/**
+	 * reset to default setting
+	 */
+	public void reset() {
+		setup = false;
+		setup();
 	}
 
 	/**
@@ -37,12 +63,10 @@ public class ControlOfLookAt extends ControlOf {
 	public void setup() {
 		if (setup)
 			return; // Already present
-		int bindex = scene.getSelectedBlockIndex();
-		SmTrace.lg(String.format("ControlOfLookAt.setup before - selected(%d)", bindex), "select");
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 		/// controlDialog = new JDialog();
 		setTitle("LookAt - Adjust/Report");
-		JPanel posPanel = new JPanel(new GridLayout(0, 1));
+		posPanel = new JPanel(new GridLayout(0, 1));
 		///JPanel posPanel = new JPanel();
 		add(posPanel);
 
@@ -110,11 +134,67 @@ public class ControlOfLookAt extends ControlOf {
 		adj_panel.add(adjDownButton);
 		pack();
 
+		JPanel m3D_panel = new JPanel();
+		m3D_panel.setBorder(BorderFactory.createLineBorder(Color.green));
+		posPanel.add(m3D_panel);
+		pack();
+		add3DPositioning(m3D_panel);
+		/**
+		**/
+		pack();
+
 		int bindex2 = scene.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfLookAt.setup after - selected(%d)", bindex2), "select");
 		setup = true;
 	}
 
+	
+	
+	/**
+	 * Add 3D positioning
+	 * @param panel
+	 */
+	public void add3DPositioning(JPanel panel) {
+		SmTrace.lg("addMap - adding 3D positioning");
+		JPanel m3D_panel = new JPanel();
+		m3D_panel.setBorder(BorderFactory.createLineBorder(Color.black));
+		panel.add(m3D_panel);
+		pack();
+		JButton m3D_positioning_Button = new JButton("3D Positioning");
+		m3D_positioning_Button.setActionCommand("emc_m3D_lookAt_PositionButton");
+		m3D_panel.add(m3D_positioning_Button);
+		m3D_positioning_Button.addActionListener(scene);
+		pack();
+		m3D_panel.setVisible(true);
+		
+		
+		// Do common stuff
+		addComponentListener(new ComponentListener() {
+		public void componentMoved(ComponentEvent e) {
+		updateLocation(e);
+		}
+		
+		@Override
+		public void componentResized(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		
+		@Override
+		public void componentShown(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		
+		@Override
+		public void componentHidden(ComponentEvent e) {
+		// TODO Auto-generated method stub
+		
+		}
+		} );
+	}
+	
+	
 	/**
 	 * get fields
 	 * 
@@ -221,7 +301,7 @@ public class ControlOfLookAt extends ControlOf {
 	 * @return true if no error
 	 */
 	public boolean posXfieldSet(float val) {
-		String val_str = Float.toString(val);
+		String val_str = String.format("%.2g", val);
 		return posXfieldSet(val_str);
 	}
 
@@ -248,7 +328,7 @@ public class ControlOfLookAt extends ControlOf {
 	 * @return true if no error
 	 */
 	public boolean posYfieldSet(float val) {
-		String val_str = Float.toString(val);
+		String val_str = String.format("%.2g", val);
 		return posYfieldSet(val_str);
 	}
 
@@ -275,7 +355,7 @@ public class ControlOfLookAt extends ControlOf {
 	 * @return true if no error
 	 */
 	public boolean posZfieldSet(float val) {
-		String val_str = Float.toString(val);
+		String val_str = String.format("%.2g", val);
 		return posZfieldSet(val_str);
 	}
 
@@ -298,19 +378,19 @@ public class ControlOfLookAt extends ControlOf {
 	 */
 	public boolean LookAt(float x, float y, float z) throws EMBlockError {
 		if (!posXfieldSet(x)) {
-			SmTrace.lg(String.format("ControlOfLookAt.Moveto(x=%g) failed", x));
+			SmTrace.lg(String.format("ControlOfLookAt.Moveto(x=%.2g) failed", x));
 			return false;
 		}
 		if (!posYfieldSet(y)) {
-			SmTrace.lg(String.format("ControlOfLookAt.Moveto(y=%g) failed", y));
+			SmTrace.lg(String.format("ControlOfLookAt.Moveto(y=%.2g) failed", y));
 			return false;
 		}
 		if (!posZfieldSet(z)) {
-			SmTrace.lg(String.format("ControlOfLookAt.Moveto(z=%g) failed", z));
+			SmTrace.lg(String.format("ControlOfLookAt.Moveto(z=%.2g) failed", z));
 			return false;
 		}
 		if (!LookAt()) {
-			SmTrace.lg(String.format("ControlOfLookAt.Moveto move(%g, %g,%g) failed", x, y, z));
+			SmTrace.lg(String.format("ControlOfLookAt.Moveto move(%.2g, %.2g,%.2g) failed", x, y, z));
 			return false;
 		}
 		return true;
@@ -366,6 +446,54 @@ public class ControlOfLookAt extends ControlOf {
 
 	/**
 	 * Look at position
+	 * setting values, updating controls
+	 * @throws EMBlockError
+	 */
+	public void setLookAtPosition(Point3D pt) throws EMBlockError {
+		if (!posXfieldSet(pt.x()))
+			return;
+		
+		if (!posYfieldSet(pt.y()))
+			return;
+		
+		if (!posZfieldSet(pt.z()))
+			return;
+		
+		if (m3DPos != null)
+			m3DPos.updatePoint(pt);
+	}
+
+	/**
+	 * Look at position
+	 * creating command, setting values, updating controls
+	 * @throws EMBlockError
+	 */
+	public void lookAtPosition(float x, float y, float z) throws EMBlockError {
+		if (!posXfieldSet(x))
+			return;
+		
+		if (!posYfieldSet(y))
+			return;
+		
+		if (!posZfieldSet(z))
+			return;
+
+		
+		EMBCommand bcmd;
+		try {
+			bcmd = new BlkCmdAdd("emc lookAt cmd");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return;
+		}
+		
+		SmTrace.lg(String.format("lookAtPosition cmd x=%.2f y=%.2f z=%.2f", x, y, z));
+		bcmd.setLookAt(new Point3D(x, y, z));
+		bcmd.doCmd();
+	}
+
+	/**
+	 * Look at position
 	 * 
 	 * @throws EMBlockError
 	 */
@@ -385,7 +513,7 @@ public class ControlOfLookAt extends ControlOf {
 			String text = posZfield.getText();
 			zval = Float.valueOf(text);
 		}
-		SmTrace.lg(String.format("look at x=%.2f y=%.2f z=%.2f", xval, yval, zval));
+		SmTrace.lg(String.format("lookAtPosition cmd x=%.2f y=%.2f z=%.2f", xval, yval, zval));
 		bcmd.setLookAt(new Point3D(xval, yval, zval));
 		bcmd.doCmd();
 	}
@@ -433,6 +561,10 @@ public class ControlOfLookAt extends ControlOf {
 		case "emc_lookAtAdjDownButton":
 			lookAtAdjustPosition(bcmd, -1);
 			break;
+			
+		case "emc_m3D_lookAt_PositionButton":
+			m3DPositionSelect(bcmd);
+			break;
 
 		default:
 			return false; // No action here
@@ -441,6 +573,39 @@ public class ControlOfLookAt extends ControlOf {
 
 	}
 
+	
+
+	
+	/**
+	 * Select LookAt via 3DPosition widget
+	 * @throws EMBlockError 
+	 */
+	public void m3DPositionSelect(EMBCommand bcmd) throws EMBlockError {
+		int width = 350;
+		int height = 2*width+20;
+		float xMin = -5;
+		float xMax = 5;
+		float yMin = xMin;
+		float yMax = xMax;
+		float zMin = xMin;
+		float zMax = xMax;
+		
+		Point lapt = this.getLocation();
+		lapt.translate(0, -height);
+		JFrame frame = new JFrame();
+		frame.setLocation(lapt);
+		m3DPos = new EM3DPosition("LookAt Position", frame,
+			width,
+			height,
+			"xLookAT", xMin, xMax,
+			"yLookAT", yMin, yMax,
+			"zLookAT", zMin, zMax
+			);
+		m3DPos.addEM3DEventListener(this);
+
+	}
+	
+	
 	/**
 	 * Set / Get / Access methods
 	 */
@@ -486,5 +651,21 @@ public class ControlOfLookAt extends ControlOf {
 		val = cbPos.z();
 		text = String.format("%.2g", val);
 		posZfield.setText(text);
+	}
+
+	@Override
+	public void location3DEvent(EM3DLocationEvent e) {
+		float x = e.getX();
+		float y = e.getY();
+		float z = e.getZ();
+
+		SmTrace.lg(String.format("ControlOfLookAt.location3DEvent: %s x=%.2g y=%.2g z=%.2g",
+									"", x, y, z));
+		try {
+			lookAtPosition(x,y,z);
+		} catch (EMBlockError e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 	}
 }

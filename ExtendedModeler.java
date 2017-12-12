@@ -1,3 +1,4 @@
+package ExtendedModeler;
 /**
  * ExtendedModeler - Adapted from SimpleModeller-3D_JavaApplication-JOGL
    Still trying to work with GitHub.
@@ -66,9 +67,11 @@ public class ExtendedModeler implements ActionListener {
 	JMenuItem undoMenuItem;			// Command undo
 	JMenuItem redoMenuItem;			// Command redo
 	JMenuItem repeatMenuItem;		// Command repeat
+	JMenuItem resetMenuItem;		// Command reset
 	JButton undoButton;				// Command undo
 	JButton redoButton;				// Command redo
 	JButton repeatButton;			// Command repeat
+	JButton resetButton;			// Reset to initial settings
 	
 	JMenuItem placementMenuItem;
 	JMenuItem placementComputeMenuItem;
@@ -116,6 +119,19 @@ public class ExtendedModeler implements ActionListener {
 		}
 		else if (source == repeatButton || source == repeatMenuItem) {
 			sceneViewer.cmdRepeat();
+			return;
+		}
+		else if (source == resetButton || source == resetMenuItem) {
+			int response = JOptionPane.showConfirmDialog(
+				frame,
+				"Really Reset to initial state",
+				"Confirm Reset",
+				JOptionPane.YES_NO_OPTION
+			);
+
+			if (response == JOptionPane.YES_OPTION) {
+				sceneViewer.reset();
+			}
 			return;
 		}
 		if ( source == deleteAllMenuItem ) {
@@ -298,6 +314,11 @@ public class ExtendedModeler implements ActionListener {
 		repeatButton = new JButton("Repeat");
 		repeatButton.addActionListener(this);
 		menuBar.add(repeatButton);
+		frame.setJMenuBar(menuBar);
+		
+		resetButton = new JButton("Reset");
+		resetButton.addActionListener(this);
+		menuBar.add(resetButton);
 		frame.setJMenuBar(menuBar);
 					
 		Container pane = frame.getContentPane();

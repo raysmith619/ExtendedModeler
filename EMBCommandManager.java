@@ -1,4 +1,6 @@
+package ExtendedModeler;
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.Stack;
 
 import smTrace.SmTrace;
@@ -18,8 +20,9 @@ public class EMBCommandManager {
 		this.scene = scene;
 		commandStack = new Stack<EMBCommand>();
 		undoStack = new Stack<EMBCommand>();
-		if (EMBCommand.commandManager == null)
-			EMBCommand.setManager(this);	// Ensure a manager is in place
+		EMBCommand.setManager(this);	// Ensure a manager is in place
+		///if (EMBCommand.commandManager == null)
+		///	EMBCommand.setManager(this);	// Ensure a manager is in place
 	}
 
 	/**
@@ -297,20 +300,26 @@ public class EMBCommandManager {
 	 * Print command stack
 	 */
 	public void cmdStackPrint(String tag, String trace) {
+		final int maxPrint = 5;
 		String str = "";
 		if (commandStack.isEmpty() ) {
 			SmTrace.lg(String.format("%s commandStack: Empty", tag), trace);
 			return;
 		}
-		Iterator<EMBCommand> cmd_itr = commandStack.iterator();
-		
-		while (cmd_itr.hasNext()) {
-			EMBCommand cmd = cmd_itr.next();
+		ListIterator<EMBCommand> cmd_itr = commandStack.listIterator();
+		int nprint = maxPrint;
+		if (SmTrace.trace("verbose"))
+			nprint = 9999;
+		while (cmd_itr.hasNext())
+			cmd_itr.next();
+		for (int i = 0; i < nprint && cmd_itr.hasPrevious(); i++) {
+			EMBCommand cmd = cmd_itr.previous();
 			if (!str.equals(""))
 				str += "; ";
 			str += cmd;
 		}
-		SmTrace.lg(String.format("%s commandStack: %s", tag, str), trace);
+		SmTrace.lg(String.format("%s commandStack: (n:%d) %s",
+				tag, commandStack.size(), str), trace);
 	}
 	
 	

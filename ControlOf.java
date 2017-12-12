@@ -1,3 +1,5 @@
+package ExtendedModeler;
+import java.awt.Color;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentEvent;
@@ -10,6 +12,7 @@ import javax.swing.JFrame;
 import com.jogamp.newt.event.WindowEvent;
 import com.jogamp.opengl.GLAutoDrawable;
 
+import EMGraphics.EM3DLocationEvent;
 import smTrace.SmTrace;
 
 public class ControlOf extends JDialog implements java.awt.event.WindowListener {
@@ -24,6 +27,7 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	private boolean active;		// true setup and visible
 	public boolean inPos;			// true - in position
 	public boolean full;		// Reserve full height
+	static int nextColor = 0;	// index for generated colors
 	
 	ControlOf(SceneViewer scene, String name) {
 		super();
@@ -175,6 +179,13 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 		setVisible(on);
 		active = on;
 	}
+
+	/**
+	 * Check active state
+	 */
+	public boolean isOn() {
+		return setup && active;
+	}
 	
 	
 	/**
@@ -218,6 +229,16 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	public void adjustControls() {		
 	}
 
+
+	public void location3DEvent(EM3DLocationEvent e) {
+		float x = e.getX();
+		float y = e.getY();
+		float z = e.getZ();
+
+		SmTrace.lg(String.format("controlOf.location3DEvent: %s x=%.2g y=%.2g z=%.2g",
+									name, x, y, z));
+	}
+
 	/**
 	 * Set Control window location and remember
 	 */
@@ -245,6 +266,32 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 */
 	public boolean isInPos() {
 		return inPos;
+	}
+
+	/**
+	 * Generated repeatable color sequence
+	 * @throws EMBlockError 
+	 */
+	public static Color nextColor() {
+		final Color colors[] = {
+				Color.RED,
+				Color.ORANGE,
+				Color.YELLOW,
+				Color.GREEN,
+				Color.BLUE,
+				
+				Color.CYAN,
+				Color.MAGENTA,
+				Color.PINK,
+				Color.BLACK,
+				Color.DARK_GRAY,
+				Color.GRAY,
+				Color.LIGHT_GRAY,
+				Color.WHITE
+		};
+		Color color = colors[nextColor%colors.length];
+		nextColor++;
+		return color;
 	}
 	
 	
@@ -329,5 +376,9 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 */
 	// Overridden by appropriate controls
 	public void adjustFromControl(EMBlock cb, EMBCommand bcmd) throws EMBlockError {
+	}
+
+	// Overridden by appropriate controls
+	public void reset() {
 	}
 }

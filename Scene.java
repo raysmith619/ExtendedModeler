@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Color;
 import java.util.ArrayList;
 
@@ -17,14 +18,29 @@ class Scene {
 
 
 	public Scene() throws EMBlockError {
-		genBlocks = new EMBlockGroup();			// Generated
-		EMBlock.setGenerated(genBlocks);
-		EMBlock.setDefaults("box",
-				new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)),
-				new Color(255, 0, 255));
-		displayedBlocks = new EMBlockGroup();		// Displayed
+		reset();
 	}
 
+	/**
+	 * Reset to initial (repeatable) state
+	 * @throws EMBlockError 
+	 */
+	public  void reset() {
+		genBlocks = new EMBlockGroup();			// Generated
+		EMBlock.setGenerated(genBlocks);
+		try {
+			EMBlock.setDefaults("box",
+					new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)),
+					new Color(255, 0, 255));
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		displayedBlocks = new EMBlockGroup();		// Displayed
+		
+	}
+	
+	
 	public AlignedBox3D getBoundingBoxOfScene() {
 		if ( isBoundingBoxOfSceneDirty ) {
 			boundingBoxOfScene.clear();
