@@ -11,6 +11,7 @@ import smTrace.SmTrace;
 public abstract class EMBCommand {
 	static EMBCommandManager commandManager;
 	String action;				// Unique action name
+	boolean canUndo;			// Command can be undone
 	Point3D prevEyeAt;			// Previous eyeAt point
 	Point3D newEyeAt;				// New eyeAt point
 	Point3D prevLookAt;			// Previous viewing point
@@ -25,6 +26,7 @@ public abstract class EMBCommand {
 		if (commandManager == null) {
 			throw new EMBlockError("No EMBCommandManager");			
 		}
+		canUndo = true;
 		prevEyeAt = commandManager.scene.camera.position;	// refs by default
 		newLookAt = prevEyeAt;			// refs by default - Don't modify
 		prevLookAt = commandManager.scene.camera.target;	// refs by default
@@ -42,7 +44,13 @@ public abstract class EMBCommand {
 		prevBlocks = cmd.prevBlocks;
 		newBlocks = cmd.newBlocks;
 	}
-	
+
+	/**
+	 * Set canUndo
+	 */
+	public void setCanUndo(boolean can) {
+		canUndo = can;
+	}
 	
 	/**
 	 * Setup command manager
@@ -129,6 +137,21 @@ public abstract class EMBCommand {
 			commandManager.undoStack.push(this);
 		return res;
 	}
+	
+	
+	/**
+	 * Create checkpoint command, which when "undone", will
+	 * recreate current command state
+	 * @throws EMBlockError 
+	 */
+	public static EMBCommand checkPointCmd() throws EMBlockError {
+		EMBCommand cmd;
+		cmd = new BlkCmdAdd("emc checkpoint");	// Create "disposable" copy of command
+		cmd.prevBlocks  = commandManager.scene.getDisplay().getBlocks();
+		return cmd;
+	}
+	
+	
 	/**
 	 * Redo last undo - reverse the effects of the latest  undo
 	 * The commandManager has already popped command from undo stack
@@ -244,11 +267,14 @@ public abstract class EMBCommand {
 		commandManager.cmdStackPrint(String.format("doCmd(%s)", this.action), "execute");
 		boolean res = execute();
 		if (res) {
-			if (canUndo() || canRepeat()) {
-				SmTrace.lg("add to commandStack", "execute");
-				commandManager.commandStack.add(this);
-			} else {
-				SmTrace.lg(String.format("doCmd(%s) can't undo/repeat", this.action), "execute");
+							/* Disable cmd pushing if mouse pressed */
+			if (!commandManager.scene.isMousePressed()) {
+				if (canUndo() || canRepeat()) {
+					SmTrace.lg("add to commandStack", "execute");
+					commandManager.commandStack.add(this);
+				} else {
+					SmTrace.lg(String.format("doCmd(%s) can't undo/repeat", this.action), "execute");
+				}
 			}
 		}
 		commandManager.cmdStackPrint(String.format("doCmd(%s) AFTER", this.action), "execute");
@@ -314,7 +340,7 @@ public abstract class EMBCommand {
 
 
 	public boolean canUndo() {
-		return true;
+		return canUndo;
 	}
 
 
@@ -336,6 +362,10 @@ public abstract class EMBCommand {
 
 	public void addPrevBlock(EMBlock cb) {
 		prevBlocks.putBlock(cb.copy());
+	}
+
+	public void checkPoint() {
+		commandManager.checkPoint();
 	}
 		
 

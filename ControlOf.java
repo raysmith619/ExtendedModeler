@@ -28,7 +28,8 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	public boolean inPos;			// true - in position
 	public boolean full;		// Reserve full height
 	static int nextColor = 0;	// index for generated colors
-	
+	public Point3D setPoint;	// Last check point value
+	public float minClose = .5f;	// Close for setPoint comparison 
 	ControlOf(SceneViewer scene, String name) {
 		super();
 		this.scene = scene;
@@ -37,6 +38,13 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 		this.active = false;
 		this.inPos = false;
 		this.full = false;
+	}
+
+	/**
+	 * Set latest checkpoint "location"
+	 */
+	public void setPoint(Point3D pt) {
+		setPoint = new Point3D(pt);
 	}
 	
 	/**
@@ -380,5 +388,6 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 
 	// Overridden by appropriate controls
 	public void reset() {
+		setPoint = new Point3D();
 	}
 }

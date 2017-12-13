@@ -51,8 +51,6 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	GLU glu; // Needed for scene2WorldCoord
 	GLUT glut;
 	
-	boolean toggleBlockSelection = false;	// short cut for toggling block selection
-
 	// Updated each display() call
 	int viewport[] = new int[4];
 	double mvmatrix[] = new double[16];
@@ -61,7 +59,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	///public int indexOfSelectedBlock = -1; // -1 for none
 									/**
 									 * Only used to go to previously
-									 * selecte block(s) in case of delete
+									 * select block(s) in case of delete
 									 */
 	private Stack<BlockSelect> selectStack = new Stack<BlockSelect>();			// Stack of recent selected
 	
@@ -73,7 +71,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 	Camera3D camera = new Camera3D();
 	ExtendedModeler.AutoAddType autoAdd = ExtendedModeler.AutoAddType.NONE; // Add
-																			// item
+	boolean mousePressed;		// true iff mouse is selected																		// item
 																			// source
 																			// menu
 
@@ -104,8 +102,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 	
 	public SceneViewer(GLCapabilities caps,
 		ExtendedModeler modeler,
-		JFrame frame,
-		SmTrace trace)
+		JFrame frame)
 		throws EMBlockError {
 
 		super(caps);
@@ -113,13 +110,12 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		this.caps = caps;
 		this.modeler = modeler;
 		this.frame = frame;
-		this.smTrace = trace; // Passed in
 		this.commandManager = new EMBCommandManager(this);
 		addGLEventListener(this);
 
 		addMouseListener(this);
 		addMouseMotionListener(this);
-		this.controls = new ControlsOfView(this, trace);
+		this.controls = new ControlsOfView(this);
 
 		radialMenu.setItemLabelAndID(RadialMenuWidget.CENTRAL_ITEM, "", COMMAND_DUPLICATE_BLOCK);
 		radialMenu.setItemLabelAndID(1, "Duplicate Block", COMMAND_DUPLICATE_BLOCK);
@@ -211,6 +207,26 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		commandManager.setSelected(select);
 	}
 
+	
+	/**
+	 * Set debug/diagnostic trace settings
+	 * Sets absolutely, clearing all flags first
+	 */
+	public void traceSet(String trace_string) {
+		SmTrace.clearFlags();
+		SmTrace.setFlags(trace_string);
+	}
+
+	
+	/**
+	 * Set debug/diagnostic trace settings
+	 * Sets from traceSelection group
+	 */
+	public void traceSelection() {
+		SmTrace.clearFlags();
+		String trace_string = "test1, test2";
+		SmTrace.setFlags(trace_string);
+	}
 	
 	/**
 	 * Save selected in order
@@ -756,19 +772,6 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		selectBlocks(bcmd, allids);
 		indexOfHilitedBox = -1;
 	}
-
-	/**
-	 * Toggle selected state of blocks
-	 * as clicked 
-	 * @param bcmd
-	 */
-	public void toggleSelection(EMBCommand bcmd) {
-		if (!toggleBlockSelection) {
-			toggleBlockSelection = true;
-		} else {
-			toggleBlockSelection = false;
-		}
-	}
 	
 	/**
 	 * Select block, as part of a command
@@ -865,8 +868,24 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		resetCamera();
 		controls.reset();
 		commandManager = new EMBCommandManager(this);
+		mousePressed = false;
 		repaint();
 	}
+
+	/**
+	 * Check if we are in a mouse pressed state
+	 */
+	public boolean isMousePressed() {
+		return mousePressed;
+	}
+	
+	/**
+	 * Set our mouse pressed state
+	 */
+	public void setMousePressed(boolean setting) {
+		mousePressed = setting;
+	}
+	
 	
 	public void resetCamera() {
 		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
@@ -1210,6 +1229,7 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 
 		
 	public void mouseReleased(MouseEvent e) {
+		setMousePressed(false);
 		old_mouse_x = mouse_x;
 		old_mouse_y = mouse_y;
 		mouse_x = e.getX();
@@ -1579,10 +1599,6 @@ class SceneViewer extends GLCanvas implements MouseListener, MouseMotionListener
 		switch(action) {
 			case "emc_selectAllButton":
 				selectAll(bcmd);
-				break;
-				
-			case "emc_toggleSelectButton":
-				toggleSelection(bcmd);
 				break;
 			
 			case "emc_duplicateBlockButton":

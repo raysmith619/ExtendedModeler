@@ -475,6 +475,14 @@ public class ControlOfEye extends ControlOf {
 		}
 		
 		SmTrace.lg(String.format("eyeAtPosition cmd x=%.2f y=%.2f z=%.2f", x, y, z));
+		Point3D new_pt = new Point3D(x, y, z);
+		if (setPoint == null)
+			setPoint = new_pt;
+		if (Point3D.diff(setPoint, new_pt).length() > minClose) {
+			bcmd.checkPoint();
+			setPoint(new_pt);
+			bcmd.setCanUndo(false);
+		}
 		bcmd.setEyeAt(new Point3D(x, y, z));
 		bcmd.doCmd();
 	}

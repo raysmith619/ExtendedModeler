@@ -70,7 +70,14 @@ public class SmTrace {
 		init();		// Insure connection
 		return traceObj.trace(flag,  levels);
 	}
-	
+
+	/**
+	 * Clear all trace flags
+	 */
+	public static void clearFlags() {
+		traceFlags = new HashMap<String, Integer>();
+		traceAll = 0;				// For "all" trace
+	}
 	
 	/**
 	 * Setup trace flags from string
@@ -88,8 +95,8 @@ public class SmTrace {
 			int val = 1;			// Default value if no =...
 			if (value != null)
 				val = Integer.parseInt(value);
-			traceObj.setLevel(flag, val);
-			int get_val = traceObj.getLevel(flag);
+			setLevel(flag, val);
+			int get_val = getLevel(flag);
 			System.out.println(String.format("flag=%s value=%d", flag, get_val));
 		}
 	}
@@ -228,6 +235,7 @@ public class SmTrace {
 				prefix += " " + ts;
 			}
 			System.out.println(prefix + " " + msg);
+			System.out.flush();			// Force output
 		}
 		if (logWriter == null) {
 			System.out.println("Can't write to log file");
@@ -551,5 +559,5 @@ public class SmTrace {
 	private static SmTrace traceObj;
 	private static Properties defaultProps; 	// program properties
 	private static int traceAll;				// For "all" trace
-	private static HashMap<String, Integer> traceFlags; // tracing flag/levels
+	private static HashMap<String, Integer> traceFlags = new HashMap<String, Integer>(); // tracing flag/levels
 }

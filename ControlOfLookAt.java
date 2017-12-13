@@ -498,23 +498,31 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 	 * @throws EMBlockError
 	 */
 	private void lookAtPosition(EMBCommand bcmd) throws EMBlockError {
-		float xval = 0;
-		float yval = 0;
-		float zval = 0;
+		float x = 0;
+		float y = 0;
+		float z = 0;
 		if (posXfield != null) {
 			String text = posXfield.getText();
-			xval = Float.valueOf(text);
+			x = Float.valueOf(text);
 		}
 		if (posYfield != null) {
 			String text = posYfield.getText();
-			yval = Float.valueOf(text);
+			y = Float.valueOf(text);
 		}
 		if (posZfield != null) {
 			String text = posZfield.getText();
-			zval = Float.valueOf(text);
+			z = Float.valueOf(text);
 		}
-		SmTrace.lg(String.format("lookAtPosition cmd x=%.2f y=%.2f z=%.2f", xval, yval, zval));
-		bcmd.setLookAt(new Point3D(xval, yval, zval));
+		SmTrace.lg(String.format("lookAtPosition cmd x=%.2f y=%.2f z=%.2f", x, y, z));
+		Point3D new_pt = new Point3D(x, y, z);
+		if (setPoint == null)
+			setPoint = new_pt;
+		if (Point3D.diff(setPoint, new_pt).length() > minClose) {
+			bcmd.checkPoint();
+			setPoint(new_pt);
+			bcmd.setCanUndo(false);
+		}
+		bcmd.setLookAt(new Point3D(x, y, z));
 		bcmd.doCmd();
 	}
 
@@ -660,7 +668,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		float z = e.getZ();
 
 		SmTrace.lg(String.format("ControlOfLookAt.location3DEvent: %s x=%.2g y=%.2g z=%.2g",
-									"", x, y, z));
+									"", x, y, z), "control");
 		try {
 			lookAtPosition(x,y,z);
 		} catch (EMBlockError e1) {

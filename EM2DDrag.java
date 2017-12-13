@@ -244,7 +244,7 @@ public class EM2DDrag  extends JPanel
 		xCurrentField.setText(String.format("%.2g", this.xCurrent)); 
 		SmTrace.lg(String.format("setxCurrent %s Loc x: %.2f (%.2f, %.2f) y: %.2f (%.2f, %.2f)", title,
 				getxCurrent(),  xMin, xMax,
-				getyCurrent(), yMin, yMax));
+				getyCurrent(), yMin, yMax), "graphic");
 	}
 
 	
@@ -257,7 +257,7 @@ public class EM2DDrag  extends JPanel
 		yCurrentField.setText(String.format("%.2g", this.yCurrent)); 
 		SmTrace.lg(String.format("setyCurrent %s Loc x: %.2f (%.2f, %.2f) y: %.2f (%.2f, %.2f)", title,
 				getxCurrent(),  xMin, xMax,
-				getyCurrent(), yMin, yMax));
+				getyCurrent(), yMin, yMax), "graphic");
 	}
 	
 	/***
@@ -271,7 +271,7 @@ public class EM2DDrag  extends JPanel
 	public void mouseDragged(MouseEvent e) {
 		int x = xyRegionGetX(e);
 		int y = xyRegionGetY(e);
-		SmTrace.lg(String.format("mouseDragged at(%d, %d)", x,  y));
+		SmTrace.lg(String.format("mouseDragged at(%d, %d)", x,  y), "mouse");
 		setAtMouseXY(x, y);
 		em2DLocationNotify();
 		paintIt();
@@ -323,12 +323,12 @@ public class EM2DDrag  extends JPanel
 	}
 
 	public void setAtMouseXY(int x, int y) {
-		SmTrace.lg(String.format("mouse at(%d, %d)", x,  y));
+		SmTrace.lg(String.format("mouse at(%d, %d)", x,  y), "mouse");
 		setAtMouseX(x);
 		setAtMouseY(y);
 		SmTrace.lg(String.format("mouse %s Loc x: %.2f (%.2f, %.2f) y: %.2f (%.2f, %.2f)", title,
 				getxCurrent(),  xMin, xMax,
-				getyCurrent(), yMin, yMax));
+				getyCurrent(), yMin, yMax), "mouse");
 	}
 
 	
@@ -350,7 +350,7 @@ public class EM2DDrag  extends JPanel
 	public void mouseClicked(MouseEvent e) {
 		int x = xyRegionGetX(e);
 		int y = xyRegionGetY(e);
-		SmTrace.lg(String.format("mouseClicked at(%d, %d)", x,  y));
+		SmTrace.lg(String.format("mouseClicked at(%d, %d)", x,  y), "mouse");
 		setAtMouseXY(x,y);
 		em2DLocationNotify();
 		paintIt();
@@ -360,35 +360,35 @@ public class EM2DDrag  extends JPanel
 	public void mousePressed(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
-		SmTrace.lg(String.format("mousePressed at(%d, %d)", x,  y));
+		SmTrace.lg(String.format("mousePressed at(%d, %d)", x,  y), "mouse");
 	}
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
-		SmTrace.lg(String.format("mouseReleased at(%d, %d)", x,  y));
+		SmTrace.lg(String.format("mouseReleased at(%d, %d)", x,  y), "mouse");
 	}
 
 	@Override
 	public void mouseEntered(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
-		SmTrace.lg(String.format("mouseEntered at(%d, %d)", x,  y));
+		SmTrace.lg(String.format("mouseEntered at(%d, %d)", x,  y), "mouse");
 	}
 
 	@Override
 	public void mouseExited(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
-		SmTrace.lg(String.format("mouseExited at(%d, %d)", x,  y));
+		SmTrace.lg(String.format("mouseExited at(%d, %d)", x,  y), "mouse");
 	}
 
 	@Override
 	public void paintComponent(Graphics gl) {
 		//frame.paintComponent(gl);
 		super.paintComponent(gl);
-		SmTrace.lg("paintComponent");
+		SmTrace.lg("paintComponent", "paint");
 	    int width = getWidth();
 	    int height = getHeight();
 	    gl.setColor(Color.BLACK);

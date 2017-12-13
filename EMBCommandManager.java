@@ -53,13 +53,6 @@ public class EMBCommandManager {
 		return undoStack.peek();
 	}
 	
-	/**
-	 * Push most done command
-	 */
-	public void Command(EMBCommand cmd) {
-		commandStack.push(cmd);
-	}
-	
 
 	/**
 	 * Check if can redo this command
@@ -108,6 +101,22 @@ public class EMBCommandManager {
 		return scene.getCb(id);
 	}
 
+	
+	/**
+	 * Check point command state
+	 * by pushing command, which upon undo, will create current state
+	 */
+	public void checkPoint() {
+		SmTrace.lg(String.format("checkPoint"), "execute");
+		EMBCommand cmd;
+		try {
+			cmd = EMBCommand.checkPointCmd();
+			undoStack.push(cmd);
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	
 	/**
 	 * Undo if possible

@@ -13,6 +13,7 @@ import java.awt.BorderLayout;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
+import javax.swing.JTextField;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -95,6 +96,12 @@ public class ExtendedModeler implements ActionListener {
 	JButton deleteSelectionButton;
 	JButton eyeAtSelectionButton;
 	JButton lookAtSelectionButton;
+	JButton traceAllButton;
+	JButton traceNoneButton;
+	JButton traceSpecifyButton;
+	JTextField traceSpecifyField;
+	JButton traceSelectionButton;
+	JPanel traceSelectionCkBoxPanel;
 	JButton resetCameraButton;
 	JCheckBox displayAddControlCheckBox;
 	JCheckBox displayEyeAtControlCheckBox;
@@ -196,6 +203,22 @@ public class ExtendedModeler implements ActionListener {
 			sceneViewer.lookAtSelection();
 			sceneViewer.repaint();
 		}
+		else if ( source == traceAllButton ) {
+			sceneViewer.traceSet("ALL");
+			sceneViewer.repaint();
+		}
+		else if ( source == traceNoneButton ) {
+			sceneViewer.traceSet("");
+			sceneViewer.repaint();
+		}
+		else if ( source == traceSpecifyButton ) {
+			sceneViewer.traceSet(traceSpecifyField.getText());
+			sceneViewer.repaint();
+		}
+		else if ( source == traceSelectionButton ) {
+			sceneViewer.traceSelection();
+			sceneViewer.repaint();
+		}
 		else if ( source == resetCameraButton ) {
 			sceneViewer.resetCamera();
 			sceneViewer.repaint();
@@ -273,7 +296,7 @@ public class ExtendedModeler implements ActionListener {
 		caps.setDoubleBuffered(true);
 		caps.setHardwareAccelerated(true);
 		try {
-			sceneViewer = new SceneViewer(caps, this, frame, smTrace);
+			sceneViewer = new SceneViewer(caps, this, frame);
 		} catch (EMBlockError e) {
 			SmTrace.lg(String.format("SceneViewer error %s", e.getMessage()));
 			e.printStackTrace();
@@ -294,6 +317,9 @@ public class ExtendedModeler implements ActionListener {
 		menuBar.add(menu);
 		
 		menu =  toolMenu();
+		menuBar.add(menu);
+		
+		menu =  traceMenu();
 		menuBar.add(menu);
 
 		menu = new JMenu("Help");
@@ -430,6 +456,61 @@ public class ExtendedModeler implements ActionListener {
 		frame.setVisible( true );
 
 		return menu;
+	}
+
+	/**
+	 * Create trace menu drop down
+	 * Adapted from toolMenu
+	 * @return - display menu item
+	 */
+	private JMenu traceMenu() {
+		JMenu menu = new JMenu("Trace");
+		JFrame traceFrame = new JFrame();
+
+		Container tracePane = traceFrame.getContentPane();
+		JPanel tracePanel = new JPanel();
+		///tracePanel.setLayout( new BoxLayout( tracePanel, BoxLayout.Y_AXIS ) );
+		///tracePanel.setLayout( new BoxLayout( tracePanel, BoxLayout.Y_AXIS ) );
+		///tracePane.setLayout( new BorderLayout() );
+		tracePane.add( tracePanel, BorderLayout.LINE_START );
+		tracePane.add( sceneViewer, BorderLayout.CENTER );
+		///tracePane.add(tracePanel);
+		menu.add(tracePane);
+		
+		traceAllButton = new JButton("ALL");
+		traceAllButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		traceAllButton.addActionListener(this);
+		tracePanel.add( traceAllButton );
+		
+		traceNoneButton = new JButton("None");
+		traceNoneButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		traceNoneButton.addActionListener(this);
+		tracePanel.add( traceNoneButton );
+		
+		traceSpecifyButton = new JButton("Specify:");
+		traceSpecifyButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		traceSpecifyButton.addActionListener(this);
+		tracePanel.add( traceSpecifyButton );
+		traceSpecifyField = new JTextField(String.format("%15s", ""));
+		tracePanel.add( traceSpecifyField );
+		
+		traceSelectionButton = new JButton("Select:");
+		traceSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		traceSelectionButton.addActionListener(this);
+		tracePanel.add( traceSelectionButton );
+		traceSelectionCkBoxPanel = traceCkBoxPanel();
+		tracePanel.add(traceSelectionCkBoxPanel);
+		frame.pack();
+		frame.setVisible( true );
+
+		return menu;
+	}
+
+	/**
+	 * Create trace flag check box panel using SmTrace flags
+	 */
+	public JPanel traceCkBoxPanel() {
+		return new JPanel();	/// TBD
 	}
 	
 	

@@ -30,16 +30,14 @@ public class ControlsOfView {
 	}
 
 	// Controls dictionary
-	SmTrace trace;
 	SceneViewer scene;
 	Map<String, ControlEntry> controlh;
 	LinkedList<String> controls = new LinkedList<String>();			// Ordered set of control names
 	/**
 	 * Setup controls access
 	 */
-	ControlsOfView(SceneViewer scene, SmTrace trace) {
+	ControlsOfView(SceneViewer scene) {
 		this.scene = scene;
-		this.trace = trace;
 		this.controlh = new HashMap<String, ControlEntry>();
 	}
 
