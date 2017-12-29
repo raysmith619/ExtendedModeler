@@ -11,13 +11,13 @@ import smTrace.SmTrace;
  *
  */
 public class EMBCommandManager {
-	SceneViewer scene;
+	SceneControler sceneControler;
 	EMBCommand currentCmd;				// Currently executing command
 	Stack<EMBCommand> commandStack;		// Commands done
 	Stack<EMBCommand> undoStack;			// Commands undone
 	
-	public EMBCommandManager(SceneViewer scene) {
-		this.scene = scene;
+	public EMBCommandManager(SceneControler sceneControler) {
+		this.sceneControler = sceneControler;
 		commandStack = new Stack<EMBCommand>();
 		undoStack = new Stack<EMBCommand>();
 		EMBCommand.setManager(this);	// Ensure a manager is in place
@@ -90,7 +90,7 @@ public class EMBCommandManager {
 	 * Get newest block index
 	 */
 	public int cbIndex() {
-		return scene.cbIndex();
+		return sceneControler.cbIndex();
 	}
 	
 
@@ -98,7 +98,7 @@ public class EMBCommandManager {
 	 * Get block, given index
 	 */
 	public EMBlock cb(int id) {
-		return scene.getCb(id);
+		return sceneControler.getCb(id);
 	}
 
 	
@@ -283,7 +283,7 @@ public class EMBCommandManager {
 	
 	/**
 	public EMBlock cb(int bindex) {
-		return scene.cb(bindex);
+		return sceneControler.cb(bindex);
 	}
 
 	
@@ -292,7 +292,7 @@ public class EMBCommandManager {
 	 * Print displayed blocks
 	 */
 	public void displayPrint(String tag, String trace) {
-		scene.displayPrint(tag, trace);
+		sceneControler.displayPrint(tag, trace);
 	}
 
 	
@@ -301,7 +301,7 @@ public class EMBCommandManager {
 	 * For now we just unselect all previous and select all new
 	 */
 	public boolean displayUpdate(BlockSelect new_select, BlockSelect prev_select) {
-		return (scene.displayUpdate(new_select, prev_select));
+		return (sceneControler.displayUpdate(new_select, prev_select));
 	}
 	
 
@@ -336,7 +336,7 @@ public class EMBCommandManager {
 	 * Print select stack state
 	 */
 	public void selectPrint(String tag, String trace) {
-		scene.selectPrint(tag, trace);
+		sceneControler.selectPrint(tag, trace);
 	}
 
 }

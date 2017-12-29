@@ -44,8 +44,8 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 	JTextField adjZfield;
 	EM3DPosition m3DPos;		// 3D setting if non-null
 	
-	ControlOfLookAt(SceneViewer scene, String name) {
-		super(scene, name);
+	ControlOfLookAt(SceneControler sceneControler, String name) {
+		super(sceneControler, name);
 		setup();
 	}
 
@@ -75,17 +75,17 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		posPanel.add(moveto_panel);
 
 		traceSelected(11);
-		Point3D center = new Point3D(scene.camera.target);
+		Point3D center = new Point3D(sceneControler.camera.target);
 		posXfield = new JTextField(String.format("%.2f", center.x()));
 		SmTrace.lg(String.format("setup posXfield"));
 		posXfield.setActionCommand("emc_ENTER");
-		posXfield.addActionListener(scene);
+		posXfield.addActionListener(sceneControler);
 		posYfield = new JTextField(String.format("%.2f", center.y()));
 		posYfield.setActionCommand("emc_ENTER");
-		posYfield.addActionListener(scene);
+		posYfield.addActionListener(sceneControler);
 		posZfield = new JTextField(String.format("%.2f", center.z()));
 		posZfield.setActionCommand("emc_ENTER");
-		posZfield.addActionListener(scene);
+		posZfield.addActionListener(sceneControler);
 
 		moveto_panel.add(new JLabel("Loc:"));
 		moveto_panel.add(new JLabel("x:"));
@@ -96,7 +96,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		moveto_panel.add(posZfield);
 		JButton lookAtButton = new JButton("LookAt");
 		lookAtButton.setActionCommand("emc_lookAtButton");
-		lookAtButton.addActionListener(scene);
+		lookAtButton.addActionListener(sceneControler);
 		moveto_panel.add(lookAtButton);
 
 		///JPanel sizeto_panel = new JPanel();
@@ -109,20 +109,20 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		float adjamt = 1f; // Default adjustment
 		adjXfield = new JTextField(String.format("%.2f", adjamt));
 		adjXfield.setActionCommand("emc_adjENTER");
-		adjXfield.addActionListener(scene);
+		adjXfield.addActionListener(sceneControler);
 		adjYfield = new JTextField(String.format("%.2f", adjamt));
 		adjYfield.setActionCommand("emc_adjENTER");
-		adjYfield.addActionListener(scene);
+		adjYfield.addActionListener(sceneControler);
 		adjZfield = new JTextField(String.format("%.2f", adjamt));
 		adjZfield.setActionCommand("emc_adjENTER");
-		adjZfield.addActionListener(scene);
+		adjZfield.addActionListener(sceneControler);
 
 		JButton adjUpButton = new JButton("Up By");
 		adjUpButton.setActionCommand("emc_lookAtAdjUpButton");
-		adjUpButton.addActionListener(scene);
+		adjUpButton.addActionListener(sceneControler);
 		JButton adjDownButton = new JButton("Down By");
 		adjDownButton.setActionCommand("emc_lookAtAdjDownButton");
-		adjDownButton.addActionListener(scene);
+		adjDownButton.addActionListener(sceneControler);
 		adj_panel.add(new JLabel("Adj:"));
 		adj_panel.add(new JLabel("x:"));
 		adj_panel.add(adjXfield);
@@ -143,7 +143,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		**/
 		pack();
 
-		int bindex2 = scene.getSelectedBlockIndex();
+		int bindex2 = sceneControler.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfLookAt.setup after - selected(%d)", bindex2), "select");
 		setup = true;
 	}
@@ -163,7 +163,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		JButton m3D_positioning_Button = new JButton("3D Positioning");
 		m3D_positioning_Button.setActionCommand("emc_m3D_lookAt_PositionButton");
 		m3D_panel.add(m3D_positioning_Button);
-		m3D_positioning_Button.addActionListener(scene);
+		m3D_positioning_Button.addActionListener(sceneControler);
 		pack();
 		m3D_panel.setVisible(true);
 		
@@ -397,7 +397,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 	}
 
 	private void traceSelected(int place) {
-		int bindex = scene.getSelectedBlockIndex();
+		int bindex = sceneControler.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfLookAt.setup place(%d) - selected(%d)", place, bindex), "select",
 				"select");
 	}

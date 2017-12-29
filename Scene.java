@@ -17,7 +17,7 @@ class Scene {
 
 
 
-	public Scene() throws EMBlockError {
+	public Scene() {
 		reset();
 	}
 
@@ -211,6 +211,8 @@ class Scene {
 		
 		cb.setSelected(state);
 	}
+	
+	
 	public void toggleSelectionStateOfBox( int id ) {
 		EMBlock cb = displayedBlocks.getBlock(id);
 		if (cb == null)
@@ -278,80 +280,6 @@ class Scene {
 	public void deleteAllBlocks() {
 		displayedBlocks.removeAllBlocks();
 		isBoundingBoxOfSceneDirty = true;
-	}
-
-
-	static public void drawBlock(
-		GLAutoDrawable drawable,
-		EMBlock block,
-		boolean expand,
-		boolean drawAsWireframe,
-		boolean cornersOnly
-	) {
-		block.draw(drawable, expand, drawAsWireframe, cornersOnly);
-	}
-
-
-	public void drawScene(
-		GLAutoDrawable drawable,
-		int indexOfHilitedBox, // -1 for none
-		boolean useAlphaBlending
-	) {
-		GL2 gl = (GL2) drawable.getGL();
-		if ( useAlphaBlending ) {
-			gl.glDisable(GL.GL_DEPTH_TEST);
-			gl.glDepthMask(false);
-			gl.glBlendFunc( GL.GL_SRC_ALPHA, GL.GL_ONE );
-			gl.glEnable( GL.GL_BLEND );
-		}
-		for (int id : displayedBlocks.getIds()) {
-			EMBlock cb = displayedBlocks.getBlock(id);
-			if (cb == null) {
-				SmTrace.lg(String.format("drawScene: No display block for id:%d",id));
-				continue;
-			}
-			if ( useAlphaBlending )
-				gl.glColor4f(cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha());
-			else
-				gl.glColor3f(cb.getRed(), cb.getGreen(), cb.getBlue());
-				///gl.glColor3f(1, 1, 1);
-			drawBlock( drawable, cb, false, false, false );
-		}
-		if ( useAlphaBlending ) {
-			gl.glDisable( GL.GL_BLEND );
-			gl.glDepthMask(true);
-			gl.glEnable(GL.GL_DEPTH_TEST);
-		}
-		for ( int id : displayedBlocks.getIds()) {
-			EMBlock cb = displayedBlocks.getBlock(id);
-			if (cb == null) {
-				SmTrace.lg(String.format("drawScene: No display block for id:%d", id));
-				continue;
-			}
-			if (true)
-				if (cb.blockType().equals("ball")) {
-					SmTrace.lg(String.format("ball at[%d]", id), "tracing ball");
-					if (cb.isSelected()) {
-						SmTrace.lg("tracing ball selected", "ball");
-					} else {
-						SmTrace.lg("tracing ball not selected", "ball");
-					}
-				}
-			if ( cb.isSelected() && indexOfHilitedBox == id )
-				gl.glColor3f( 1, 1, 0 );
-			else if ( cb.isSelected() )
-				gl.glColor3f( 1, 0, 0 );
-			else if ( indexOfHilitedBox == id )
-				gl.glColor3f( 0, 1, 0 );
-			else continue;
-			drawBlock(drawable, cb, true, true, true );
-		}
-	}
-
-	public void drawBoundingBoxOfScene(GLAutoDrawable drawable) {
-		AlignedBox3D box = getBoundingBoxOfScene();
-		if ( ! box.isEmpty() )
-			ColoredBox.drawBox(drawable, box, false, true, false );
 	}
 
 	public int addBlock(EMBCommand bcmd, int id) {

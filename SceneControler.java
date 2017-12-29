@@ -1,11 +1,9 @@
 package ExtendedModeler;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Point;
+import java.awt.List;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -14,7 +12,6 @@ import java.util.Iterator;
 import java.util.Stack;
 
 import javax.swing.JFrame;
-import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 
 import com.jogamp.opengl.GL;
@@ -28,12 +25,7 @@ import com.jogamp.opengl.util.gl2.GLUT;
 
 import smTrace.SmTrace;
 
-class SceneViewer extends JFrame
-	implements MouseListener,
-			MouseMotionListener,
-			GLEventListener,
-			ActionListener
-			{
+class SceneControler extends GLCanvas implements MouseListener, MouseMotionListener, GLEventListener, ActionListener {
 	/**
 	 * 
 	 */
@@ -49,27 +41,23 @@ class SceneViewer extends JFrame
 		NONE, // none added
 		PLACEMENT_MOVE, PLACEMENT_OK, PLACEMENT_CANCEL,
 	}
-	
-	int width = 400;				// Canvas size
-	int height = width;
-	String name;					// Viewer name
-	GLCanvas canvas;				// Our canvas
 	GLCapabilities caps;			// Main set of capabilities
-	SceneControler sceneControler;		// Main class - currently only for check button access
+	ArrayList<SceneViewer> sceneViewers;			// independent viewers
+	ExtendedModeler modeler;		// Main class - currently only for check button access
+	EMBCommandManager commandManager;		// Command do,redo... control
 	JFrame frame;					// Access to main frame
 	ControlMap controlMap;			// Control Map window/frame
 	SmTrace smTrace; 				// Trace support
-	///ControlsOfView controls;	// Control boxes - use getControls - not ready at initialization
-	///GLAutoDrawable drawable; 		// USE canvas - inherits from 
-	///GLU glu; // Needed for scene2WorldCoord
-	///GLUT glut;
+	ControlsOfView controls;	// Control boxes
+
+	GLU glu; // Needed for scene2WorldCoord
+	GLUT glut;
 	
 	// Updated each display() call
 	int viewport[] = new int[4];
 	double mvmatrix[] = new double[16];
 	double projmatrix[] = new double[16];
-
-	private SceneDraw sceneDraw;	// Access to scene drawing
+	public Scene scene;
 	///public int indexOfSelectedBlock = -1; // -1 for none
 									/**
 									 * Only used to go to previously
@@ -114,95 +102,98 @@ class SceneViewer extends JFrame
 
 	int mouse_x, mouse_y, old_mouse_x, old_mouse_y;
 	
-	public SceneViewer(String name,
-		SceneControler sceneControler
-		)
+	public SceneControler(ExtendedModeler modeler)
 		throws EMBlockError {
+		this.sceneViewers = new ArrayList<SceneViewer>();
+		this.modeler = modeler;
+		this.scene = modeler.getScene(); 	// Shortcut
+		this.commandManager = new EMBCommandManager(this);
+		this.controls = new ControlsOfView(this);
 
+		radialMenu.setItemLabelAndID(RadialMenuWidget.CENTRAL_ITEM, "", COMMAND_DUPLICATE_BLOCK);
+		radialMenu.setItemLabelAndID(1, "Duplicate Block", COMMAND_DUPLICATE_BLOCK);
+		radialMenu.setItemLabelAndID(2, "Set Color to Red", COMMAND_COLOR_RED);
+		radialMenu.setItemLabelAndID(3, "Set Color to Yellow", COMMAND_COLOR_YELLOW);
+		radialMenu.setItemLabelAndID(4, "Set Color to Green", COMMAND_COLOR_GREEN);
+		radialMenu.setItemLabelAndID(5, "Set Color to Blue", COMMAND_COLOR_BLUE);
+		radialMenu.setItemLabelAndID(7, "Delete Box", COMMAND_DELETE);
 
-		this.name = name;
-		this.sceneControler = sceneControler;
-		
-		this.setTitle(name);
-		caps = new GLCapabilities(null);
-		caps.setDoubleBuffered(true);
-		caps.setHardwareAccelerated(true);
-		
-		canvas = new GLCanvas(caps);
-
-		this.getContentPane().add(canvas);
-		addComponentListener(new ComponentListener() {
-			@Override
-			public void componentResized(ComponentEvent e) {
-				System.out.println("SceneViewer resized");
-				updateSize(e);
-				
-			}
- 			@Override
-			public void componentMoved(ComponentEvent e) {
-				System.out.println("SceneViewer moved");
-				updateLocation(e);
-			}
-
-			@Override
-			public void componentShown(ComponentEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			public void componentHidden(ComponentEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-	} );
-
-		
-		setLocationSize();
-		this.setVisible(true);
-		canvas.getContext().makeCurrent(); 	///Hack to avoid no GLContext
-		this.sceneDraw = new SceneDraw(sceneControler, canvas);
-		
-		canvas.addGLEventListener(this);
-		canvas.addMouseListener(this);
-		canvas.addMouseMotionListener(this);
-		
 		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
-				sceneControler.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
+				scene.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
 		camera.reset();
 
 	}
 
 	
-	private void setLocationSize() {
-	int x = getXFromProp();
-	int y = getYFromProp();
-	if (x < 0 || y < 0 ) {
-		x = 100;
-		y = 100;
+	/**
+	 * Add viewer to control
+	 */
+	public void addViewer(SceneViewer viewer) {
+		sceneViewers.add(viewer);
 	}
-	this.setLocation(x, y);
 	
-	int w = getWidthFromProp();
-	int h = getHeightFromProp();
-	if (x < 0 || y < 0 ) {
-		w = width;
-		h = height;
+	
+	public AlignedBox3D getBoundingBoxOfScene() {
+		return scene.getBoundingBoxOfScene();
 	}
-	this.setSize(w, h);
-	}
-
-
+	
+	
 	/**
 	 * Get generated blocks' ids
 	 */
 	public int[] getDisplayedIds() {
-		return sceneControler.getDisplayedIds();
+		return scene.getDisplayedIds();
 	}
 	
+
+	public int getIndexOfIntersectedBox(
+		Ray3D ray, // input
+		Point3D intersectionPoint, // output
+		Vector3D normalAtIntersection // output
+	) {
+		return scene.getIndexOfIntersectedBox(ray, intersectionPoint, normalAtIntersection);
+	}
+
 	
 	public Dimension getPreferredSize() {
 		return new Dimension(512, 512);
+	}
+
+	public EMBlock getPrevSelectedBlock() {
+		return commandManager.getPrevSelectedBlock();
+		
+	}
+
+	/**
+	 * Get currently selected
+	 */
+	public BlockSelect getSelected() {
+		return commandManager.getSelected();
+	}
+	
+
+	/**
+	 * Get currently selected block
+	 */
+	public EMBlock getSelectedBlock() {
+		return commandManager.getSelectedBlock();
+	}
+
+	/**
+	 * Get currently selected
+	 */
+	public EMBlock[] getSelectedBlocks() {
+		EMBlock[] cbs = commandManager.getSelectedBlocks();
+		return cbs;
+	}
+	
+
+	/**
+	 * Get currently selected block
+	 */
+	public int getSelectedBlockIndex() {
+		BlockSelect select = getSelected();
+		return select.getIndex();
 	}
 	
 	/**
@@ -213,6 +204,22 @@ class SceneViewer extends JFrame
 	 */
 	public void setAutoAdd(ExtendedModeler.AutoAddType type) {
 		autoAdd = type;
+	}
+
+	/**
+	 * Set/Restore selection
+	 */
+	public void pushSelected(BlockSelect select) {
+		SmTrace.lg(String.format("pushSelected"));
+		setSelected(select);
+	}
+
+	/**
+	 * Set selection
+	 */
+	public void setSelected(BlockSelect select) {
+		SmTrace.lg(String.format("setSelected"));
+		commandManager.setSelected(select);
 	}
 
 	
@@ -235,6 +242,64 @@ class SceneViewer extends JFrame
 		String trace_string = "test1, test2";
 		SmTrace.setFlags(trace_string);
 	}
+	
+	/**
+	 * Save selected in order
+	 * Only push changed index
+	 */
+	public void pushSelected(int id) {
+		BlockSelect select = new BlockSelect(id);
+		setSelected(select);
+	}
+
+	/**
+	 * Get previously selected
+	 *  empty select if empty
+	 */
+	public BlockSelect popSelected() {
+		SmTrace.lg(String.format("popSelected"));
+		return getSelected();
+	}
+	
+	/**
+	 * Get int 
+	 */
+	public int popSelectedIndex() {
+		BlockSelect top = popSelected();
+		
+		int id = top.getIndex();
+		SmTrace.lg(String.format("popSelected = %d", id));
+		return id;
+	}
+	
+	/**
+	 * Select given block
+	 * @return index of selected block
+	 * @param id - index of block to select, -1 - most recent block(s)
+	 * @param keep - selection is added to currently selected, else currently selected group is pushed 
+	 */
+	public int select(int id, boolean keep) {
+		if (id < 0)
+			id = getSelectedBlockIndex();
+		if (id < 0)
+			id = scene.displayedBlocks.getNewestId();
+		if (isSelected(id))
+			return id;							// Already selected
+		
+		selectUnmark();								// Unmark previously selected  TBD - see if more efficient way
+		if (!keep) {
+			selectStack.push(new BlockSelect(id));		// New entry with newly selected
+		} else {
+			BlockSelect select;
+			if (selectStack.isEmpty())
+				select = new BlockSelect(id);
+			else
+				select = selectStack.peek();
+			select.addIndex(id);
+		}
+		selectMark();
+		return id;
+	}
 
 	/**
 	 * Check if select stack empty
@@ -252,6 +317,92 @@ class SceneViewer extends JFrame
 	public void selectPush(BlockSelect select) {
 		selectStack.push(select);
 	}
+	
+	
+	/**
+	 * command to replace selection
+	 * Add another block to selection
+	 * @param id - id to add
+	 * @param keep - true keep any already selected, false - drop them
+	 */
+	public int selectAdd(EMBCommand bcmd, int id, boolean keep) {
+		if (!keep) {
+			bcmd.newSelect = new BlockSelect();
+		}
+		bcmd.newSelect.addIndex(id);
+		return id;
+	}
+	
+	
+	/**
+	 * Mark current selection(s)
+	 */
+	public BlockSelect selectMark() {
+		BlockSelect select = getSelected();
+		if (select.isEmpty())
+			return select;				// None selected
+		
+		for (Integer bin : select.getList()) {
+			int id = bin.intValue();
+			scene.setSelectionStateOfBox(id, true);
+			indexOfHilitedBox = getSelectedBlockIndex();	/// TBD generalize hilighted
+		}
+		controls.adjustControls();
+
+		return select;
+	}
+
+	
+	/**
+	 * Mark current selection(s)
+	 */
+	public BlockSelect selectUnmark() {
+		BlockSelect select = getSelected();
+		if (select.isEmpty())
+			return select;				// None selected
+		
+		for (Integer bin : select.getList()) {
+			int id = bin.intValue();
+			scene.setSelectionStateOfBox(id, false);
+		}
+
+		return select;
+	}
+
+	/**
+	 * Print current selected blocks
+	 */
+	public void selectPrint(String tag, String trace) {
+		if (tag == null) {
+			tag = "select";
+		}
+		EMBCommand currentCmd = commandManager.currentCmd;
+		if (currentCmd == null ) {
+			SmTrace.lg(String.format("%s select: NONE", tag), trace);
+			return;
+		}
+		String str =  currentCmd.newSelect.toString(scene.genBlocks);
+		SmTrace.lg(String.format("%s select:%s", tag, str), trace);
+		
+			/**
+			 * Select stack
+			 */
+		String str2 = "";
+		if (selectStack.isEmpty() ) {
+			SmTrace.lg(String.format("%s selectStack: Empty", tag), trace);
+			return;
+		}
+		Iterator<BlockSelect> sel_itr = selectStack.iterator();
+		
+		while (sel_itr.hasNext()) {
+			BlockSelect sel = sel_itr.next();
+			if (!str2.equals(""))
+				str2 += "; ";
+			str2 += sel.toString(scene.genBlocks);
+		}
+		SmTrace.lg(String.format("%s selectStack: %s", tag, str2), trace);
+	
+	}
 
 	
 	/**
@@ -262,7 +413,7 @@ class SceneViewer extends JFrame
 		for (int id : select.getIds()) {
 			if (str != "")
 				str += ", ";
-			str += sceneControler.cbGen(id);
+			str += scene.genBlocks.getBlock(id);
 		}
 		return str;
 	}
@@ -274,39 +425,258 @@ class SceneViewer extends JFrame
 	 */
 	public boolean displayUpdate(BlockSelect new_select, BlockSelect prev_select) {
 		for (int id : prev_select.getIds()) {
-			sceneControler.setSelectionStateOfBox(id, false);
+			scene.setSelectionStateOfBox(id, false);
 		}
 		for (int id : new_select.getIds()) {
-			sceneControler.setSelectionStateOfBox(id, true);
+			scene.setSelectionStateOfBox(id, true);
 		}
 		/**
 		 * Update control display
 		 */
-		getControls().displayUpdate(new_select, prev_select);
-		repaint();
+		controls.displayUpdate(new_select, prev_select);
+		for (SceneViewer viewer: sceneViewers) {
+			viewer.display();
+			viewer.repaint();
+		}
 		return true;
+	}
+	
+	
+	/**
+	 * Check if any selected
+	 */
+	public boolean anySelected() {
+		return commandManager.anySelected();
+	}
+	
+	/**
+	 * Check if block at this index is already selected
+	 */
+	public boolean isSelected(int id) {
+		EMBlock cb = getCb(id);
+		return cb.isSelected();
+	}
+
+	/**
+	 * Select new block, unselecting current
+	 * @param id
+	 * @return selected block's index
+	 */
+	public int select(int id) {
+		return select(id, false);
+	}
+
+	/**
+	 * select latest block
+	 */
+	public int select() {
+		return select(scene.displayedBlocks.getNewestId());
+	}
+
+	/**
+	 * Clear out selections, remembering them for undo
+	 * @param bcmd
+	 */
+	public void clearSelections(EMBCommand bcmd) {
+		while (!selectStack.isEmpty())
+			clearSelection(bcmd);
+	}
+
+/**
+ * Command undo, redo, ... control
+ * @return
+ */
+	public boolean cmdUndo() {
+		return commandManager.undo();
+	}
+	public boolean cmdRedo() {
+		return commandManager.redo();
+	}
+	public boolean cmdRepeat() {
+		return commandManager.repeat();
+	}
+
+	/**
+	 * Clear out current selection, remembering it for undo
+	 * @param bcmd
+	 */
+	public void clearSelection(EMBCommand bcmd) {
+		if (!selectStack.isEmpty()) {
+			BlockSelect select = selectStack.pop();
+			unSelect(select.getList());
+			bcmd.setSelect(select);
+		}
+	}
+	
+	/**
+	 * Unselect selection
+	 * Unselect is restricted to those in the currently selected entry
+	 * If the result is an empty selected set it is popped from the stack
+	 * Any re-selection is done elsewhere.
+	 * @param id - index to unselect, -1 => all
+	 */
+	public void unSelect(int id) {
+		if (selectStack.isEmpty())
+			return;						// None selected
+		
+		if (scene.displayedBlocks.isEmpty()) {
+			return;
+		}
+		
+		BlockSelect select = getSelected();
+		ArrayList<Integer> bilist = new ArrayList<Integer>();
+		for (Integer bin : select.getList())
+			bilist.add(new Integer(bin));		// Make copy
+		for (Integer bin : bilist) {
+			int bi = bin.intValue();
+			if (id < 0 || bi == id) {
+				scene.setSelectionStateOfBox(bi, false);
+				select.removeIndex(bi);
+				indexOfHilitedBox = bi;		// TBD - highlight needs to track selected in form
+			}
+		}
+		if (select.isEmpty()) {				// Pop selected entry if empty
+			selectStack.pop();
+		}
+	}
+
+	
+	/**
+	 * Unselect those specified
+	 */
+	public void unSelect(ArrayList<Integer> bins) {
+		Iterator<Integer> bit = bins.iterator();
+		for (Integer bii = bit.next(); bit.hasNext(); ) {
+			unSelect(bii.intValue());
+		}
+	}
+	
+	float clamp(float x, float min, float max) {
+		if (x < min)
+			return min;
+		if (x > max)
+			return max;
+		return x;
+	}
+
+	/**
+	 * Add another block to scene
+	 */
+	public void addBlock(EMBCommand bcmd, EMBlock cb) {
+		int icb = bcmd.addBlock(cb.iD());
+		bcmd.addSelect(icb);
+	}
+
+	/**
+	 * Add another block to scene
+	 */
+	public void addBlock(EMBCommand bcmd, int id) {
+		scene.addBlock(bcmd, id);
+	}
+
+	public int addNewBlock(EMBCommand bcmd, String blocktype, AlignedBox3D box, Color color) {
+		 EMBlock cb = newBlock(blocktype, box, color);
+		bcmd.addBlock(cb.iD());
+		return cb.iD();
+	}
+
+	private EMBlock newBlock(String blocktype, AlignedBox3D box, Color color) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	/**
+	 * Add blocks to scene
+	 */
+	public void addBlocks(EMBCommand bcmd, int[] ids) {
+		for (int id : ids) {
+			addBlock(bcmd, id);
+		}
+	}
+
+	/**
+	 * Add a duplicate block at the given point
+	 * @throws EMBlockError 
+	 */
+	public void addDuplicateBlock(EMBCommand bcmd, EMBlock cb, Point3D atpoint) throws EMBlockError {
+		EMBlock cbnew = cb.duplicate();
+		addBlock(bcmd, cbnew);
+	}
+
+	public int createNewBlock(EMBCommand bcmd, String blockType) throws EMBlockError  {
+		EMBlock cb_sel = getSelectedBlock();
+		if (cb_sel != null) {
+			cb_sel.setControls(controls);
+		}
+		EMBlock cb = null;
+		try {
+			cb = EMBlock.newBlock(blockType);
+		} catch (EMBlockError e) {
+			SmTrace.lg(String.format("createNewBlock %s error: %s",
+					blockType, e.getMessage()));
+			return -1;
+		}
+		try {
+			cb.setFromControls(controls);
+		} catch (EMBlockError e) {
+			SmTrace.lg(String.format("createNewBlock %s error: %s",
+					blockType, e.getMessage()));
+			return -1;
+		}
+		
+		cb.adjustFromControls(controls, bcmd);
+		int id = bcmd.addBlock(cb);
+		bcmd.selectBlock(id);		// Select new block
+		return id;
+		
+	}
+
+	public void createNewBlock(EMBCommand bcmd, String blockType, Point3D at_point, Vector3D size) {
+		Vector3D halfDiagonalOfNewBox = new Vector3D(EMBlockBase.DEFAULT_SIZE * 0.5f, EMBlockBase.DEFAULT_SIZE * 0.5f,
+				EMBlockBase.DEFAULT_SIZE * 0.5f);
+		EMBlock cb = null;
+		if (anySelected()) {
+			cb = getSelectedBlock();
+			Point3D centerOfNewBox = Point3D.sum(
+					Point3D.sum(cb.getCenter(),
+							Vector3D.mult(normalAtSelectedPoint,
+									0.5f * (float) Math.abs(Vector3D.dot(cb.getDiagonal(), normalAtSelectedPoint)))),
+					Vector3D.mult(normalAtSelectedPoint, EMBlockBase.DEFAULT_SIZE * 0.5f));
+			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
+					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
+			Color color = new Color(clamp(cb.getRed() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
+					clamp(cb.getGreen() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
+					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), cb.getAlpha());
+
+			cb = EMBlock.newBlock(blockType, box, color);
+		} else {
+			Point3D centerOfNewBox = camera.target;
+			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
+					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
+			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
+					EMBlockBase.DEFAULT_ALPHA);
+			cb = EMBlock.newBlock(blockType, box, color);
+			normalAtSelectedPoint = new Vector3D(1, 0, 0);
+		}
+		if (cb != null) {
+			bcmd.addBlock(cb.iD());
+		}
 	}
 	
 	/**
 	 * Get newest block index
 	 */
 	public int cbIndex() {
-		return sceneControler.cbIndex();
+		return scene.cbIndex();
 	}
 
-	/**
-	 * Get controls
-	 */
-	public ControlsOfView getControls() {
-		ControlsOfView controls = sceneControler.getControls();
-		return controls;
-	}
 	
 	/**
 	 * Get block, given index
 	 */
 	public EMBlock getCb(int id) {
-		return sceneControler.getCb(id);
+		return scene.cb(id);
 	}
 
 	
@@ -315,7 +685,127 @@ class SceneViewer extends JFrame
 	 * null, if none
 	 */
 	public EMBlock cbGen(int id) {
-		return sceneControler.cbGen(id);
+		return scene.genBlocks.getBlock(id);
+	}
+
+	
+	/**
+	 * Duplicate selected block - offset a bit
+	 * @throws EMBlockError 
+	 */
+	public int duplicateBlock(EMBCommand bcmd) throws EMBlockError {
+		EMBlock cb = getSelectedBlock();
+		if (cb != null) {
+			cb = cb.duplicate();
+		}
+		if (cb != null) {
+			bcmd.addBlock(cb.iD());
+			return cb.iD();
+		}
+		return -1;		// None created
+	}
+
+	/**
+	 * Duplicate block
+	 * 
+	 * @param id - original block
+	 * @return - id of new block
+	 * @throws EMBlockError 
+	 */
+	public int duplicateBlock(EMBCommand bcmd, int id) throws EMBlockError {
+		String blockType = getCb(id).blockType();
+		int idnew = createNewBlock(bcmd, blockType);
+		return idnew;
+	}
+
+	public void setColorOfSelection(EMBCommand bcmd, float r, float g, float b) {
+		if (anySelected()) {
+///			bcmd.saveSelection();
+			scene.setColorOfBlock(getSelectedBlockIndex(), r, g, b);
+		}
+	}
+
+///	public void deleteBlock(int id) {
+///		scene.deleteBlock(id);
+///	}
+
+	/**
+	 * Delete blocks
+	 */
+	public void deleteBlocks(EMBCommand bcmd, int[] ids) {
+		for (int id : ids) {
+			deleteBlock(bcmd, id);
+		}
+		
+	}
+
+	/**
+	 * Select blocks
+	 * Add blocks to selected list
+	 */
+	public void selectBlocks(EMBCommand bcmd, int[] ids) {
+		for (int id : ids) {
+			selectBlock(bcmd, id);
+		}
+		
+	}
+	
+	
+	/**
+	 * Delete block, as part of a command
+	 * Selection process is handled by others
+	 * @param bcmd
+	 * @param id
+	 */
+	public void deleteBlock(EMBCommand bcmd, int id) {
+		SmTrace.lg(String.format("deleteBlock(%d)", id));
+		bcmd.addPrevBlock(id);
+	}
+	
+	public void deleteSelection(EMBCommand bcmd) {
+		SmTrace.lg("deleteSelection");
+		selectPrint(String.format("deleteSelection"), "select");
+		BlockSelect select = getSelected();
+		if (!select.isEmpty()) {
+			deleteBlocks(bcmd, select.getIds());
+			if (!selectStack.isEmpty()) {
+				selectStack.pop();
+				if (!selectStack.isEmpty()) {
+					BlockSelect select2 = selectStack.pop();
+					bcmd.setSelect(select2);
+				}
+			}
+		}
+	}
+
+	public void deleteAll(EMBCommand bcmd) {
+		int[] allids = getDisplayedIds();
+		deleteBlocks(bcmd, allids);
+		indexOfHilitedBox = -1;
+	}
+
+	public void selectAll(EMBCommand bcmd) {
+		int[] allids = getDisplayedIds();
+		selectBlocks(bcmd, allids);
+		indexOfHilitedBox = -1;
+	}
+	
+	/**
+	 * Select block, as part of a command
+	 * @param bcmd
+	 * @param id
+	 */
+	public void selectBlock(EMBCommand bcmd, int id) {
+		SmTrace.lg(String.format("selectBlock(%s)", getCb(id).toString()));
+		bcmd.selectBlock(id, true);
+	}
+
+	public void eyeAtSelection() {
+		int id = getSelectedBlockIndex();
+		if (id >= 0) {
+			Point3D p = scene.getBox(id).getCenter();
+			camera.eyeAt(p);
+		}
 	}
 
 	
@@ -326,7 +816,7 @@ class SceneViewer extends JFrame
 	 */
 	public void eyeAt(Point3D pt) {
 		camera.eyeAt(pt);
-		ControlOfEye eac = (ControlOfEye) getControls().getControl("eyeat");
+		ControlOfEye eac = (ControlOfEye) controls.getControl("eyeat");
 		if (eac != null)
 			try {
 				eac.setEyeAtPosition(pt);
@@ -344,7 +834,7 @@ class SceneViewer extends JFrame
 	 */
 	public void lookAt(Point3D pt) {
 		camera.lookAt(pt);
-		ControlOfLookAt lac = (ControlOfLookAt) getControls().getControl("lookat");
+		ControlOfLookAt lac = (ControlOfLookAt) controls.getControl("lookat");
 		if (lac != null)
 			try {
 				lac.setLookAtPosition(pt);
@@ -353,20 +843,49 @@ class SceneViewer extends JFrame
 				e.printStackTrace();
 			}
 	}
-
-	/**
-	 * Repaint graphics canvas
-	 * 
-	 */
-	public void repaint() {
-		canvas.repaint();
+	
+	
+	public void lookAtSelection() {
+		int id = getSelectedBlockIndex();
+		if (id >= 0) {
+			Point3D p = scene.getBox(id).getCenter();
+			lookAt(p);
+		}
 	}
 	
 	
 	/**
+	 * Remove block from display
+	 * No other processing is done.
+	 * Physical display update is done elsewhere.
+	 * @param id
+	 */
+	public void removeBlock(int id) {
+		SmTrace.lg(String.format("removeBlock(%d)", id), "blocks");
+		scene.displayedBlocks.removeBlock(id);
+	}
+	
+	/**
+	 * Remove blocks from display
+	 * No additional processing is done
+	 */
+	public void removeBlocks(int[] ids) {
+		for (int id : ids) {
+			removeBlock(id);
+		}
+		
+	}
+
+	/**
 	 * Reset graphics
 	 */
 	public void reset() {
+		SmTrace.lg("Reset");
+		scene.reset();
+		resetCamera();
+		controls.reset();
+		commandManager = new EMBCommandManager(this);
+		mousePressed = false;
 		repaint();
 	}
 
@@ -387,7 +906,7 @@ class SceneViewer extends JFrame
 	
 	public void resetCamera() {
 		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
-				sceneControler.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
+				scene.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
 		camera.reset();
 		ColoredText.reset();
 	}
@@ -400,7 +919,7 @@ class SceneViewer extends JFrame
 	 * Display update is done elsewhere
 	 */
 	public void insertBlock(int id) {
-		sceneControler.insertBlock(id);
+		scene.insertBlock(id);
 	}
 	
 	/**
@@ -420,15 +939,10 @@ class SceneViewer extends JFrame
 	 * Display update is done elsewhere.
 	 */
 	public void insertBlocks(EMBlockGroup blocks) {
-		sceneControler.insertBlocks(blocks);
+		scene.insertBlocks(blocks);
 	}
 
 	public void init(GLAutoDrawable drawable) {
-		///this.drawable = drawable; // Save for later
-		GL2 gl = (GL2) canvas.getGL();
-		gl.glClearColor(0, 0, 0, 0);
-		///glu = new GLU();
-		///glut = new GLUT();
 	}
 
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
@@ -451,7 +965,7 @@ class SceneViewer extends JFrame
 	) {
 		int realy = viewport[3] - (int) y - 1;
 		SmTrace.lg(String.format("screen2WorldCoord(x=%d,y=%d (realy=%d), z=%.2f", x, y, realy, zval), "projection");
-		((GLU) canvas.getGL()).gluUnProject((double) x, (double) realy, zval, //
+		glu.gluUnProject((double) x, (double) realy, zval, //
 				mvmatrix, 0, projmatrix, 0, viewport, 0, wcoord, 0);
 		SmTrace.lg(String.format("   wx=%.2f, wy=%.2f, wz=%.2f", wcoord[0], wcoord[1], wcoord[2]), "projection");
 	}
@@ -480,208 +994,23 @@ class SceneViewer extends JFrame
 		SmTrace.lg("displayChanged");
 	}
 
-	public void display() {
-		GL2 gl = (GL2) canvas.getGL();
-		gl.glMatrixMode(GL2.GL_PROJECTION);
-		gl.glLoadIdentity();
-		camera.transform(gl);
-		gl.glMatrixMode(GL2.GL_MODELVIEW);
-		gl.glLoadIdentity();
-
-		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
-
-		gl.glDepthFunc(GL.GL_LEQUAL);
-		gl.glEnable(GL.GL_DEPTH_TEST);
-		gl.glEnable(GL.GL_CULL_FACE);
-		gl.glFrontFace(GL.GL_CCW);
-		gl.glDisable(GL2.GL_LIGHTING);
-		gl.glShadeModel(GL2.GL_FLAT);
-
-		sceneDraw.drawScene(indexOfHilitedBox, enableCompositing);
-		gl.glGetIntegerv(GL2.GL_VIEWPORT, viewport, 0);
-		gl.glGetDoublev(GL2.GL_MODELVIEW_MATRIX, mvmatrix, 0);
-		gl.glGetDoublev(GL2.GL_PROJECTION_MATRIX, projmatrix, 0);
-		if (SmTrace.tr("projection")) {
-			printMatrix("display(): mvmatrix", mvmatrix);
-			printMatrix("display(): projmatrix", projmatrix);
+	public void display(GLAutoDrawable drawable) {
+		for (SceneViewer viewer: sceneViewers) {
+			viewer.display(drawable);
 		}
-
-		gl.glGetIntegerv(GL2.GL_VIEWPORT, viewport, 0);
-		SmTrace.lg(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1],
-				viewport[2], viewport[3]), "projection");
-		
-		setControl("eyeat", displayEyeAtControl);
-		setControl("lookat", displayLookAtControl);
-		setControl("placement", displayPlacementControl);
-		setControl("color", displayColorControl);
-		setControl("text", displayTextControl);
-		setControl("component", displayAddControl);
-		getControls().display(canvas);
-		displayWorldAxes = true;			/// Force on
-		if (displayWorldAxes) {
-			gl.glBegin(GL.GL_LINES);
-			gl.glColor3f(1, 0, 0);
-			gl.glVertex3f(0, 0, 0);
-			gl.glVertex3f(1, 0, 0);
-			gl.glColor3f(0, 1, 0);
-			gl.glVertex3f(0, 0, 0);
-			gl.glVertex3f(0, 1, 0);
-			gl.glColor3f(0, 0, 1);
-			gl.glVertex3f(0, 0, 0);
-			gl.glVertex3f(0, 0, 1);
-			gl.glEnd();
-		}
-		if (displayCameraTarget) {
-			gl.glBegin(GL.GL_LINES);
-			gl.glColor3f(1, 1, 1);
-			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(-0.5f, 0, 0)).get(), 0);
-			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0.5f, 0, 0)).get(), 0);
-			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, -0.5f, 0)).get(), 0);
-			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, 0.5f, 0)).get(), 0);
-			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, 0, -0.5f)).get(), 0);
-			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, 0, 0.5f)).get(), 0);
-			gl.glEnd();
-		}
-		if (displayBoundingBox) {
-			gl.glColor3f(0.5f, 0.5f, 0.5f);
-			sceneDraw.drawBoundingBoxOfScene(canvas);
-		}
-
-		if (radialMenu.isVisible()) {
-			GLUT glut = new GLUT();
-			radialMenu.draw(gl, glut, getWidth(), getHeight());
-		}
-
-		// gl.glFlush(); // I don't think this is necessary
 	}
 
 	private void updateHiliting() {
 		Ray3D ray = camera.computeRay(mouse_x, mouse_y);
 		Point3D newIntersectionPoint = new Point3D();
 		Vector3D newNormalAtIntersection = new Vector3D();
-		int newIndexOfHilitedBox = sceneControler.getIndexOfIntersectedBox(ray, newIntersectionPoint, newNormalAtIntersection);
+		int newIndexOfHilitedBox = scene.getIndexOfIntersectedBox(ray, newIntersectionPoint, newNormalAtIntersection);
 		hilitedPoint.copy(newIntersectionPoint);
 		normalAtHilitedPoint.copy(newNormalAtIntersection);
 		if (newIndexOfHilitedBox != indexOfHilitedBox) {
 			indexOfHilitedBox = newIndexOfHilitedBox;
 			repaint();
 		}
-	}
-
-	
-	/** our control locations
-	 * 
-	 */
-	private String getPosKeyX() {
-		String key = "control." + name + ".pos.x";
-		return key;
-	}
-	private String getPosKeyY() {
-		String key = "control." + name + ".pos.y";
-		return key;
-	}
-	
-	
-	/**
-	 * Return position, -1 if none
-	 */
-	public int getXFromProp() {
-		String posstr = SmTrace.getProperty(getPosKeyX());
-		if (posstr.equals(""))
-			return -1;
-		
-		return Integer.valueOf(posstr);
-	}
-
-	
-	public int getYFromProp() {
-		String posstr = SmTrace.getProperty(getPosKeyY());
-		if (posstr.equals(""))
-			return -1;
-		
-		return Integer.valueOf(posstr);
-	}
-
-	
-	/**
-	 * Record current location
-	 */
-	public void recordLocation(int x, int y) {
-		String pos_key_x = getPosKeyX();
-		SmTrace.setProperty(pos_key_x, String.valueOf(x));
-		String pos_key_y = getPosKeyY();
-		SmTrace.setProperty(pos_key_y, String.valueOf(y));
-	}
-
-	
-	/**
-	 * Record current size
-	 */
-	public void recordSize(int width, int height) {
-		String size_key_width = getSizeKeyWidth();
-		SmTrace.setProperty(size_key_width, String.valueOf(width));
-		String size_key_height = getSizeKeyHeight();
-		SmTrace.setProperty(size_key_height, String.valueOf(height));
-	}
-	
-	
-	/**
-	 * Update location
-	 * Generally called after move
-	 */
-	public void updateLocation(ComponentEvent e) {
-		Point pt = e.getComponent().getLocation();
-		recordLocation(pt.x, pt.y);
-		SmTrace.lg(String.format(String.format("updateLocation(%s: %d, %d)"
-				,  name, pt.x, pt.y)));
-		
-	}
-	
-	
-	/**
-	 * Update size
-	 * Generally called after resize
-	 */
-	public void updateSize(ComponentEvent e) {
-		Dimension dim = e.getComponent().getSize();
-		recordSize(dim.width, dim.height);
-		SmTrace.lg(String.format(String.format("updateSize(%s: width=%d, height=%d)"
-				,  name, dim.width, dim.height)));
-		
-	}
-
-	
-	/** our view size
-	 * 
-	 */
-	private String getSizeKeyWidth() {
-		String key = "viewer." + name + ".size.width";
-		return key;
-	}
-	private String getSizeKeyHeight() {
-		String key = "viewer." + name + ".size.height";
-		return key;
-	}
-	
-	
-	/**
-	 * Return position, -1 if none
-	 */
-	public int getWidthFromProp() {
-		String sizestr = SmTrace.getProperty(getSizeKeyWidth());
-		if (sizestr.equals(""))
-			return -1;
-		
-		return Integer.valueOf(sizestr);
-	}
-
-	
-	public int getHeightFromProp() {
-		String sizestr = SmTrace.getProperty(getSizeKeyHeight());
-		if (sizestr.equals(""))
-			return -1;
-		
-		return Integer.valueOf(sizestr);
 	}
 
 	public void mouseClicked(MouseEvent e) {
@@ -698,10 +1027,10 @@ class SceneViewer extends JFrame
 					e2.printStackTrace();
 					return;
 				}
-				if (sceneControler.isSelected(indexOfHilitedBox)) {
+				if (isSelected(indexOfHilitedBox)) {
 					bcmd.removeSelect(indexOfHilitedBox);
 				} else {
-					sceneControler.selectAdd(bcmd, indexOfHilitedBox, true);		// keep with selected
+					selectAdd(bcmd, indexOfHilitedBox, true);		// keep with selected
 				}
 				bcmd.doCmd();
 			} else {
@@ -713,7 +1042,7 @@ class SceneViewer extends JFrame
 					e2.printStackTrace();
 					return;
 				}
-				sceneControler.selectAdd(bcmd, indexOfHilitedBox, false);
+				selectAdd(bcmd, indexOfHilitedBox, false);
 				bcmd.doCmd();
 			}
 		}
@@ -741,7 +1070,7 @@ class SceneViewer extends JFrame
 				double wcoord[] = new double[4];
 				screen2WorldCoord(mouse_x, mouse_y, world_z, wcoord);
 				Point3D p = new Point3D((float) wcoord[0], (float) wcoord[1], (float) world_z);
-				if (sceneControler.anySelected()) {
+				if (anySelected()) {
 					Point3D pnew = new Point3D((float) wcoord[0], (float) wcoord[1], (float) wcoord[2]);
 					p = pnew;
 				}
@@ -757,7 +1086,7 @@ class SceneViewer extends JFrame
 						return;
 					}
 					try {
-						sceneControler.duplicateBlock(bcmd);
+						duplicateBlock(bcmd);
 					} catch (EMBlockError e2) {
 						e2.printStackTrace();
 						SmTrace.lg("duplicateBlock error");
@@ -773,7 +1102,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "box");
+					createNewBlock(bcmd, "box");
 					break;
 	
 				case BALL:
@@ -784,7 +1113,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "ball");
+					createNewBlock(bcmd, "ball");
 					break;
 	
 				case CONE:
@@ -794,7 +1123,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "cone");
+					createNewBlock(bcmd, "cone");
 					break;
 	
 				case CYLINDER:
@@ -805,7 +1134,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "cylinder");
+					createNewBlock(bcmd, "cylinder");
 					break;
 	
 				case TEXT:
@@ -816,7 +1145,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "text");
+					createNewBlock(bcmd, "text");
 					break;
 					
 				default:
@@ -867,7 +1196,7 @@ class SceneViewer extends JFrame
 						return;
 					}
 					try {
-						sceneControler.duplicateBlock(bcmd);
+						duplicateBlock(bcmd);
 					} catch (EMBlockError e2) {
 						// TODO Auto-generated catch block
 						e2.printStackTrace();
@@ -883,7 +1212,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "box");
+					createNewBlock(bcmd, "box");
 					break;
 				case COMMAND_CREATE_BALL:
 					try {
@@ -893,7 +1222,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "ball");
+					createNewBlock(bcmd, "ball");
 					break;
 				case COMMAND_CREATE_CONE:
 					try {
@@ -903,7 +1232,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "cone");
+					createNewBlock(bcmd, "cone");
 					break;
 				case COMMAND_CREATE_CYLINDAR:
 					try {
@@ -913,7 +1242,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.createNewBlock(bcmd, "cylinder");
+					createNewBlock(bcmd, "cylinder");
 					break;
 				case COMMAND_COLOR_RED:
 					try {
@@ -923,7 +1252,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.setColorOfSelection(bcmd, 1, 0, 0);
+					setColorOfSelection(bcmd, 1, 0, 0);
 					break;
 				case COMMAND_COLOR_YELLOW:
 					try {
@@ -933,7 +1262,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.setColorOfSelection(bcmd, 1, 1, 0);
+					setColorOfSelection(bcmd, 1, 1, 0);
 					break;
 				case COMMAND_COLOR_GREEN:
 					try {
@@ -943,7 +1272,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.setColorOfSelection(bcmd, 0, 1, 0);
+					setColorOfSelection(bcmd, 0, 1, 0);
 					break;
 				case COMMAND_COLOR_BLUE:
 					try {
@@ -953,7 +1282,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.setColorOfSelection(bcmd, 0, 0, 1);
+					setColorOfSelection(bcmd, 0, 0, 1);
 					break;
 				case COMMAND_DELETE:
 					try {
@@ -963,7 +1292,7 @@ class SceneViewer extends JFrame
 						e1.printStackTrace();
 						return;
 					}
-					sceneControler.deleteSelection(bcmd);
+					deleteSelection(bcmd);
 					break;
 				}
 	
@@ -1022,11 +1351,9 @@ class SceneViewer extends JFrame
 				camera.translateSceneRightAndUp((float) (delta_x), (float) (delta_y));
 			}
 			repaint();
-		} else if (SwingUtilities.isLeftMouseButton(e)
-					&& !e.isControlDown()
-					&& sceneControler.anySelected()) {
+		} else if (SwingUtilities.isLeftMouseButton(e) && !e.isControlDown() && anySelected()) {
 			if (!e.isShiftDown()) {
-				EMBlock[] cbs = sceneControler.getSelectedBlocks();
+				EMBlock[] cbs = getSelectedBlocks();
 				if (cbs.length == 0)
 					return;
 				// translate a box
@@ -1056,7 +1383,7 @@ class SceneViewer extends JFrame
 				}
 			} else {
 				// resize a box
-				EMBlock[] cbs = sceneControler.getSelectedBlocks();
+				EMBlock[] cbs = getSelectedBlocks();
 				if (cbs.length == 0)
 					return;
 				SmTrace.lg("resize");
@@ -1159,7 +1486,7 @@ class SceneViewer extends JFrame
 		if (tag == null) {
 			tag = "displayList";
 		}
-		int[] block_ids = sceneControler.getDisplayedIds();
+		int[] block_ids = scene.getDisplayedIds();
 		if (block_ids.length == 0) {
 			SmTrace.lg(String.format("%s displayed: None", tag), trace);
 			return;
@@ -1171,7 +1498,7 @@ class SceneViewer extends JFrame
 			if (str != "") {
 				str += ", ";
 			}
-			str += sceneControler.getDisplayedBlocks().getBlock(id);
+			str += scene.displayedBlocks.getBlock(id);
 		}
 		SmTrace.lg(String.format("%s displayed:%s", tag, str), trace);
 	}
@@ -1182,11 +1509,11 @@ class SceneViewer extends JFrame
 		String action = ae.getActionCommand();
 		SmTrace.lg(String.format("action: %s", action));
 		try {
-			if (getControls().ckDoAction(action))
+			if (controls.ckDoAction(action))
 				return;
 		} catch (EMBlockError e) {
 			SmTrace.lg(String.format(
-					"getControls().ckDoaction(%s): %s",
+					"controls.ckDoaction(%s): %s",
 					action, e.getMessage()));
 			e.printStackTrace();
 			return;
@@ -1199,7 +1526,7 @@ class SceneViewer extends JFrame
 	 * @throws EMBlockError 
 	 */
 	public void addBlockButton(EMBCommand bcmd, String action) throws EMBlockError {
-		sceneControler.selectPrint(String.format("addBlockButton(%s) select", action), "action");
+		selectPrint(String.format("addBlockButton(%s) select", action), "action");
 		try {
 			if (bcmd == null) {
 				SmTrace.lg(String.format(
@@ -1215,39 +1542,39 @@ class SceneViewer extends JFrame
 		}
 		switch(action) {
 			case "emc_selectAllButton":
-				sceneControler.selectAll(bcmd);
+				selectAll(bcmd);
 				break;
 			
 			case "emc_duplicateBlockButton":
-				sceneControler.duplicateBlock(bcmd); 			// Duplicate selected block
+				duplicateBlock(bcmd); 			// Duplicate selected block
 				break;
 				
 			case "emc_deleteBlockButton":
-				sceneControler.deleteSelection(bcmd);
+				deleteSelection(bcmd);
 				break;
 				
 			case "emc_deleteBlockAllButton":
-				sceneControler.deleteAll(bcmd);
+				deleteAll(bcmd);
 				break;
 			
 			case "emc_addBoxButton":
-				sceneControler.createNewBlock(bcmd, "box");
+				createNewBlock(bcmd, "box");
 				break;
 				
 			case "emc_addBallButton":
-				sceneControler.createNewBlock(bcmd, "ball");
+				createNewBlock(bcmd, "ball");
 				break;
 				
 			case "emc_addConeButton":
-				sceneControler.createNewBlock(bcmd, "cone");
+				createNewBlock(bcmd, "cone");
 				break;
 				
 			case "emc_addCylinderButton":
-				sceneControler.createNewBlock(bcmd, "cylinder");
+				createNewBlock(bcmd, "cylinder");
 				break;
 				
 			case "emc_addTextButton":
-				sceneControler.createNewBlock(bcmd, "text");
+				createNewBlock(bcmd, "text");
 				break;
 				
 			default:
@@ -1263,7 +1590,7 @@ class SceneViewer extends JFrame
 	 * @throws EMBlockError 
 	 */
 	public void addTextButton(EMBCommand bcmd, String action) throws EMBlockError {
-		sceneControler.selectPrint(String.format("addTextButton(%s) select", action), "action");
+		selectPrint(String.format("addTextButton(%s) select", action), "action");
 		if (bcmd == null) {
 			SmTrace.lg(String.format(
 					"addTextButton(%s) with no cmd - ignored",
@@ -1271,7 +1598,7 @@ class SceneViewer extends JFrame
 			return;
 		}
 		
-		EMBlock cb = new EMBlock(new ColoredText(getControls()));
+		EMBlock cb = new EMBlock(new ColoredText(controls));
 		if (cb != null) {
 			int id = bcmd.addBlock(cb);
 			bcmd.selectBlock(id);		// Select new block
@@ -1284,14 +1611,14 @@ class SceneViewer extends JFrame
 	 * @throws EMBlockError 
 	 */
 	public void changeTextButton(EMBCommand bcmd, String action) throws EMBlockError {
-		sceneControler.selectPrint(String.format("changeTextButton(%s) select", action), "action");
-		BlockSelect bg = sceneControler.getSelected();
+		selectPrint(String.format("changeTextButton(%s) select", action), "action");
+		BlockSelect bg = getSelected();
 		int[] ids = bg.getIds();
 		for (int i = 0; i < ids.length; i++) {
 			int id = ids[i];
 			EMBlock cb = getCb(id);
 			bcmd.addPrevBlock(cb);
-			cb.adjustFromControl((ControlOfText)getControls().getControl("text"), bcmd);
+			cb.adjustFromControl((ControlOfText)controls.getControl("text"), bcmd);
 			bcmd.addBlock(cb);
 		}
 	}
@@ -1302,7 +1629,7 @@ class SceneViewer extends JFrame
 	 * @throws EMBlockError 
 	 */
 	public void dupTextButton(EMBCommand bcmd, String action) throws EMBlockError {
-		sceneControler.selectPrint(String.format("dupTextButton(%s) select", action), "action");
+		selectPrint(String.format("dupTextButton(%s) select", action), "action");
 		selectTextButton(bcmd, action);
 		addTextButton(bcmd, action);
 	}
@@ -1313,7 +1640,7 @@ class SceneViewer extends JFrame
 	 * @throws EMBlockError 
 	 */
 	public void selectTextButton(EMBCommand bcmd, String action) throws EMBlockError {
-		sceneControler.selectPrint(String.format("selectTextButton(%s) select", action), "action");
+		selectPrint(String.format("selectTextButton(%s) select", action), "action");
 	}
 
 	
@@ -1321,32 +1648,49 @@ class SceneViewer extends JFrame
 	 * Add/Remove Control/Display
 	 */
 	public void setControl(String controlName, boolean on) {
-		getControls().setControl(controlName, on);
+		controls.setControl(controlName, on);
 	}
 
 	
+	public void setSelectionStateOfBox( int id, boolean state ) {
+		scene.setSelectionStateOfBox(id, state);
+	}
+	
 
 	public void setCheckBox(String name, boolean checked) {
-		sceneControler.setCheckBox(name, checked);
+		if (modeler != null)
+			modeler.setCheckBox(name, checked);
 	}
 
+	
+	public ControlsOfView getControls() {
+		return controls;
+	}
 
+	
 	public EMDisplay getDisplay() {
 		EMDisplay disp = new EMDisplay("SceneViewer");
 		disp.putBlocks(getDisplayedBlocks());
 		return disp;
 	}
 
-
-	private EMBlockGroup getDisplayedBlocks() {
-		return sceneControler.getDisplayedBlocks();
+	
+	public Scene getScene() {
+		return scene;
+	}
+	
+	
+	/**
+	 * Repaint each viewer
+	 */
+	public void repaint() {
+		for (SceneViewer viewer: sceneViewers) {
+			viewer.repaint();
+		}
 	}
 
-
-	@Override
-	public void display(GLAutoDrawable drawable) {
-		display();
-		
+	public EMBlockGroup getDisplayedBlocks() {
+		return scene.displayedBlocks;
 	}
 
 	

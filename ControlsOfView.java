@@ -30,14 +30,14 @@ public class ControlsOfView {
 	}
 
 	// Controls dictionary
-	SceneViewer scene;
+	SceneControler sceneControler;
 	Map<String, ControlEntry> controlh;
 	LinkedList<String> controls = new LinkedList<String>();			// Ordered set of control names
 	/**
 	 * Setup controls access
 	 */
-	ControlsOfView(SceneViewer scene) {
-		this.scene = scene;
+	ControlsOfView(SceneControler sceneControler) {
+		this.sceneControler = sceneControler;
 		this.controlh = new HashMap<String, ControlEntry>();
 	}
 
@@ -75,12 +75,12 @@ public class ControlsOfView {
 		SmTrace.lg(String.format("setControl(%s,%b)", controlName, on));
 		control.setControl(on);
 		
-		scene.setCheckBox(controlName, on);		// Have check box reflect setting
+		sceneControler.setCheckBox(controlName, on);		// Have check box reflect setting
 		if (on) {
-			int bindex = scene.getSelectedBlockIndex();
+			int bindex = sceneControler.getSelectedBlockIndex();
 			SmTrace.lg(String.format("ControlsOf.setControl(%s): before - selected(%d)",controlName, bindex), "controls", "controls");
 			placeControl(controlName);
-			int bindex2 = scene.getSelectedBlockIndex();
+			int bindex2 = sceneControler.getSelectedBlockIndex();
 			SmTrace.lg(String.format("ControlsOf.setControl(%s): after - selected(%d)",controlName, bindex2), "controls", "controls");
 		}
 	}
@@ -115,28 +115,28 @@ public class ControlsOfView {
 		ControlOf control = null;
 		switch (controlName) {
 			case "component":
-				control = new ControlOfComponent(scene, "component");
+				control = new ControlOfComponent(sceneControler, "component");
 				control.setFull();		// Set full display 
 				break;
 				
 			case "eyeat":
-				control = new ControlOfEye(scene, "eyeat");
+				control = new ControlOfEye(sceneControler, "eyeat");
 				break;
 				
 			case "lookat":
-				control = new ControlOfLookAt(scene, "lookat");
+				control = new ControlOfLookAt(sceneControler, "lookat");
 				break;
 			
 			case "placement":
-				control = new ControlOfPlacement(scene, "placement");
+				control = new ControlOfPlacement(sceneControler, "placement");
 				break;
 				
 			case "color":
-				control = new ControlOfColor(scene, "color");
+				control = new ControlOfColor(sceneControler, "color");
 				break;
 				
 			case "text":
-				control = new ControlOfText(scene, "text");
+				control = new ControlOfText(sceneControler, "text");
 				control.setFull();		// Set full display 
 				break;
 				
@@ -248,7 +248,7 @@ public class ControlsOfView {
 		SmTrace.lg(String.format("placeControl(%s)", controlName));
 		int xmargin = 30;
 		int ymargin = 30;
-		int yloc = scene.frame.getHeight() + 2;
+		int yloc = sceneControler.getHeight() + 2;
 		int xloc = xmargin;
 		int ndisplayed = 0;		// Number displayed
 		ControlOf prev_control = null;
@@ -297,7 +297,7 @@ public class ControlsOfView {
 		if (cbis.length != 1)
 			return;			// Ignore if not 1
 		
-		EMBlock cb = scene.getCb(cbis[0]);
+		EMBlock cb = sceneControler.getCb(cbis[0]);
 		if (cb == null)
 			return;					// Not displayed
 		

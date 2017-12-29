@@ -21,18 +21,18 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	SceneViewer scene;			// Our scene
-	String name;				// Our unique control name
-	boolean setup;				// true - fully setup
-	private boolean active;		// true setup and visible
+	SceneControler sceneControler;	// Our scene
+	String name;					// Our unique control name
+	boolean setup;					// true - fully setup
+	private boolean active;			// true setup and visible
 	public boolean inPos;			// true - in position
-	public boolean full;		// Reserve full height
-	static int nextColor = 0;	// index for generated colors
-	public Point3D setPoint;	// Last check point value
+	public boolean full;			// Reserve full height
+	static int nextColor = 0;		// index for generated colors
+	public Point3D setPoint;		// Last check point value
 	public float minClose = .5f;	// Close for setPoint comparison 
-	ControlOf(SceneViewer scene, String name) {
+	ControlOf(SceneControler sceneControler, String name) {
 		super();
-		this.scene = scene;
+		this.sceneControler = sceneControler;
 		this.name = name;
 		this.setup = false;
 		this.active = false;
@@ -203,12 +203,12 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	 * @throws EMBlockError 
 	 */
 	public void setControl(boolean on) {
-			int bindex = scene.getSelectedBlockIndex();
+			int bindex = sceneControler.getSelectedBlockIndex();
 			SmTrace.lg(String.format("ControlOf.setControl(%b) %s: before - selected(%d)", on, name, bindex),
 					"select", "select");
 			setActive(on);
 			
-			bindex = scene.getSelectedBlockIndex();
+			bindex = sceneControler.getSelectedBlockIndex();
 			SmTrace.lg(String.format("ControlOf.setControl(%b) %s: after - selected(%d)", on, name, bindex),
 					"select", "select");
 	}
@@ -304,7 +304,7 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 	
 	
 	/**
-	 * Update position in scene display
+	 * Update position in sceneControler display
 	 */
 	void updatePosition() {
 		this.setVisible(true);
@@ -317,7 +317,7 @@ public class ControlOf extends JDialog implements java.awt.event.WindowListener 
 
  	public void dispose() {
   		super.dispose();
-		scene.setCheckBox(name, false);			// Clear display checkbox
+		sceneControler.setCheckBox(name, false);			// Clear display checkbox
  		setup = false;
 	}
 

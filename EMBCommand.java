@@ -27,11 +27,11 @@ public abstract class EMBCommand {
 			throw new EMBlockError("No EMBCommandManager");			
 		}
 		canUndo = true;
-		prevEyeAt = commandManager.scene.camera.position;	// refs by default
+		prevEyeAt = commandManager.sceneControler.camera.position;	// refs by default
 		newLookAt = prevEyeAt;			// refs by default - Don't modify
-		prevLookAt = commandManager.scene.camera.target;	// refs by default
+		prevLookAt = commandManager.sceneControler.camera.target;	// refs by default
 		newLookAt = prevLookAt;			// refs by default - Don't modify
-		prevSelect = new BlockSelect(commandManager.scene.getSelected());
+		prevSelect = new BlockSelect(commandManager.sceneControler.getSelected());
 		newSelect = new BlockSelect(prevSelect);	// Default  - no change
 		prevBlocks = new EMBlockGroup();
 		newBlocks = new EMBlockGroup();
@@ -56,8 +56,8 @@ public abstract class EMBCommand {
 	 * Setup command manager
 	 * @param mgr
 	 */
-	public static void setManager(SceneViewer scene) {
-		setManager(new EMBCommandManager(scene));
+	public static void setManager(SceneControler sceneControler) {
+		setManager(new EMBCommandManager(sceneControler));
 	}
 
 	/**
@@ -80,17 +80,17 @@ public abstract class EMBCommand {
 		commandManager.currentCmd = this;
 		if (newLookAt != prevLookAt) {
 			if (newLookAt != null)
-				commandManager.scene.lookAt(newLookAt);
+				commandManager.sceneControler.lookAt(newLookAt);
 		}
 		if (newEyeAt != prevEyeAt) {
 			if (newEyeAt != null)
-				commandManager.scene.eyeAt(newEyeAt);
+				commandManager.sceneControler.eyeAt(newEyeAt);
 		}
 		int[] prev_ids = prevBlocks.getIds();
-		commandManager.scene.removeBlocks(prev_ids);
+		commandManager.sceneControler.removeBlocks(prev_ids);
 		if (newBlocks == null)
 			SmTrace.lg("execute - null newBlocks");
-		commandManager.scene.insertBlocks(newBlocks);
+		commandManager.sceneControler.insertBlocks(newBlocks);
 		commandManager.displayUpdate(newSelect, prevSelect);
 		commandManager.displayPrint(String.format("execute(%s) AFTER", this.action), "execute");
 		commandManager.selectPrint(String.format("execute(%s) AFTER", this.action), "execute");
@@ -147,7 +147,7 @@ public abstract class EMBCommand {
 	public static EMBCommand checkPointCmd() throws EMBlockError {
 		EMBCommand cmd;
 		cmd = new BlkCmdAdd("emc checkpoint");	// Create "disposable" copy of command
-		cmd.prevBlocks  = commandManager.scene.getDisplay().getBlocks();
+		cmd.prevBlocks  = commandManager.sceneControler.getDisplay().getBlocks();
 		return cmd;
 	}
 	
@@ -268,7 +268,7 @@ public abstract class EMBCommand {
 		boolean res = execute();
 		if (res) {
 							/* Disable cmd pushing if mouse pressed */
-			if (!commandManager.scene.isMousePressed()) {
+			if (!commandManager.sceneControler.isMousePressed()) {
 				if (canUndo() || canRepeat()) {
 					SmTrace.lg("add to commandStack", "execute");
 					commandManager.commandStack.add(this);

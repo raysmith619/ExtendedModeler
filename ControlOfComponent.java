@@ -11,8 +11,8 @@ public class ControlOfComponent extends ControlOf {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	ControlOfComponent(SceneViewer scene, String name) {
-		super(scene, name);
+	ControlOfComponent(SceneControler sceneControler, String name) {
+		super(sceneControler, name);
 	}
 
 	/**
@@ -39,12 +39,12 @@ public class ControlOfComponent extends ControlOf {
 		JPanel selectPanel = new JPanel(new GridLayout(1, 0));		// Modifiers in one row
 		JButton addSelectAllButton = new JButton("Select All");
 		addSelectAllButton.setActionCommand("emc_selectAllButton");
-		addSelectAllButton.addActionListener(scene);
+		addSelectAllButton.addActionListener(sceneControler);
 		selectPanel.add(addSelectAllButton);
 		/***
 		JButton addToggleSelectButton = new JButton("Toggle Select");
 		addToggleSelectButton.setActionCommand("emc_toggleSelectButton");
-		addToggleSelectButton.addActionListener(scene);
+		addToggleSelectButton.addActionListener(sceneControler);
 		selectPanel.add(addToggleSelectButton);
 		***/
 		blockPanel.add(selectPanel);
@@ -52,46 +52,46 @@ public class ControlOfComponent extends ControlOf {
 		JPanel modPanel = new JPanel(new GridLayout(1, 0));		// Modifiers in one row
 		JButton addDuplicateButton = new JButton("Duplicate");
 		addDuplicateButton.setActionCommand("emc_duplicateBlockButton");
-		addDuplicateButton.addActionListener(scene);
+		addDuplicateButton.addActionListener(sceneControler);
 		modPanel.add(addDuplicateButton);
 
 		JButton addDeleteButton = new JButton("Delete");
 		addDeleteButton.setActionCommand("emc_deleteBlockButton");
-		addDeleteButton.addActionListener(scene);
+		addDeleteButton.addActionListener(sceneControler);
 		modPanel.add(addDeleteButton);
 		blockPanel.add(modPanel);
 
 		JButton addDeleteAllButton = new JButton("Delete ALL");
 		addDeleteAllButton.setActionCommand("emc_deleteBlockAllButton");
-		addDeleteAllButton.addActionListener(scene);
+		addDeleteAllButton.addActionListener(sceneControler);
 		modPanel.add(addDeleteAllButton);
 		blockPanel.add(modPanel);
 
 		JPanel compPanel = new JPanel(new GridLayout(1,0));		// Components - one row
 		JButton addBoxButton = new JButton("Box");
 		addBoxButton.setActionCommand("emc_addBoxButton");
-		addBoxButton.addActionListener(scene);
+		addBoxButton.addActionListener(sceneControler);
 		compPanel.add(addBoxButton);
 
 		JButton addBallButton = new JButton("Ball");
 		addBallButton.setActionCommand("emc_addBallButton");
-		addBallButton.addActionListener(scene);
+		addBallButton.addActionListener(sceneControler);
 		compPanel.add(addBallButton);
 
 		JButton addConeButton = new JButton("Cone");
 		addConeButton.setActionCommand("emc_addConeButton");
-		addConeButton.addActionListener(scene);
+		addConeButton.addActionListener(sceneControler);
 		compPanel.add(addConeButton);
 
 		JButton addCylinderButton = new JButton("Cylinder");
 		addCylinderButton.setActionCommand("emc_addCylinderButton");
-		addCylinderButton.addActionListener(scene);
+		addCylinderButton.addActionListener(sceneControler);
 		compPanel.add(addCylinderButton);
 		blockPanel.add(compPanel);
 
 		JButton addTextButton = new JButton("Text");
 		addTextButton.setActionCommand("emc_addTextButton");
-		addTextButton.addActionListener(scene);
+		addTextButton.addActionListener(sceneControler);
 		compPanel.add(addTextButton);
 		blockPanel.add(compPanel);
 		
@@ -113,7 +113,7 @@ public class ControlOfComponent extends ControlOf {
 		if (!isActive())
 			return false;	// Not active
 		
-		scene.selectPrint(String.format("ckDoAction(%s)", action), "select");
+		sceneControler.selectPrint(String.format("ckDoAction(%s)", action), "select");
 		EMBCommand bcmd;
 		try {
 			bcmd = new BlkCmdAdd(action);
@@ -131,19 +131,19 @@ public class ControlOfComponent extends ControlOf {
 			case "emc_addBallButton":
 			case "emc_addConeButton":
 			case "emc_addCylinderButton":
-				scene.addBlockButton(bcmd, action);
+				sceneControler.addBlockButton(bcmd, action);
 				if (bcmd != null) {
 					boolean res = bcmd.doCmd();
-					scene.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
+					sceneControler.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
 					return res;
 				}
 				break;
 				
 			case "emc_addTextButton":		// Emulate Text control
-				scene.addTextButton(bcmd, action);
+				sceneControler.addTextButton(bcmd, action);
 				if (bcmd != null) {
 					boolean res = bcmd.doCmd();
-					scene.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
+					sceneControler.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
 					return res;
 				}
 				break;

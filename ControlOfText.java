@@ -54,8 +54,8 @@ public class ControlOfText extends ControlOf {
 
 	
 	
-	ControlOfText(SceneViewer scene, String name) {
-		super(scene, name);
+	ControlOfText(SceneControler sceneControler, String name) {
+		super(sceneControler, name);
 		///setup();
 	}	
 
@@ -74,7 +74,7 @@ public class ControlOfText extends ControlOf {
 		if (setup)
 			return;					// Already present
 		
-		int bindex = scene.getSelectedBlockIndex();
+		int bindex = sceneControler.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfText.setup before - selected(%d)", bindex), "select");
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 ///		controlDialog = new JDialog();
@@ -184,28 +184,28 @@ public class ControlOfText extends ControlOf {
 
 		JButton textNewButton = new JButton("New");
 		textNewButton.setActionCommand("emc_text_new");
-		textNewButton.addActionListener(scene);
+		textNewButton.addActionListener(sceneControler);
 		actionPanel.add(textNewButton);
 		
 		JButton textDupButton = new JButton("Change");
 		textDupButton.setActionCommand("emc_text_change");
-		textDupButton.addActionListener(scene);
+		textDupButton.addActionListener(sceneControler);
 		actionPanel.add(textDupButton);
 		
 		JButton textSelectButton = new JButton("Select");
 		textSelectButton.setActionCommand("emc_text_select");
-		textSelectButton.addActionListener(scene);
+		textSelectButton.addActionListener(sceneControler);
 		actionPanel.add(textSelectButton);
 		
 
 		positionAtNextRaButton = new JRadioButton("At Next");
 		positionAtNextRaButton.setActionCommand("emc_pos_at_next");
 		positionAtNextRaButton.setSelected(true);
-		positionAtNextRaButton.addActionListener(scene);
+		positionAtNextRaButton.addActionListener(sceneControler);
 
 		positionAtCurrRaButton = new JRadioButton("At Current");
 		positionAtCurrRaButton.setActionCommand("emc_pos_at_current");
-		positionAtCurrRaButton.addActionListener(scene);
+		positionAtCurrRaButton.addActionListener(sceneControler);
 
 		ButtonGroup positionAtGroup = new ButtonGroup();
 		positionAtGroup.add(positionAtNextRaButton);
@@ -226,7 +226,7 @@ public class ControlOfText extends ControlOf {
 	 * Adjust control based on selection
 	 */
 	public void adjustControls() {
-		EMBlock cb = scene.getSelectedBlock();
+		EMBlock cb = sceneControler.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -254,15 +254,15 @@ public class ControlOfText extends ControlOf {
 		}
 		switch (action) {
 			case "emc_text_new":
-				scene.addTextButton(bcmd, action);
+				sceneControler.addTextButton(bcmd, action);
 				break;
 				
 			case "emc_text_change":
-				scene.changeTextButton(bcmd, action);
+				sceneControler.changeTextButton(bcmd, action);
 				break;
 				
 			case "emc_text_select":
-				scene.selectTextButton(bcmd, action);
+				sceneControler.selectTextButton(bcmd, action);
 				break;
 			
 				default:

@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Color;
 
 import com.jogamp.opengl.GL;
@@ -56,6 +57,7 @@ public class ColoredBall extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
+		///drawable.getContext().makeCurrent(); 	///Hack to avoid no GLContext
 		GL2 gl = (GL2) drawable.getGL();
 		drawAsWireframe = true;			/// Force frame
 		///drawAsWireframe = false;		/// Force not frame

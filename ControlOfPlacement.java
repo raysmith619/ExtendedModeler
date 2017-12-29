@@ -35,8 +35,8 @@ public class ControlOfPlacement extends ControlOf {
 	JTextField adjZfield;
 	JCheckBox adjByBlockCkBox; // Adjust by units of block size
 
-	ControlOfPlacement(SceneViewer scene, String name) {
-		super(scene, name);
+	ControlOfPlacement(SceneControler sceneControler, String name) {
+		super(sceneControler, name);
 		///setup();
 	}
 
@@ -56,7 +56,7 @@ public class ControlOfPlacement extends ControlOf {
 	public void setup() {
 		if (setup)
 			return; // Already present
-		int bindex = scene.getSelectedBlockIndex();
+		int bindex = sceneControler.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfPlacement.setup before - selected(%d)", bindex), "select");
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 		/// controlDialog = new JDialog();
@@ -67,12 +67,12 @@ public class ControlOfPlacement extends ControlOf {
 		JRadioButton ps_pos_button = new JRadioButton("Position");
 		ps_pos_button.setActionCommand("emc_ps_position");
 		ps_pos_button.setSelected(true);
-		ps_pos_button.addActionListener(scene);
+		ps_pos_button.addActionListener(sceneControler);
 
 		JRadioButton ps_size_button = new JRadioButton("Size");
 		ps_size_button.setActionCommand("emc_ps_size");
 		ps_size_button.setSelected(false);
-		ps_size_button.addActionListener(scene);
+		ps_size_button.addActionListener(sceneControler);
 
 		JPanel pos_size_panel = new JPanel();
 		ButtonGroup pos_size_group = new ButtonGroup();
@@ -87,12 +87,12 @@ public class ControlOfPlacement extends ControlOf {
 		mdmove_button.setMnemonic(KeyEvent.VK_M);
 		mdmove_button.setActionCommand("emc_md_move");
 		mdmove_button.setSelected(true);
-		mdmove_button.addActionListener(scene);
+		mdmove_button.addActionListener(sceneControler);
 
 		JRadioButton mddup_button = new JRadioButton("Duplicate");
 		mddup_button.setMnemonic(KeyEvent.VK_D);
 		mddup_button.setActionCommand("emc_md_duplicate");
-		mddup_button.addActionListener(scene);
+		mddup_button.addActionListener(sceneControler);
 
 		JPanel movedup_panel = new JPanel();
 		ButtonGroup movedup_group = new ButtonGroup();
@@ -110,13 +110,13 @@ public class ControlOfPlacement extends ControlOf {
 		posXfield = new JTextField(String.format("%.2f", center.x()));
 		SmTrace.lg(String.format("setup posXfield"));
 		posXfield.setActionCommand("emc_ENTER");
-		posXfield.addActionListener(scene);
+		posXfield.addActionListener(sceneControler);
 		posYfield = new JTextField(String.format("%.2f", center.y()));
 		posYfield.setActionCommand("emc_ENTER");
-		posYfield.addActionListener(scene);
+		posYfield.addActionListener(sceneControler);
 		posZfield = new JTextField(String.format("%.2f", center.z()));
 		posZfield.setActionCommand("emc_ENTER");
-		posZfield.addActionListener(scene);
+		posZfield.addActionListener(sceneControler);
 		posByBlockCkBox = new JCheckBox("ByBlock", true);
 
 		moveto_panel.add(new JLabel("Loc:"));
@@ -129,7 +129,7 @@ public class ControlOfPlacement extends ControlOf {
 		moveto_panel.add(posByBlockCkBox);
 		JButton moveToButton = new JButton("MoveTo");
 		moveToButton.setActionCommand("emc_moveToButton");
-		moveToButton.addActionListener(scene);
+		moveToButton.addActionListener(sceneControler);
 		moveto_panel.add(moveToButton);
 
 		JPanel sizeto_panel = new JPanel();
@@ -138,13 +138,13 @@ public class ControlOfPlacement extends ControlOf {
 		sizeXfield = new JTextField(String.format("%.2f", defdim));
 		SmTrace.lg(String.format("setup sizeXfield"));
 		sizeXfield.setActionCommand("emc_ENTER");
-		sizeXfield.addActionListener(scene);
+		sizeXfield.addActionListener(sceneControler);
 		sizeYfield = new JTextField(String.format("%.2f", defdim));
 		sizeYfield.setActionCommand("emc_ENTER");
-		sizeYfield.addActionListener(scene);
+		sizeYfield.addActionListener(sceneControler);
 		sizeZfield = new JTextField(String.format("%.2f", defdim));
 		sizeZfield.setActionCommand("emc_ENTER");
-		sizeZfield.addActionListener(scene);
+		sizeZfield.addActionListener(sceneControler);
 		sizeto_panel.add(Box.createVerticalStrut(15)); // a spacer
 		sizeto_panel.add(new JLabel("Size:"));
 		sizeto_panel.add(new JLabel("x:"));
@@ -156,7 +156,7 @@ public class ControlOfPlacement extends ControlOf {
 
 		JButton sizeToButton = new JButton("SizeTo");
 		sizeToButton.setActionCommand("emc_sizeToButton");
-		sizeToButton.addActionListener(scene);
+		sizeToButton.addActionListener(sceneControler);
 		sizeto_panel.add(sizeToButton);
 
 		// Adjust by
@@ -166,21 +166,21 @@ public class ControlOfPlacement extends ControlOf {
 		adj_panel.add(Box.createVerticalStrut(15)); // a spacer
 		adjXfield = new JTextField(String.format("%.2f", adjamt));
 		adjXfield.setActionCommand("emc_adjENTER");
-		adjXfield.addActionListener(scene);
+		adjXfield.addActionListener(sceneControler);
 		adjYfield = new JTextField(String.format("%.2f", adjamt));
 		adjYfield.setActionCommand("emc_adjENTER");
-		adjYfield.addActionListener(scene);
+		adjYfield.addActionListener(sceneControler);
 		adjZfield = new JTextField(String.format("%.2f", adjamt));
 		adjZfield.setActionCommand("emc_adjENTER");
-		adjZfield.addActionListener(scene);
+		adjZfield.addActionListener(sceneControler);
 		adjByBlockCkBox = new JCheckBox("ByBlock", true);
 
 		JButton adjUpButton = new JButton("Up By");
 		adjUpButton.setActionCommand("emc_adjUpButton");
-		adjUpButton.addActionListener(scene);
+		adjUpButton.addActionListener(sceneControler);
 		JButton adjDownButton = new JButton("Down By");
 		adjDownButton.setActionCommand("emc_adjDownButton");
-		adjDownButton.addActionListener(scene);
+		adjDownButton.addActionListener(sceneControler);
 		adj_panel.add(Box.createVerticalStrut(15)); // a spacer
 		adj_panel.add(new JLabel("Adj:"));
 		adj_panel.add(new JLabel("x:"));
@@ -194,7 +194,7 @@ public class ControlOfPlacement extends ControlOf {
 		adj_panel.add(adjDownButton);
 		pack();
 
-		int bindex2 = scene.getSelectedBlockIndex();
+		int bindex2 = sceneControler.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfPlacement.setup after - selected(%d)", bindex2), "select");
 		setup = true;
 	}
@@ -455,7 +455,7 @@ public class ControlOfPlacement extends ControlOf {
 	}
 
 	private void traceSelected(int place) {
-		int bindex = scene.getSelectedBlockIndex();
+		int bindex = sceneControler.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfPlacement.setup place(%d) - selected(%d)", place, bindex), "select",
 				"select");
 	}
@@ -472,7 +472,7 @@ public class ControlOfPlacement extends ControlOf {
 	 * @param direction
 	 */
 	private void adjustPosition(EMBCommand bcmd, int direction) throws EMBlockError {
-		EMBlock[] cbs = scene.getSelectedBlocks();
+		EMBlock[] cbs = sceneControler.getSelectedBlocks();
 		if (cbs.length == 0)
 			return;
 
@@ -538,7 +538,7 @@ public class ControlOfPlacement extends ControlOf {
 	 * @throws EMBlockError
 	 */
 	private void moveToPosition(EMBCommand bcmd) throws EMBlockError {
-		if (scene.getSelected() == null)
+		if (sceneControler.getSelected() == null)
 			return;
 		float xval = 0;
 		float yval = 0;
@@ -556,7 +556,7 @@ public class ControlOfPlacement extends ControlOf {
 			zval = Float.valueOf(text);
 		}
 
-		EMBlock cb = scene.getSelectedBlock();
+		EMBlock cb = sceneControler.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -575,14 +575,14 @@ public class ControlOfPlacement extends ControlOf {
 		}
 		bcmd.addBlock(cb1); // Save new or modified
 		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f", xval, yval, zval));
-		scene.repaint();
+		sceneControler.repaint();
 	}
 
 	/**
 	 * Adjust control based on selection
 	 */
 	public void adjustControls() {
-		EMBlock cb = scene.getSelectedBlock();
+		EMBlock cb = sceneControler.getSelectedBlock();
 		if (cb == null)
 			return;
 
