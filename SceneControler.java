@@ -48,8 +48,8 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	JFrame frame;					// Access to main frame
 	ControlMap controlMap;			// Control Map window/frame
 	SmTrace smTrace; 				// Trace support
-	ControlsOfView controls;	// Control boxes
-
+	ControlsOfScene controls;		// Control boxes
+	Scene scene;					// Modeled scene
 	GLU glu; // Needed for scene2WorldCoord
 	GLUT glut;
 	
@@ -57,7 +57,6 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	int viewport[] = new int[4];
 	double mvmatrix[] = new double[16];
 	double projmatrix[] = new double[16];
-	public Scene scene;
 	///public int indexOfSelectedBlock = -1; // -1 for none
 									/**
 									 * Only used to go to previously
@@ -71,10 +70,10 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	private Point3D hilitedPoint = new Point3D();
 	private Vector3D normalAtHilitedPoint = new Vector3D();
 
-	Camera3D camera = new Camera3D();
 	ExtendedModeler.AutoAddType autoAdd = ExtendedModeler.AutoAddType.NONE; // Add
 	boolean mousePressed;		// true iff mouse is selected																		// item
-																			// source
+	EMBlock prevEye;			// Most recent eye object
+																		// source
 																			// menu
 
 	RadialMenuWidget radialMenu = new RadialMenuWidget();
@@ -97,6 +96,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	public boolean displayTextControl = true;
 	public boolean displayWorldAxes = false;
 	public boolean displayCameraTarget = false;
+	public boolean displayLocalView = true;
 	public boolean displayBoundingBox = false;
 	public boolean enableCompositing = false;
 
@@ -106,9 +106,9 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		throws EMBlockError {
 		this.sceneViewers = new ArrayList<SceneViewer>();
 		this.modeler = modeler;
-		this.scene = modeler.getScene(); 	// Shortcut
+		this.scene = modeler.getScene();
 		this.commandManager = new EMBCommandManager(this);
-		this.controls = new ControlsOfView(this);
+		this.controls = new ControlsOfScene(this);
 
 		radialMenu.setItemLabelAndID(RadialMenuWidget.CENTRAL_ITEM, "", COMMAND_DUPLICATE_BLOCK);
 		radialMenu.setItemLabelAndID(1, "Duplicate Block", COMMAND_DUPLICATE_BLOCK);
@@ -117,10 +117,6 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		radialMenu.setItemLabelAndID(4, "Set Color to Green", COMMAND_COLOR_GREEN);
 		radialMenu.setItemLabelAndID(5, "Set Color to Blue", COMMAND_COLOR_BLUE);
 		radialMenu.setItemLabelAndID(7, "Delete Box", COMMAND_DELETE);
-
-		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
-				scene.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
-		camera.reset();
 
 	}
 
@@ -131,6 +127,10 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	public void addViewer(SceneViewer viewer) {
 		sceneViewers.add(viewer);
 	}
+
+	public AlignedBox3D getBox( int index ) {
+		return scene.getBox(index);
+	}
 	
 	
 	public AlignedBox3D getBoundingBoxOfScene() {
@@ -139,10 +139,11 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	
 	
 	/**
-	 * Get generated blocks' ids
+	 * Get currently viewer's displayed block ids
 	 */
 	public int[] getDisplayedIds() {
-		return scene.getDisplayedIds();
+		SceneViewer viewer = getSceneViewer();		
+		return viewer.getDisplayedIds();
 	}
 	
 
@@ -651,7 +652,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 
 			cb = EMBlock.newBlock(blockType, box, color);
 		} else {
-			Point3D centerOfNewBox = camera.target;
+			Point3D centerOfNewBox = currentViewerCamera().target;
 			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
 					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
 			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
@@ -804,26 +805,19 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		int id = getSelectedBlockIndex();
 		if (id >= 0) {
 			Point3D p = scene.getBox(id).getCenter();
-			camera.eyeAt(p);
+			currentViewerCamera().eyeAt(p);
 		}
 	}
 
 	
 	/**
-	 * Set camera(target) at a point
+	 * Sets all viewers' camera(target) at a point
 	 * Updates visible controls
 	 * @param pt
 	 */
 	public void eyeAt(Point3D pt) {
-		camera.eyeAt(pt);
-		ControlOfEye eac = (ControlOfEye) controls.getControl("eyeat");
-		if (eac != null)
-			try {
-				eac.setEyeAtPosition(pt);
-			} catch (EMBlockError e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+		for (SceneViewer viewer : sceneViewers)
+			viewer.eyeAt(pt);
 	}
 
 	
@@ -833,15 +827,8 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	 * @param pt
 	 */
 	public void lookAt(Point3D pt) {
-		camera.lookAt(pt);
-		ControlOfLookAt lac = (ControlOfLookAt) controls.getControl("lookat");
-		if (lac != null)
-			try {
-				lac.setLookAtPosition(pt);
-			} catch (EMBlockError e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+		for (SceneViewer viewer : sceneViewers)
+			viewer.lookAt(pt);
 	}
 	
 	
@@ -882,10 +869,11 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	public void reset() {
 		SmTrace.lg("Reset");
 		scene.reset();
-		resetCamera();
+		resetCameras();
 		controls.reset();
 		commandManager = new EMBCommandManager(this);
 		mousePressed = false;
+		prevEye = null;
 		repaint();
 	}
 
@@ -902,16 +890,36 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	public void setMousePressed(boolean setting) {
 		mousePressed = setting;
 	}
+
+	/**
+	 * Get current viewer
+	 */
+	public SceneViewer currentViewer() {
+		return sceneViewers.get(0);		/// TBD - for now, just first one
+	}
 	
+	/**
+	 * Get camera of current viewer
+	 */
+	public Camera3D currentViewerCamera() {
+		return currentViewer().camera;
+	}
 	
-	public void resetCamera() {
-		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
-				scene.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
-		camera.reset();
+	public void resetCameras() {
+		for (SceneViewer viewer : sceneViewers) {
+			viewer.resetCamera();
+		}
 		ColoredText.reset();
 	}
 
 	
+	/**
+	 * Insert new block into scene display
+	 * 
+	 */
+	public void insertBlock(EMBlock cb) {
+		scene.insertBlock(cb);
+	}
 
 	/**
 	 * Insert block to scene display
@@ -943,14 +951,6 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	}
 
 	public void init(GLAutoDrawable drawable) {
-	}
-
-	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-		GL gl = drawable.getGL();
-		camera.setViewportDimensions(width, height);
-
-		// set viewport
-		gl.glViewport(0, 0, width, height);
 	}
 
 	/**
@@ -1000,19 +1000,6 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		}
 	}
 
-	private void updateHiliting() {
-		Ray3D ray = camera.computeRay(mouse_x, mouse_y);
-		Point3D newIntersectionPoint = new Point3D();
-		Vector3D newNormalAtIntersection = new Vector3D();
-		int newIndexOfHilitedBox = scene.getIndexOfIntersectedBox(ray, newIntersectionPoint, newNormalAtIntersection);
-		hilitedPoint.copy(newIntersectionPoint);
-		normalAtHilitedPoint.copy(newNormalAtIntersection);
-		if (newIndexOfHilitedBox != indexOfHilitedBox) {
-			indexOfHilitedBox = newIndexOfHilitedBox;
-			repaint();
-		}
-	}
-
 	public void mouseClicked(MouseEvent e) {
 		SmTrace.lg("mouseClick", "mouse");
 		if (e.isControlDown())
@@ -1058,117 +1045,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	}
 
 	public void mousePressed(MouseEvent e) {
-		old_mouse_x = mouse_x;
-		old_mouse_y = mouse_y;
-		mouse_x = e.getX();
-		mouse_y = e.getY();
-		SmTrace.lg(String.format("mousePressed(%d,%d)", mouse_x, mouse_y), "mouse");
-		try {
-			if (autoAdd != ExtendedModeler.AutoAddType.NONE) {
-				// Placement point assuming z == 0
-				double world_z = 0;
-				double wcoord[] = new double[4];
-				screen2WorldCoord(mouse_x, mouse_y, world_z, wcoord);
-				Point3D p = new Point3D((float) wcoord[0], (float) wcoord[1], (float) world_z);
-				if (anySelected()) {
-					Point3D pnew = new Point3D((float) wcoord[0], (float) wcoord[1], (float) wcoord[2]);
-					p = pnew;
-				}
-				camera.lookAt(p);
-				EMBCommand bcmd = null;
-				switch (autoAdd) {
-				case DUPLICATE:
-					try {
-						bcmd = new BlkCmdAdd("emc_duplicate");
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-						return;
-					}
-					try {
-						duplicateBlock(bcmd);
-					} catch (EMBlockError e2) {
-						e2.printStackTrace();
-						SmTrace.lg("duplicateBlock error");
-						return;
-					}
-					break;
-	
-				case BOX:
-					try {
-						bcmd = new BlkCmdAdd("emc_duplicate");
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-						return;
-					}
-					createNewBlock(bcmd, "box");
-					break;
-	
-				case BALL:
-					try {
-						bcmd = new BlkCmdAdd("ball");
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-						return;
-					}
-					createNewBlock(bcmd, "ball");
-					break;
-	
-				case CONE:
-					try {
-						bcmd = new BlkCmdAdd("emc_cone");
-					} catch (Exception e1) {
-						e1.printStackTrace();
-						return;
-					}
-					createNewBlock(bcmd, "cone");
-					break;
-	
-				case CYLINDER:
-					try {
-						bcmd = new BlkCmdAdd("emc_cylinder");
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-						return;
-					}
-					createNewBlock(bcmd, "cylinder");
-					break;
-	
-				case TEXT:
-					try {
-						bcmd = new BlkCmdAdd("emc_text");
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-						return;
-					}
-					createNewBlock(bcmd, "text");
-					break;
-					
-				default:
-					SmTrace.lg("Unrecognized AutoAdd value - ignored");
-				}
-				if (bcmd != null)
-					bcmd.doCmd();
-				return;
-			}
-			if (radialMenu.isVisible()
-					|| (SwingUtilities.isRightMouseButton(e) && !e.isShiftDown() && !e.isControlDown())) {
-				int returnValue = radialMenu.pressEvent(mouse_x, mouse_y);
-				if (returnValue == CustomWidget.S_REDRAW)
-					repaint();
-				if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
-					return;
-			}
-	
-			updateHiliting();
-		} catch (EMBlockError eb) {
-			SmTrace.lg(String.format("mousePressed error %s", eb.getMessage()));
-			return;
-		}
+		SmTrace.lg(String.format("SceneControler mousePressed(%d,%d)", mouse_x, mouse_y), "mouse");
 	}
 
 		
@@ -1311,115 +1188,9 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	}
 
 	public void mouseMoved(MouseEvent e) {
-
-		old_mouse_x = mouse_x;
-		old_mouse_y = mouse_y;
-		mouse_x = e.getX();
-		mouse_y = e.getY();
-
-		if (radialMenu.isVisible()) {
-			int returnValue = radialMenu.moveEvent(mouse_x, mouse_y);
-			if (returnValue == CustomWidget.S_REDRAW)
-				repaint();
-			if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
-				return;
-		}
-
-		updateHiliting();
 	}
 
 	public void mouseDragged(MouseEvent e) {
-		old_mouse_x = mouse_x;
-		old_mouse_y = mouse_y;
-		mouse_x = e.getX();
-		mouse_y = e.getY();
-		int delta_x = mouse_x - old_mouse_x;
-		int delta_y = old_mouse_y - mouse_y;
-
-		if (radialMenu.isVisible()) {
-			int returnValue = radialMenu.dragEvent(mouse_x, mouse_y);
-			if (returnValue == CustomWidget.S_REDRAW)
-				repaint();
-			if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
-				return;
-		} else if (e.isControlDown()) {
-			if (SwingUtilities.isLeftMouseButton(e) && SwingUtilities.isRightMouseButton(e)) {
-				camera.dollyCameraForward((float) (3 * (delta_x + delta_y)), false);
-			} else if (SwingUtilities.isLeftMouseButton(e)) {
-				camera.orbit(old_mouse_x, old_mouse_y, mouse_x, mouse_y);
-			} else {
-				camera.translateSceneRightAndUp((float) (delta_x), (float) (delta_y));
-			}
-			repaint();
-		} else if (SwingUtilities.isLeftMouseButton(e) && !e.isControlDown() && anySelected()) {
-			if (!e.isShiftDown()) {
-				EMBlock[] cbs = getSelectedBlocks();
-				if (cbs.length == 0)
-					return;
-				// translate a box
-
-				Ray3D ray1 = camera.computeRay(old_mouse_x, old_mouse_y);
-				Ray3D ray2 = camera.computeRay(mouse_x, mouse_y);
-				Point3D intersection1 = new Point3D();
-				Point3D intersection2 = new Point3D();
-				Plane plane = new Plane(normalAtSelectedPoint, selectedPoint);
-				if (plane.intersects(ray1, intersection1, true) && plane.intersects(ray2, intersection2, true)) {
-					EMBCommand bcmd;
-					String action = "mouseDragBlock";
-					try {
-						bcmd = new BlkCmdAdd(action);
-					} catch (Exception e2) {
-						e2.printStackTrace();
-						return;
-					}
-					Vector3D translation = Point3D.diff(intersection2, intersection1);
-					for (int i = 0; i < cbs.length; i++) {
-						EMBlock cb = cbs[i];
-						bcmd.addPrevBlock(cb);
-						cb.translate(translation);
-						bcmd.addBlock(cb);
-					}
-					bcmd.doCmd();
-				}
-			} else {
-				// resize a box
-				EMBlock[] cbs = getSelectedBlocks();
-				if (cbs.length == 0)
-					return;
-				SmTrace.lg("resize");
-				Ray3D ray1 = camera.computeRay(old_mouse_x, old_mouse_y);
-				Ray3D ray2 = camera.computeRay(mouse_x, mouse_y);
-				Point3D intersection1 = new Point3D();
-				Point3D intersection2 = new Point3D();
-				Vector3D v1 = Vector3D.cross(normalAtSelectedPoint, ray1.direction);
-				Vector3D v2 = Vector3D.cross(normalAtSelectedPoint, v1);
-				Plane plane = new Plane(v2, selectedPoint);
-				if (plane.intersects(ray1, intersection1, true) && plane.intersects(ray2, intersection2, true)) {
-					EMBCommand bcmd;
-					String action = "mouseSizeBlock";
-					try {
-						bcmd = new BlkCmdAdd(action);
-					} catch (Exception e2) {
-						e2.printStackTrace();
-						return;
-					}
-					
-					Vector3D translation = Point3D.diff(intersection2, intersection1);
-					SmTrace.lg(String.format("resize translation: %s", translation));
-
-					// project the translation onto the normal, so that it is
-					// only along one axis
-					translation = Vector3D.mult(normalAtSelectedPoint,
-							Vector3D.dot(normalAtSelectedPoint, translation));
-					for (int i = 0; i < cbs.length; i++) {
-						EMBlock cb = cbs[i];
-						bcmd.addPrevBlock(cb);
-						cb.resize(0, translation);
-					}
-					bcmd.doCmd();
-				}
-			}
-		}
 	}
 
 	/**
@@ -1645,6 +1416,61 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 
 	
 	/**
+	 * Add new eye
+	 * Experiment in eye drawing / debugging
+	 * @throws EMBlockError 
+	 */
+	public void addEyeButton(EMBCommand bcmd, String action) throws EMBlockError {
+		selectPrint(String.format("addEyeButton(%s) select", action), "action");
+		if (bcmd == null) {
+			SmTrace.lg(String.format(
+					"addEyeButton(%s) with no cmd - ignored",
+					action));
+			return;
+		}
+
+		EMBlock cb = null;
+		Point3D target = new Point3D(0, 0, 0);
+		Vector3D up = new Vector3D(0, 1, 0);
+		
+		if (anySelected()) {
+			cb = getSelectedBlock();
+			Point3D center = Point3D.sum(
+					Point3D.sum(cb.getCenter(),
+							Vector3D.mult(normalAtSelectedPoint,
+									0.5f * (float) Math.abs(Vector3D.dot(cb.getDiagonal(), normalAtSelectedPoint)))),
+					Vector3D.mult(normalAtSelectedPoint, EMBlockBase.DEFAULT_SIZE * 0.5f));
+			cb = EMBlock.newBlock("eye", center, target, up);
+		} else if (prevEye != null) {
+			Point3D center = Point3D.sum(
+					Point3D.sum(prevEye.getPosition(),
+							Vector3D.mult(normalAtSelectedPoint,
+									0.5f * (float) Math.abs(Vector3D.dot(prevEye.getDiagonal(), normalAtSelectedPoint)))),
+					Vector3D.mult(normalAtSelectedPoint, EMBlockBase.DEFAULT_SIZE * 0.5f));
+			cb = EMBlock.newBlock("eye", center, target, up);
+			
+		} else {
+			Point3D center = currentViewerCamera().target;
+			cb = EMBlock.newBlock("eye", center, target, up);
+			normalAtSelectedPoint = new Vector3D(1, 0, 0);
+		}
+/** No need to adjust		
+		try {
+			cb.setFromControls(controls);
+		} catch (EMBlockError e) {
+			SmTrace.lg(String.format("setFromControls %s error: %s",
+					cb.blockType(), e.getMessage()));
+			return;
+		}
+		cb.adjustFromControls(controls, bcmd);
+	**/
+		prevEye = cb;
+		int id = bcmd.addBlock(cb);
+		bcmd.selectBlock(id);		// Select new block
+	}
+
+	
+	/**
 	 * Add/Remove Control/Display
 	 */
 	public void setControl(String controlName, boolean on) {
@@ -1663,7 +1489,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	}
 
 	
-	public ControlsOfView getControls() {
+	public ControlsOfScene getControls() {
 		return controls;
 	}
 
@@ -1674,11 +1500,14 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		return disp;
 	}
 
-	
-	public Scene getScene() {
-		return scene;
+	/**
+	 * Get currently viewed
+	 */
+	public SceneViewer getSceneViewer() {
+		EMBCommand cmd = commandManager.getCurrentCommand();
+		SceneViewer viewer = cmd.newViewer;
+		return viewer;
 	}
-	
 	
 	/**
 	 * Repaint each viewer
@@ -1691,6 +1520,13 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 
 	public EMBlockGroup getDisplayedBlocks() {
 		return scene.displayedBlocks;
+	}
+
+
+	@Override
+	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	

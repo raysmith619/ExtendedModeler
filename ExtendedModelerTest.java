@@ -129,7 +129,7 @@ public class ExtendedModelerTest {
 			delay(afterSetupDelay);
 			sceneViewers = modeler.sceneViewers;
 			String control_name = null;
-			ControlOf ctl = null;
+			ControlOfScene ctl = null;
 			control_name = "component";
 			ctl = sceneControler.controls.getControl(control_name);
 			if (ctl == null) {

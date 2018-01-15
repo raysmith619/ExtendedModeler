@@ -14,7 +14,7 @@ import com.jogamp.newt.event.KeyEvent;
 
 import smTrace.SmTrace;
 
-public class ControlOfPlacement extends ControlOf {
+public class ControlOfPlacement extends ControlOfScene {
 	/**
 	 * 
 	 */
@@ -230,6 +230,11 @@ public class ControlOfPlacement extends ControlOf {
 		return val;
 	}
 
+	public Point3D getPosition() throws EMBlockError {
+		return new Point3D(getPosX(), getPosY(), getPosZ());
+	}
+	
+	
 	public float getPosX() throws EMBlockError {
 		if (posXfield == null)
 			return 0;

@@ -29,7 +29,7 @@ import EMGraphics.EM3DPosition;
 
 import smTrace.SmTrace;
 
-public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
+public class ControlOfLookAt extends ControlOfView implements EM3DLocationListner{
 	/**
 	 * 
 	 */
@@ -44,8 +44,8 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 	JTextField adjZfield;
 	EM3DPosition m3DPos;		// 3D setting if non-null
 	
-	ControlOfLookAt(SceneControler sceneControler, String name) {
-		super(sceneControler, name);
+	ControlOfLookAt(SceneViewer sceneViewer, String name) {
+		super(sceneViewer, name);
 		setup();
 	}
 
@@ -65,7 +65,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 			return; // Already present
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 		/// controlDialog = new JDialog();
-		setTitle("LookAt - Adjust/Report");
+		setTitle(sceneViewer.name + " LookAt - Adjust/Report");
 		posPanel = new JPanel(new GridLayout(0, 1));
 		///JPanel posPanel = new JPanel();
 		add(posPanel);
@@ -75,17 +75,17 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		posPanel.add(moveto_panel);
 
 		traceSelected(11);
-		Point3D center = new Point3D(sceneControler.camera.target);
+		Point3D center = sceneViewer.camera.target;
 		posXfield = new JTextField(String.format("%.2f", center.x()));
 		SmTrace.lg(String.format("setup posXfield"));
 		posXfield.setActionCommand("emc_ENTER");
-		posXfield.addActionListener(sceneControler);
+		posXfield.addActionListener(sceneViewer);
 		posYfield = new JTextField(String.format("%.2f", center.y()));
 		posYfield.setActionCommand("emc_ENTER");
-		posYfield.addActionListener(sceneControler);
+		posYfield.addActionListener(sceneViewer);
 		posZfield = new JTextField(String.format("%.2f", center.z()));
 		posZfield.setActionCommand("emc_ENTER");
-		posZfield.addActionListener(sceneControler);
+		posZfield.addActionListener(sceneViewer);
 
 		moveto_panel.add(new JLabel("Loc:"));
 		moveto_panel.add(new JLabel("x:"));
@@ -96,7 +96,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		moveto_panel.add(posZfield);
 		JButton lookAtButton = new JButton("LookAt");
 		lookAtButton.setActionCommand("emc_lookAtButton");
-		lookAtButton.addActionListener(sceneControler);
+		lookAtButton.addActionListener(sceneViewer);
 		moveto_panel.add(lookAtButton);
 
 		///JPanel sizeto_panel = new JPanel();
@@ -109,20 +109,20 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		float adjamt = 1f; // Default adjustment
 		adjXfield = new JTextField(String.format("%.2f", adjamt));
 		adjXfield.setActionCommand("emc_adjENTER");
-		adjXfield.addActionListener(sceneControler);
+		adjXfield.addActionListener(sceneViewer);
 		adjYfield = new JTextField(String.format("%.2f", adjamt));
 		adjYfield.setActionCommand("emc_adjENTER");
-		adjYfield.addActionListener(sceneControler);
+		adjYfield.addActionListener(sceneViewer);
 		adjZfield = new JTextField(String.format("%.2f", adjamt));
 		adjZfield.setActionCommand("emc_adjENTER");
-		adjZfield.addActionListener(sceneControler);
+		adjZfield.addActionListener(sceneViewer);
 
 		JButton adjUpButton = new JButton("Up By");
 		adjUpButton.setActionCommand("emc_lookAtAdjUpButton");
-		adjUpButton.addActionListener(sceneControler);
+		adjUpButton.addActionListener(sceneViewer);
 		JButton adjDownButton = new JButton("Down By");
 		adjDownButton.setActionCommand("emc_lookAtAdjDownButton");
-		adjDownButton.addActionListener(sceneControler);
+		adjDownButton.addActionListener(sceneViewer);
 		adj_panel.add(new JLabel("Adj:"));
 		adj_panel.add(new JLabel("x:"));
 		adj_panel.add(adjXfield);
@@ -143,7 +143,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		**/
 		pack();
 
-		int bindex2 = sceneControler.getSelectedBlockIndex();
+		int bindex2 = sceneViewer.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfLookAt.setup after - selected(%d)", bindex2), "select");
 		setup = true;
 	}
@@ -163,7 +163,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 		JButton m3D_positioning_Button = new JButton("3D Positioning");
 		m3D_positioning_Button.setActionCommand("emc_m3D_lookAt_PositionButton");
 		m3D_panel.add(m3D_positioning_Button);
-		m3D_positioning_Button.addActionListener(sceneControler);
+		m3D_positioning_Button.addActionListener(sceneViewer);
 		pack();
 		m3D_panel.setVisible(true);
 		
@@ -397,7 +397,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 	}
 
 	private void traceSelected(int place) {
-		int bindex = sceneControler.getSelectedBlockIndex();
+		int bindex = sceneViewer.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfLookAt.setup place(%d) - selected(%d)", place, bindex), "select",
 				"select");
 	}
@@ -522,6 +522,7 @@ public class ControlOfLookAt extends ControlOf implements EM3DLocationListner{
 			setPoint(new_pt);
 			bcmd.setCanUndo(false);
 		}
+		bcmd.setView(sceneViewer);
 		bcmd.setLookAt(new Point3D(x, y, z));
 		bcmd.doCmd();
 	}

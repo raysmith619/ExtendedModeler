@@ -9,14 +9,10 @@ import com.jogamp.opengl.GLAutoDrawable;
 import smTrace.SmTrace;
 
 class SceneDraw {
-	private SceneControler sceneControler;
-	private Scene scene;
-	private GLAutoDrawable drawable;
+	private SceneViewer sceneViewer;
 	
-	public SceneDraw(SceneControler sceneControler, GLAutoDrawable drawable) {
-		this.sceneControler = sceneControler;
-		this.scene = sceneControler.getScene();
-		this.drawable = drawable;
+	public SceneDraw(SceneViewer sceneViewer) {
+		this.sceneViewer = sceneViewer;
 	}
 
 	/**
@@ -33,6 +29,8 @@ class SceneDraw {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
+		GLAutoDrawable drawable = sceneViewer.getCanvas();
+		
 		block.draw(drawable, expand, drawAsWireframe, cornersOnly);
 	}
 
@@ -41,7 +39,7 @@ class SceneDraw {
 		int indexOfHilitedBox, // -1 for none
 		boolean useAlphaBlending
 	) {
-		GLAutoDrawable drawable = this.drawable;
+		GLAutoDrawable drawable = sceneViewer.getCanvas();
 		
 		GL2 gl = (GL2) drawable.getGL();
 		if ( useAlphaBlending ) {
@@ -50,12 +48,16 @@ class SceneDraw {
 			gl.glBlendFunc( GL.GL_SRC_ALPHA, GL.GL_ONE );
 			gl.glEnable( GL.GL_BLEND );
 		}
+		Scene scene = sceneViewer.getScene();
 		for (int id : scene.displayedBlocks.getIds()) {
 			EMBlock cb = scene.displayedBlocks.getBlock(id);
 			if (cb == null) {
 				SmTrace.lg(String.format("drawScene: No display block for id:%d",id));
 				continue;
 			}
+			if (getViewerLevel() < cb.getViewerLevel())
+				continue;				// Skip display for this block
+			
 			if ( useAlphaBlending )
 				gl.glColor4f(cb.getRed(), cb.getGreen(), cb.getBlue(), cb.getAlpha());
 			else
@@ -74,6 +76,8 @@ class SceneDraw {
 				SmTrace.lg(String.format("drawScene: No display block for id:%d", id));
 				continue;
 			}
+			if (getViewerLevel() < cb.getViewerLevel())
+				continue;				// Skip display for this block
 			if (true)
 				if (cb.blockType().equals("ball")) {
 					SmTrace.lg(String.format("ball at[%d]", id), "tracing ball");
@@ -94,8 +98,18 @@ class SceneDraw {
 		}
 	}
 
+	private int getViewerLevel() {
+		return sceneViewer.getViewerLevel();
+	}
+
+	public void drawLocalView(GLAutoDrawable drawable) {
+		AlignedBox3D box = sceneViewer.localView.getViewBox();
+		if ( ! box.isEmpty() )
+			ColoredBox.drawBox(drawable, box, false, true, false );
+	}
+
 	public void drawBoundingBoxOfScene(GLAutoDrawable drawable) {
-		AlignedBox3D box = scene.getBoundingBoxOfScene();
+		AlignedBox3D box = sceneViewer.getScene().getBoundingBoxOfScene();
 		if ( ! box.isEmpty() )
 			ColoredBox.drawBox(drawable, box, false, true, false );
 	}

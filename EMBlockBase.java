@@ -19,9 +19,13 @@ public class EMBlockBase {
 						// Universal object traits
 	public AlignedBox3D box;	// Bounding box
 	protected Color color;		// Object color
+	///public Point3D position;	// Position:  CALCULATED
+	public Point3D target;		// target
+	public Vector3D up;			// "UP" direction 
 	private boolean isSelected = false;
 	private static EMBlockBase defaultAtt;	// Default attributes for creation/access
 	public boolean isOk = false;		// Set OK upon successful construction
+	private int viewerLevel;			// Visible if viewer level > visible
 		
 
 	/**
@@ -84,6 +88,10 @@ public class EMBlockBase {
 	 */
 	public void setFromControl(ControlOfPlacement ctl) throws EMBlockError {
 		this.box = ctl.getBox();
+		if (this.target == null)
+			this.target = new Point3D(0, 0, 0);
+		if (this.up == null)
+			this.up  = new Vector3D(0, 1, 0);
 	}
 	
 /**
@@ -98,19 +106,19 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * Set block from controls
 	 * @throws EMBlockError 
 	 */
-	public void setFromControls(ControlsOfView cov) throws EMBlockError {
+	public void setFromControls(ControlsOfScene controls) throws EMBlockError {
 
-		ControlOfPlacement cop = (ControlOfPlacement) cov.getControl("placement");
+		ControlOfPlacement cop = (ControlOfPlacement) controls.getControl("placement");
 		if (cop == null)
 			throw new EMBlockError("No controlOfPlacement");
 		setFromControl(cop);
 
-		ControlOfColor coc = (ControlOfColor) cov.getControl("color");
+		ControlOfColor coc = (ControlOfColor) controls.getControl("color");
 		if (coc == null)
 			throw new EMBlockError("No controlOfColor");
 		setFromControl(coc);
 
-		ControlOfText cot = (ControlOfText) cov.getControl("text");
+		ControlOfText cot = (ControlOfText) controls.getControl("text");
 		if (cot == null)
 			throw new EMBlockError("No controlOfText");
 		setFromControl(cot);
@@ -125,13 +133,21 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * Set controls based on current state
 	 */
 	public void setControls(ControlsOfView cov) {
-		ControlOfPlacement cop = (ControlOfPlacement) cov.getControl("placement");
+		
+	}
+
+
+	/**
+	 * Set controls based on current state
+	 */
+	public void setControls(ControlsOfScene cos) {
+		ControlOfPlacement cop = (ControlOfPlacement) cos.getControl("placement");
 		setControl(cop);
 		
-		ControlOfColor coc = (ControlOfColor) cov.getControl("color");
+		ControlOfColor coc = (ControlOfColor) cos.getControl("color");
 		setControl(coc);
 		
-		ControlOfText cot = (ControlOfText) cov.getControl("text");
+		ControlOfText cot = (ControlOfText) cos.getControl("text");
 		setControl(cot);
 		
 	}
@@ -164,6 +180,31 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		this.box = box;
 		this.color = color;
 		colorCheck(color, "EMBlock");
+	}
+
+	/**
+	 * "Position only" blocks, e.g. eye
+	 * @param position
+	 * @param up
+	 */
+	public EMBlockBase(Point3D position,
+			Point3D target,
+			Vector3D up) {
+		this.iD = EMBlock.nextId();
+		if (position ==  null) {
+			Vector3D size = getSize();
+			position = new Point3D(size.x(), size.y(), size.z());
+		}
+		setPosition(position);
+		if (target == null)
+			target = new Point3D(0,0,0);
+		if (up == null)
+			up = new Vector3D(0, 1, 0);
+		
+	
+		setPosition(position);
+		this.target = target;
+		this.up = up;
 	}
 
 	
@@ -212,6 +253,26 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 			cb_new = new ColoredText(box, color);
 		else {
 			SmTrace.lg(String.format("Unsupported block type %s",
+					blockType));
+		}
+		
+		return cb_new;
+	}
+
+	
+	/**
+	 * Create new block, position type
+	 */
+	public static EMBlockBase newBlock(String blockType,
+			Point3D position,
+			Point3D target,
+			Vector3D up) {
+		EMBlockBase cb_new = null;
+		if (blockType.equals("eye")) {
+			cb_new = new ColoredEye(position, target, up, null);
+		}
+		else {
+			SmTrace.lg(String.format("Unsupported block position type %s",
 					blockType));
 		}
 		
@@ -435,8 +496,9 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * Get size - vector of x,y,z extent
 	 */
 	public Vector3D getSize() {
-		Point3D minp = box.getMin();
-		Point3D maxp = box.getMax();
+		
+		Point3D minp = getMin();
+		Point3D maxp = getMax();
 		
 		Vector3D size = Point3D.diff(maxp, minp);
 		return size;
@@ -495,6 +557,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		box = new AlignedBox3D(min, new_max);
 	}
 
+	// Overridden when necessary
 	public void translate(Vector3D translation ) {
 		AlignedBox3D oldBox = getBox();
 		box = new AlignedBox3D(
@@ -537,8 +600,23 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	public Point3D getCenter() {
 		return getBox().getCenter();
 	}
+
+	public Point3D getPosition() {
+		return getCenter();
+	}
+	
+	public Point3D getTarget() {
+		return target;
+	}
+	
+	public Vector3D getUp() {
+		return up;
+	}
 	
 	public AlignedBox3D boundingBox() {
+		if (box == null) {
+			box = new AlignedBox3D();
+		}
 		return box.boundingBox();
 	}
 	
@@ -590,7 +668,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 */
 	public Color getColor() {
 		if (color == null)
-			color = ControlOf.nextColor();
+			color = ControlOfView.nextColor();
 		return color;
 	}
 
@@ -609,6 +687,15 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	public Color setColor(float red, float green, float blue) {
 		Color new_color = new Color(red, green, blue);
 		return setColor(new_color);
+	}
+
+	/**
+	 * place block
+	 * @param pt - position
+	 */
+	public void setPosition(Point3D pt) {
+		Vector3D move = Point3D.diff(pt, getPosition());
+		translate(move);
 	}
 	
 	
@@ -646,16 +733,33 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	}
 
 	public Point3D getMin() {
+		if (box == null) {
+			box = new AlignedBox3D();
+		}
 		return box.getMin();
 	}
 
 	public Point3D getMax() {
+		if (box == null) {
+			box = new AlignedBox3D();
+		}
 		return box.getMax();
 	}
 	
 	// Overridden by all nontrivial blocks
 	public Vector3D getDiagonal() {
+		if (box == null) {
+			box = new AlignedBox3D();
+		}
 		return box.getDiagonal();
+	}
+	
+	public int getViewerLevel() {
+		return viewerLevel;
+	}
+
+	public void setViewerLevel(int viewerLevel) {
+		this.viewerLevel = viewerLevel;
 	}
 
 }

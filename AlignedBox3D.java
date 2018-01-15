@@ -1,4 +1,6 @@
+package ExtendedModeler;
 
+import smTrace.SmTrace;
 
 // This class is for storing axis-aligned boxes.
 public class AlignedBox3D {
@@ -26,9 +28,24 @@ public class AlignedBox3D {
 		assert min.x() <= max.x() : "bounds error";
 		assert min.y() <= max.y() : "bounds error";
 		assert min.z() <= max.z() : "bounds error";
+		/*** If assert is not enabled
+		if (min.x() > max.x())
+			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
+				min.x(), max.x()));
+		if (min.y() > max.y())
+			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
+				min.y(), max.x()));
+		if (min.z() > max.z())
+			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
+				min.z(), max.z()));
+		***/
 		p0.copy( min );
 		p1.copy( max );
 		isEmpty = false;
+	}
+
+	public AlignedBox3D(Vector3D size) {
+		this(new Point3D(0, 0, 0), new Point3D(size.x(), size.y(), size.z()));
 	}
 
 	public boolean isEmpty() { return isEmpty; }
@@ -254,5 +271,8 @@ public class AlignedBox3D {
 
 	}
 
+	public String toString() {
+		return String.format("p0: %s  p1: %s", p0, p1);
+	}
 }
 

@@ -10,35 +10,34 @@ import javax.swing.JFrame;
 import com.jogamp.newt.Window;
 import com.jogamp.opengl.GLAutoDrawable;
 
-import ExtendedModeler.ControlsOfScene.ControlEntry;
 import smTrace.SmTrace;
 
 /**
- * Supports operations providing a list of scene viewing controls
+ * Supports operations providing a list of scene object manipulation controls
  * @author raysmith
  *
  */
-public class ControlsOfView {
+public class ControlsOfScene {
 		
 	class ControlEntry {
 		public String name;				// Unique control name
-		public ControlOfView control;		// Control object, if ever active
+		public ControlOfScene control;		// Control object, if ever active
 	
-		ControlEntry(String name, ControlOfView control) {
+		ControlEntry(String name, ControlOfScene control) {
 			this.name = name;
 			this.control = control;
 		}
 	}
 
 	// Controls dictionary
-	SceneViewer sceneViewer;
+	SceneControler sceneControler;
 	Map<String, ControlEntry> controlh;
 	LinkedList<String> controls = new LinkedList<String>();			// Ordered set of control names
 	/**
 	 * Setup controls access
 	 */
-	ControlsOfView(SceneViewer sceneViewer) {
-		this.sceneViewer = sceneViewer;
+	ControlsOfScene(SceneControler sceneControler) {
+		this.sceneControler = sceneControler;
 		this.controlh = new HashMap<String, ControlEntry>();
 	}
 
@@ -49,7 +48,7 @@ public class ControlsOfView {
 	public void reset() {
 			for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 				String controlName = entry.getKey();
-				ControlOfView control = getControl(controlName);
+				ControlOfScene control = getControl(controlName);
 				control.reset();
 			}
 	}
@@ -67,10 +66,7 @@ public class ControlsOfView {
 			controls.add(controlName);			// Add to ordered list of control names
 		}
 		ControlEntry ctl_ent = controlh.get(controlName);
-		if (ctl_ent == null)
-			return;
-		
-		ControlOfView control = ctl_ent.control;
+		ControlOfScene control = ctl_ent.control;
 		
 		if (on == control.isOn()) {
 			return;						// No need to change
@@ -79,52 +75,14 @@ public class ControlsOfView {
 		SmTrace.lg(String.format("setControl(%s,%b)", controlName, on));
 		control.setControl(on);
 		
-		sceneViewer.setCheckBox(controlName, on);		// Have check box reflect setting
+		sceneControler.setCheckBox(controlName, on);		// Have check box reflect setting
 		if (on) {
-			int bindex = sceneViewer.getSelectedBlockIndex();
+			int bindex = sceneControler.getSelectedBlockIndex();
 			SmTrace.lg(String.format("ControlsOf.setControl(%s): before - selected(%d)",controlName, bindex), "controls", "controls");
 			placeControl(controlName);
-			int bindex2 = sceneViewer.getSelectedBlockIndex();
+			int bindex2 = sceneControler.getSelectedBlockIndex();
 			SmTrace.lg(String.format("ControlsOf.setControl(%s): after - selected(%d)",controlName, bindex2), "controls", "controls");
 		}
-	}
-	
-	/**
-	 * Place control component by name
-	 * Default starting under main viewing area
-	 * place controls as created
-	 */
-	public void placeControl(String controlName) {
-		SmTrace.lg(String.format("placeControl(%s)", controlName));
-		int xmargin = 30;
-		int ymargin = 30;
-		int yloc = sceneViewer.getHeight() + 2;
-		int xloc = xmargin;
-		int ndisplayed = 0;		// Number displayed
-		ControlOfScene prev_control = null;
-		ControlEntry ctl_entry = controlh.get(controlName);
-		if (ctl_entry == null)
-			return;
-		ControlOfView control = ctl_entry.control;
-		if(control.isInPos()) {
-			xloc = control.getX();
-			yloc = control.getY();
-		} else if (control.getXFromProp() >= 0) {
-			xloc = control.getXFromProp();
-			yloc = control.getYFromProp();
-		} else {
-			for (String name : controls) {
-				if (name.equals(controlName))
-					continue;
-				ControlEntry ctl_ent = controlh.get(name);
-				ControlOfView ctl = ctl_entry.control;
-				if (ctl.isInPos()) {
-					xloc += xmargin;
-					yloc += ymargin;
-				}
-			}
-		}
-		control.setLocation(xloc, yloc);	
 	}
 	
 	
@@ -140,7 +98,7 @@ public class ControlsOfView {
 	public boolean ckDoAction(String action) throws EMBlockError {
 		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 			ControlEntry control_entry = entry.getValue();
-			ControlOfView control = control_entry.control;
+			ControlOfScene control = control_entry.control;
 			if (!control.isActive())
 				continue;			// Skip if not active
 			
@@ -154,19 +112,29 @@ public class ControlsOfView {
 	 * Add instance of unique control
 	 */
 	public void addControl(String controlName) {
-		ControlOfView control = null;
+		ControlOfScene control = null;
 		switch (controlName) {
-			case "eyeat":
-				control = new ControlOfEye(sceneViewer, "eyeat");
+			case "component":
+				control = new ControlOfComponent(sceneControler, "component");
+				control.setFull();		// Set full display 
+				break;
+			
+			case "placement":
+				control = new ControlOfPlacement(sceneControler, "placement");
 				break;
 				
-			case "lookat":
-				control = new ControlOfLookAt(sceneViewer, "lookat");
+			case "color":
+				control = new ControlOfColor(sceneControler, "color");
+				break;
+				
+			case "text":
+				control = new ControlOfText(sceneControler, "text");
+				control.setFull();		// Set full display 
 				break;
 				
 			default:
 				SmTrace.lg(
-						String.format("ControlsOfView: Unrecognized control(%s) - ignored", controlName), "cmd");
+						String.format("ControlsOfScene: Unrecognized control(%s) - ignored", controlName));
 				return;
 		}
 		controlh.put(controlName, new ControlEntry(controlName, control));
@@ -185,7 +153,7 @@ public class ControlsOfView {
 		
 		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
 			ControlEntry centry = entry.getValue();
-			ControlOfView control = centry.control;
+			ControlOfScene control = centry.control;
 			if (control.isActive())
 				control.adjustControls();			
 		}
@@ -224,13 +192,7 @@ public class ControlsOfView {
 	public void display(GLAutoDrawable drawable) {
 		for (String name : controls) {
 			ControlEntry ctl_entry = controlh.get(name);
-			if (ctl_entry == null)
-				continue;
-			
-			ControlOfView control = ctl_entry.control;
-			if (control == null)
-				continue;
-			
+			ControlOfScene control = ctl_entry.control;
 			if (!control.isActive())
 				continue;							// Ignore if not active
 
@@ -244,7 +206,7 @@ public class ControlsOfView {
 	 * @param controlName - unique control panel name
 	 * @return control handle, null if not available(defined, set, active)
 	 */
-	public ControlOfView getControl(String controlName) {
+	public ControlOfScene getControl(String controlName) {
 		if (controlh == null)
 			return null;
 		if (controlName == null)
@@ -253,7 +215,7 @@ public class ControlsOfView {
 			return null;
 		}
 		ControlEntry ctl_entry = controlh.get(controlName);
-		ControlOfView control = ctl_entry.control;
+		ControlOfScene control = ctl_entry.control;
 		if (!control.isActive())
 			return null;
 		
@@ -268,18 +230,55 @@ public class ControlsOfView {
 		String[] names = nameset.toArray(new String[nameset.size()]);
 		return names;
 	}
+	
+	/**
+	 * Place control component by name
+	 * Default starting under main viewing area
+	 * place controls as created
+	 */
+	public void placeControl(String controlName) {
+		SmTrace.lg(String.format("placeControl(%s)", controlName));
+		int xmargin = 30;
+		int ymargin = 30;
+		int yloc = sceneControler.getHeight() + 2;
+		int xloc = xmargin;
+		int ndisplayed = 0;		// Number displayed
+		ControlOfScene prev_control = null;
+		ControlEntry ctl_entry = controlh.get(controlName);
+		if (ctl_entry == null)
+			return;
+		ControlOfScene control = ctl_entry.control;
+		if(control.isInPos()) {
+			xloc = control.getX();
+			yloc = control.getY();
+		} else if (control.getXFromProp() >= 0) {
+			xloc = control.getXFromProp();
+			yloc = control.getYFromProp();
+		} else {
+			for (String name : controls) {
+				if (name.equals(controlName))
+					continue;
+				ControlEntry ctl_ent = controlh.get(name);
+				ControlOfScene ctl = ctl_entry.control;
+				if (ctl.isInPos()) {
+					xloc += xmargin;
+					yloc += ymargin;
+				}
+			}
+		}
+		control.setLocation(xloc, yloc);	
+	}
 
 	/**
 	 * Adjust object based on controls and new object
 	 * @throws EMBlockError 
 	 */
-	/***
 	public void adjustByControl(EMBlock cb, EMBCommand bcmd) throws EMBlockError {
-		ControlOfView cov = (ControlOfView) getControl("placement");
-		Vector3D adj = cov.getAdj();
+		ControlOfPlacement cop = (ControlOfPlacement) getControl("placement");
+		Vector3D adj = cop.getAdj();
 		cb.translate(adj);
 	}
-	***/
+	
 	/**
 	 * Update controls based on display update
 	 * @param new_select
@@ -290,7 +289,7 @@ public class ControlsOfView {
 		if (cbis.length != 1)
 			return;			// Ignore if not 1
 		
-		EMBlock cb = sceneViewer.getCb(cbis[0]);
+		EMBlock cb = sceneControler.getCb(cbis[0]);
 		if (cb == null)
 			return;					// Not displayed
 		

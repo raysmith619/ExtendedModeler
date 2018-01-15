@@ -97,8 +97,6 @@ public class ExtendedModeler implements ActionListener {
 	JButton createConeButton;
 	JButton createCylinderButton;
 	JButton deleteSelectionButton;
-	JButton eyeAtSelectionButton;
-	JButton lookAtSelectionButton;
 	JButton traceAllButton;
 	JButton traceNoneButton;
 	JButton traceSpecifyButton;
@@ -107,13 +105,12 @@ public class ExtendedModeler implements ActionListener {
 	JPanel traceSelectionCkBoxPanel;
 	JButton resetCameraButton;
 	JCheckBox displayAddControlCheckBox;
-	JCheckBox displayEyeAtControlCheckBox;
-	JCheckBox displayLookAtControlCheckBox;
 	JCheckBox displayPlacementControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
 	JCheckBox displayTextControlCheckBox;
 	JCheckBox displayWorldAxesCheckBox;
 	JCheckBox displayCameraTargetCheckBox;
+	JCheckBox displayLocalViewCheckBox;
 	JCheckBox displayBoundingBoxCheckBox;
 	JCheckBox enableCompositingCheckBox;
 
@@ -198,14 +195,6 @@ public class ExtendedModeler implements ActionListener {
 			sceneControler.deleteSelection(bcmd);
 			bcmd.doCmd();
 		}
-		else if ( source == eyeAtSelectionButton ) {
-			sceneControler.eyeAtSelection();
-			sceneControler.repaint();
-		}
-		else if ( source == lookAtSelectionButton ) {
-			sceneControler.lookAtSelection();
-			sceneControler.repaint();
-		}
 		else if ( source == traceAllButton ) {
 			sceneControler.traceSet("ALL");
 			sceneControler.repaint();
@@ -223,22 +212,12 @@ public class ExtendedModeler implements ActionListener {
 			sceneControler.repaint();
 		}
 		else if ( source == resetCameraButton ) {
-			sceneControler.resetCamera();
+			sceneControler.currentViewerCamera().reset();
 			sceneControler.repaint();
 		}
 		else if ( source == displayAddControlCheckBox ) {
 			sceneControler.displayAddControl = ! sceneControler.displayAddControl;
 			sceneControler.setControl("component", sceneControler.displayAddControl);
-			sceneControler.repaint();
-		}
-		else if ( source == displayEyeAtControlCheckBox ) {
-			sceneControler.displayEyeAtControl = ! sceneControler.displayEyeAtControl;
-			sceneControler.setControl("eyeAt", sceneControler.displayEyeAtControl);
-			sceneControler.repaint();
-		}
-		else if ( source == displayLookAtControlCheckBox ) {
-			sceneControler.displayLookAtControl = ! sceneControler.displayLookAtControl;
-			sceneControler.setControl("lookat", sceneControler.displayLookAtControl);
 			sceneControler.repaint();
 		}
 		else if ( source == displayPlacementControlCheckBox ) {
@@ -262,6 +241,10 @@ public class ExtendedModeler implements ActionListener {
 		}
 		else if ( source == displayCameraTargetCheckBox ) {
 			sceneControler.displayCameraTarget = ! sceneControler.displayCameraTarget;
+			sceneControler.repaint();
+		}
+		else if ( source == displayLocalViewCheckBox ) {
+			sceneControler.displayLocalView = ! sceneControler.displayLocalView;
 			sceneControler.repaint();
 		}
 		else if ( source == displayBoundingBoxCheckBox ) {
@@ -306,14 +289,21 @@ public class ExtendedModeler implements ActionListener {
 		}
 		
 
-		///String[] viewNames = {"Local View"};
-		String[] viewNames = {"Local View", "External View"};
-		sceneViewers = new SceneViewer[viewNames.length];
-		for (int i = 0; i < viewNames.length; i++) {
+		String[] viewNames = {"Local_View"};
+		///String[] viewNames = {"Local_View", "External_View"};
+		int nv = viewNames.length * 2;		// Room for extended viewer
+		sceneViewers = new SceneViewer[nv];
+		for (int i = 0; i < nv; i += 2) {
 			String viewName = viewNames[i];
+			String viewTitle = viewName.replace(' ', '_');
 			try {
-				sceneViewers[i] = new SceneViewer(viewName, sceneControler);
-				sceneControler.addViewer(sceneViewers[i]);
+				SceneViewer sceneViewer = new SceneViewer(viewTitle, viewName, sceneControler);
+				sceneViewers[i] = sceneViewer;
+				sceneControler.addViewer(sceneViewer);
+				SceneViewer extv = sceneViewer.externalView(
+						"External View", null);
+				sceneControler.addViewer(extv);
+				sceneViewers[i+1] = extv;
 			} catch (EMBlockError e) {
 				SmTrace.lg(String.format("sceneControler %s error %s", viewName, e.getMessage()));
 				e.printStackTrace();
@@ -397,99 +387,7 @@ public class ExtendedModeler implements ActionListener {
 	SceneControler getSceneControler() {
 		return sceneControler;
 	}
-	
-	/**
-	 * Create display menu drop down
-	 * @retun - display menu item
-	 */
-	private JMenu toolMenu() {
-		JMenu menu = new JMenu("Tools");
-		JFrame toolFrame = new JFrame();
 
-		Container toolPane = toolFrame.getContentPane();
-		JPanel toolPanel = new JPanel();
-		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
-		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
-		///menu.add(pane);
-		// We used to use a BoxLayout as the layout manager here,
-		// but it caused problems with resizing behavior due to
-		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
-		toolPane.setLayout( new BorderLayout() );
-		toolPane.add( toolPanel, BorderLayout.LINE_START );
-		///toolPane.add( sceneControler, BorderLayout.CENTER );
-		///toolPane.add(toolPanel);
-		menu.add(toolPane);
-		
-		eyeAtSelectionButton = new JButton("EyeAt Selection");
-		eyeAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		eyeAtSelectionButton.addActionListener(this);
-		toolPanel.add( eyeAtSelectionButton );
-		
-		lookAtSelectionButton = new JButton("Look At Selection");
-		lookAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		lookAtSelectionButton.addActionListener(this);
-		toolPanel.add( lookAtSelectionButton );
-
-		resetCameraButton = new JButton("Reset Camera");
-		resetCameraButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		resetCameraButton.addActionListener(this);
-		toolPanel.add( resetCameraButton );
-
-		displayAddControlCheckBox = new JCheckBox("Display Add Control");
-		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayAddControlCheckBox.addActionListener(this);
-		toolPanel.add(displayAddControlCheckBox);
-
-		displayEyeAtControlCheckBox = new JCheckBox("Display EyeAt Control");
-		displayEyeAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayEyeAtControlCheckBox.addActionListener(this);
-		toolPanel.add(displayEyeAtControlCheckBox);
-
-		displayLookAtControlCheckBox = new JCheckBox("Display LookAt Control");
-		displayLookAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayLookAtControlCheckBox.addActionListener(this);
-		toolPanel.add(displayLookAtControlCheckBox);
-
-		displayPlacementControlCheckBox = new JCheckBox("Display Placement Control");
-		displayPlacementControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayPlacementControlCheckBox.addActionListener(this);
-		toolPanel.add(displayPlacementControlCheckBox);
-
-		displayColorControlCheckBox = new JCheckBox("Display Color Control");
-		displayColorControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayColorControlCheckBox.addActionListener(this);
-		toolPanel.add(displayColorControlCheckBox);
-
-		displayTextControlCheckBox = new JCheckBox("Display Text Control");
-		displayTextControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayTextControlCheckBox.addActionListener(this);
-		toolPanel.add(displayTextControlCheckBox);
-
-		displayWorldAxesCheckBox = new JCheckBox("Display World Axes", sceneControler.displayWorldAxes );
-		displayWorldAxesCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayWorldAxesCheckBox.addActionListener(this);
-		toolPanel.add( displayWorldAxesCheckBox );
-
-		displayCameraTargetCheckBox = new JCheckBox("Display Camera Target", sceneControler.displayCameraTarget );
-		displayCameraTargetCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayCameraTargetCheckBox.addActionListener(this);
-		toolPanel.add( displayCameraTargetCheckBox );
-
-		displayBoundingBoxCheckBox = new JCheckBox("Display Bounding Box", sceneControler.displayBoundingBox );
-		displayBoundingBoxCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayBoundingBoxCheckBox.addActionListener(this);
-		toolPanel.add( displayBoundingBoxCheckBox );
-
-		enableCompositingCheckBox = new JCheckBox("Enable Compositing", sceneControler.enableCompositing );
-		enableCompositingCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		enableCompositingCheckBox.addActionListener(this);
-		toolPanel.add( enableCompositingCheckBox );
-
-		frame.pack();
-		frame.setVisible( true );
-
-		return menu;
-	}
 
 	/**
 	 * Create trace menu drop down
@@ -561,16 +459,6 @@ public class ExtendedModeler implements ActionListener {
 			case "component":
 				displayAddControlCheckBox.setSelected(checked);
 				sceneControler.displayAddControl = checked;
-				break;
-				
-			case "eyeat":
-				displayEyeAtControlCheckBox.setSelected(checked);
-				sceneControler.displayEyeAtControl = checked;
-				break;
-				
-			case "lookat":
-				displayLookAtControlCheckBox.setSelected(checked);
-				sceneControler.displayLookAtControl = checked;
 				break;
 					
 			case "placement":
@@ -849,8 +737,9 @@ public class ExtendedModeler implements ActionListener {
 			}
 		);
 		int inctime = 1000;				// milliseconds
-		int maxtime = 10000;			// Max wait in milliseconds
-		///maxtime = 1000000;				/// lengthen for debugging
+		int showTime = 10000;			// Start showing time
+		///int maxtime = 10000;			// Max wait in milliseconds
+		int maxtime = 10000000;			/// lengthen for debugging
 		int dur = 0;					// Current duration
 		while (em_base == null) {
 			try {
@@ -860,6 +749,10 @@ public class ExtendedModeler implements ActionListener {
 				e.printStackTrace();
 			}
 			dur += inctime;
+			if (dur > showTime) {
+				System.out.print(String.format("wait time: %d\r", dur));
+				showTime *= 2;			// Reduce printout
+			}
 			if (dur > maxtime) {
 				SmTrace.lg(String.format("Wait time(%d) exceeded, time=%d", maxtime, dur));
 				break;
@@ -881,6 +774,57 @@ public class ExtendedModeler implements ActionListener {
 		
 		
 		emt = new ExtendedModelerTest();
+	}
+
+	/**
+	 * Create display menu drop down
+	 * @retun - display menu item
+	 */
+	private JMenu toolMenu() {
+		JMenu menu = new JMenu("Tools");
+		JFrame toolFrame = new JFrame();
+
+		Container toolPane = toolFrame.getContentPane();
+		JPanel toolPanel = new JPanel();
+		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
+		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
+		///menu.add(pane);
+		// We used to use a BoxLayout as the layout manager here,
+		// but it caused problems with resizing behavior due to
+		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
+		toolPane.setLayout( new BorderLayout() );
+		toolPane.add( toolPanel, BorderLayout.LINE_START );
+		menu.add(toolPane);
+
+		resetCameraButton = new JButton("Reset Camera");
+		resetCameraButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		resetCameraButton.addActionListener(this);
+		toolPanel.add( resetCameraButton );
+
+		displayAddControlCheckBox = new JCheckBox("Display Add Control");
+		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayAddControlCheckBox.addActionListener(this);
+		toolPanel.add(displayAddControlCheckBox);
+
+		displayPlacementControlCheckBox = new JCheckBox("Display Placement Control");
+		displayPlacementControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayPlacementControlCheckBox.addActionListener(this);
+		toolPanel.add(displayPlacementControlCheckBox);
+
+		displayColorControlCheckBox = new JCheckBox("Display Color Control");
+		displayColorControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayColorControlCheckBox.addActionListener(this);
+		toolPanel.add(displayColorControlCheckBox);
+
+		displayTextControlCheckBox = new JCheckBox("Display Text Control");
+		displayTextControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayTextControlCheckBox.addActionListener(this);
+		toolPanel.add(displayTextControlCheckBox);
+
+		frame.pack();
+		frame.setVisible( true );
+
+		return menu;
 	}
 	
 	/**

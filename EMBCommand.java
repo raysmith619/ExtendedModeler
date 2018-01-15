@@ -12,8 +12,10 @@ public abstract class EMBCommand {
 	static EMBCommandManager commandManager;
 	String action;				// Unique action name
 	boolean canUndo;			// Command can be undone
+	SceneViewer prevViewer;		// Previous viewer
+	SceneViewer newViewer;		// New viewer
 	Point3D prevEyeAt;			// Previous eyeAt point
-	Point3D newEyeAt;				// New eyeAt point
+	Point3D newEyeAt;			// New eyeAt point
 	Point3D prevLookAt;			// Previous viewing point
 	Point3D newLookAt;			// New viewing point
 	BlockSelect prevSelect;		// Previously selected
@@ -27,9 +29,11 @@ public abstract class EMBCommand {
 			throw new EMBlockError("No EMBCommandManager");			
 		}
 		canUndo = true;
-		prevEyeAt = commandManager.sceneControler.camera.position;	// refs by default
+		prevViewer = commandManager.sceneControler.currentViewer();
+		newViewer = prevViewer;
+		prevEyeAt = commandManager.sceneControler.currentViewerCamera().position;	// refs by default
 		newLookAt = prevEyeAt;			// refs by default - Don't modify
-		prevLookAt = commandManager.sceneControler.camera.target;	// refs by default
+		prevLookAt = commandManager.sceneControler.currentViewerCamera().target;	// refs by default
 		newLookAt = prevLookAt;			// refs by default - Don't modify
 		prevSelect = new BlockSelect(commandManager.sceneControler.getSelected());
 		newSelect = new BlockSelect(prevSelect);	// Default  - no change
@@ -78,13 +82,13 @@ public abstract class EMBCommand {
 	 */
 	public boolean execute() {
 		commandManager.currentCmd = this;
-		if (newLookAt != prevLookAt) {
-			if (newLookAt != null)
-				commandManager.sceneControler.lookAt(newLookAt);
+		if (newViewer != prevViewer || newLookAt != prevLookAt) {
+			if (newViewer != null && newLookAt != null)
+				newViewer.lookAt(newLookAt);
 		}
-		if (newEyeAt != prevEyeAt) {
-			if (newEyeAt != null)
-				commandManager.sceneControler.eyeAt(newEyeAt);
+		if (newViewer != prevViewer || newEyeAt != prevEyeAt) {
+			if (newViewer != null && newEyeAt != null)
+				newViewer.eyeAt(newEyeAt);
 		}
 		int[] prev_ids = prevBlocks.getIds();
 		commandManager.sceneControler.removeBlocks(prev_ids);
@@ -116,6 +120,10 @@ public abstract class EMBCommand {
 			e.printStackTrace();
 			return false;
 		}
+		SceneViewer temp_viewer = cmd.newViewer;
+		cmd.newViewer = cmd.prevViewer;
+		cmd.prevViewer = temp_viewer;
+		
 		Point3D temp_eyeAt = cmd.newEyeAt;
 		cmd.newEyeAt = cmd.prevEyeAt;
 		cmd.prevEyeAt = temp_eyeAt;
@@ -211,6 +219,11 @@ public abstract class EMBCommand {
 		newSelect = new BlockSelect(select);
 		return newSelect;
 	}
+
+	public void setView(SceneViewer viewer) {
+		this.newViewer = viewer;
+	}
+	
 	
 	public boolean removeSelect(int id) {
 		if (!newSelect.hasIndex(id)) {

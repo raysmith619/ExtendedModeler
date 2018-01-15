@@ -4,7 +4,7 @@ import java.awt.GridLayout;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
-public class ControlOfComponent extends ControlOf {
+public class ControlOfComponent extends ControlOfScene {
 
 	/**
 	 * 
@@ -94,6 +94,12 @@ public class ControlOfComponent extends ControlOf {
 		addTextButton.addActionListener(sceneControler);
 		compPanel.add(addTextButton);
 		blockPanel.add(compPanel);
+
+		JButton addEyeButton = new JButton("Eye");
+		addEyeButton.setActionCommand("emc_addEyeButton");
+		addEyeButton.addActionListener(sceneControler);
+		compPanel.add(addEyeButton);
+		blockPanel.add(compPanel);
 		
 		pack();
 		setup = true;
@@ -141,6 +147,15 @@ public class ControlOfComponent extends ControlOf {
 				
 			case "emc_addTextButton":		// Emulate Text control
 				sceneControler.addTextButton(bcmd, action);
+				if (bcmd != null) {
+					boolean res = bcmd.doCmd();
+					sceneControler.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
+					return res;
+				}
+				break;
+				
+			case "emc_addEyeButton":		// Test eye drawing
+				sceneControler.addEyeButton(bcmd, action);
 				if (bcmd != null) {
 					boolean res = bcmd.doCmd();
 					sceneControler.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");

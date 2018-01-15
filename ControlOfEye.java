@@ -23,7 +23,7 @@ import EMGraphics.EM3DLocationEvent;
 import EMGraphics.EM3DPosition;
 import smTrace.SmTrace;
 
-public class ControlOfEye extends ControlOf {
+public class ControlOfEye extends ControlOfView {
 	/**
 	 * 
 	 */
@@ -38,8 +38,8 @@ public class ControlOfEye extends ControlOf {
 	
 	EM3DPosition m3DPos;		// 3D setting if non-null
 
-	ControlOfEye(SceneControler sceneControler, String name) {
-		super(sceneControler, name);
+	ControlOfEye(SceneViewer sceneViewer, String name) {
+		super(sceneViewer, name);
 		///setup();
 	}
 
@@ -49,11 +49,11 @@ public class ControlOfEye extends ControlOf {
 	public void setup() {
 		if (setup)
 			return; // Already present
-		int bindex = sceneControler.getSelectedBlockIndex();
+		int bindex = sceneViewer.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfEyeAt.setup before - selected(%d)", bindex), "select");
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 		/// controlDialog = new JDialog();
-		setTitle("EyeAt - Adjust/Report");
+		setTitle(sceneViewer.name + " EyeAt - Adjust/Report");
 		JPanel posPanel = new JPanel(new GridLayout(0, 1));
 		///JPanel posPanel = new JPanel();
 		add(posPanel);
@@ -63,17 +63,17 @@ public class ControlOfEye extends ControlOf {
 		posPanel.add(moveto_panel);
 
 
-		Point3D center = new Point3D(sceneControler.camera.position);
+		Point3D center = new Point3D(sceneViewer.camera.position);
 		posXfield = new JTextField(String.format("%.2f", center.x()));
 		SmTrace.lg(String.format("setup posXfield"));
 		posXfield.setActionCommand("emc_ENTER");
-		posXfield.addActionListener(sceneControler);
+		posXfield.addActionListener(sceneViewer);
 		posYfield = new JTextField(String.format("%.2f", center.y()));
 		posYfield.setActionCommand("emc_ENTER");
-		posYfield.addActionListener(sceneControler);
+		posYfield.addActionListener(sceneViewer);
 		posZfield = new JTextField(String.format("%.2f", center.z()));
 		posZfield.setActionCommand("emc_ENTER");
-		posZfield.addActionListener(sceneControler);
+		posZfield.addActionListener(sceneViewer);
 
 		moveto_panel.add(new JLabel("Loc:"));
 		moveto_panel.add(new JLabel("x:"));
@@ -84,7 +84,7 @@ public class ControlOfEye extends ControlOf {
 		moveto_panel.add(posZfield);
 		JButton eyeAtButton = new JButton("EyeAt");
 		eyeAtButton.setActionCommand("emc_eyeAtButton");
-		eyeAtButton.addActionListener(sceneControler);
+		eyeAtButton.addActionListener(sceneViewer);
 		moveto_panel.add(eyeAtButton);
 
 		///JPanel sizeto_panel = new JPanel();
@@ -97,20 +97,20 @@ public class ControlOfEye extends ControlOf {
 		float adjamt = 1f; // Default adjustment
 		adjXfield = new JTextField(String.format("%.2f", adjamt));
 		adjXfield.setActionCommand("emc_adjENTER");
-		adjXfield.addActionListener(sceneControler);
+		adjXfield.addActionListener(sceneViewer);
 		adjYfield = new JTextField(String.format("%.2f", adjamt));
 		adjYfield.setActionCommand("emc_adjENTER");
-		adjYfield.addActionListener(sceneControler);
+		adjYfield.addActionListener(sceneViewer);
 		adjZfield = new JTextField(String.format("%.2f", adjamt));
 		adjZfield.setActionCommand("emc_adjENTER");
-		adjZfield.addActionListener(sceneControler);
+		adjZfield.addActionListener(sceneViewer);
 
 		JButton adjUpButton = new JButton("Up By");
 		adjUpButton.setActionCommand("emc_eyeAtAdjUpButton");
-		adjUpButton.addActionListener(sceneControler);
+		adjUpButton.addActionListener(sceneViewer);
 		JButton adjDownButton = new JButton("Down By");
 		adjDownButton.setActionCommand("emc_eyeAtAdjDownButton");
-		adjDownButton.addActionListener(sceneControler);
+		adjDownButton.addActionListener(sceneViewer);
 		adj_panel.add(new JLabel("Adj:"));
 		adj_panel.add(new JLabel("x:"));
 		adj_panel.add(adjXfield);
@@ -131,7 +131,7 @@ public class ControlOfEye extends ControlOf {
 		pack();
 
 
-		int bindex2 = sceneControler.getSelectedBlockIndex();
+		int bindex2 = sceneViewer.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfEyeAt.setup after - selected(%d)", bindex2), "select");
 		setup = true;
 	}
@@ -150,7 +150,7 @@ public class ControlOfEye extends ControlOf {
 		JButton m3D_positioning_Button = new JButton("3D Positioning");
 		m3D_positioning_Button.setActionCommand("emc_m3D_eyeAt_PositionButton");
 		m3D_panel.add(m3D_positioning_Button);
-		m3D_positioning_Button.addActionListener(sceneControler);
+		m3D_positioning_Button.addActionListener(sceneViewer);
 		pack();
 		m3D_panel.setVisible(true);
 		
@@ -384,7 +384,7 @@ public class ControlOfEye extends ControlOf {
 	}
 
 	private void traceSelected(int place) {
-		int bindex = sceneControler.getSelectedBlockIndex();
+		int bindex = sceneViewer.getSelectedBlockIndex();
 		SmTrace.lg(String.format("ControlOfEyeAt.setup place(%d) - selected(%d)", place, bindex), "select",
 				"select");
 	}
@@ -478,11 +478,12 @@ public class ControlOfEye extends ControlOf {
 		Point3D new_pt = new Point3D(x, y, z);
 		if (setPoint == null)
 			setPoint = new_pt;
-		if (Point3D.diff(setPoint, new_pt).length() > minClose) {
+		if (Point3D.diff(setPoint, new_pt).length() < minClose) {
 			bcmd.checkPoint();
 			setPoint(new_pt);
 			bcmd.setCanUndo(false);
 		}
+		bcmd.setView(sceneViewer);
 		bcmd.setEyeAt(new Point3D(x, y, z));
 		bcmd.doCmd();
 	}
@@ -535,6 +536,7 @@ public class ControlOfEye extends ControlOf {
 			e.printStackTrace();
 			return false;
 		}
+		bcmd.setView(sceneViewer);
 		switch (action) {
 
 		case "emc_eyeAtButton":

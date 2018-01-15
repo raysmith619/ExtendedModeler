@@ -19,7 +19,7 @@ import com.jogamp.newt.event.KeyEvent;
 
 import smTrace.SmTrace;
 
-public class ControlOfText extends ControlOf {
+public class ControlOfText extends ControlOfScene {
 	/**
 	 * Uses ControlOfPlacement for initial placement
 	 */

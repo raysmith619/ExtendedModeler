@@ -28,7 +28,7 @@ import com.jogamp.opengl.GLAutoDrawable;
 import smTrace.SmTrace;
 
 
-public class ControlOfColor extends ControlOf implements ChangeListener {
+public class ControlOfColor extends ControlOfScene implements ChangeListener {
 	/**
 	 * 
 	 */
@@ -53,8 +53,8 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 	ColorTriangle  triangle;	// triangle object
 	JColorChooser colorChooser;	// Dynamic color chooser if not null
 	
-	ControlOfColor(SceneControler SceneControler, String name) {
-		super(SceneControler, name);
+	ControlOfColor(SceneControler sceneControler, String name) {
+		super(sceneControler, name);
 	}
 
 	/**

@@ -78,7 +78,7 @@ public class ColoredText extends EMBlockBase {
 	}
 
 	
-	public ColoredText(ControlsOfView controls) throws EMBlockError {
+	public ColoredText(ControlsOfScene controls) throws EMBlockError {
 		this(new AlignedBox3D(), new Color(1,1,1,1), "*");
 		
 		setFromControls(controls);

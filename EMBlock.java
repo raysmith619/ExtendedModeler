@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Color;
 import java.util.ArrayList;
 
@@ -13,7 +14,15 @@ public class EMBlock{
 	private static int blockId = 0;		// Unique block identifier, used as key
 	private static EMBlockGroup blocks;	// MUST be set BEFORE block  use
 	private EMBlockBase baseBlock;	
-		
+	
+	public int getViewerLevel() {
+		return baseBlock.getViewerLevel();
+	}
+
+	public void setViewerLevel(int viewerLevel) {
+		baseBlock.setViewerLevel(viewerLevel);
+	}
+
 	/**
 	 * Setup for generated group access
 	 * @param group
@@ -22,6 +31,15 @@ public class EMBlock{
 		blocks = group;
 	}
 
+	/**
+	 * place block
+	 * @param pt - position
+	 */
+	public void setPosition(Point3D pt) {
+		baseBlock.setPosition(pt);
+	}
+	
+	
 	public EMBlock(EMBlock cb) {
 		setBase(cb);
 		addBlock(cb);
@@ -96,6 +114,9 @@ public class EMBlock{
 	 * Check if color is too dark
 	 */
 	public static Color colorCheck(Color color, String tag) {
+		if (color == null)
+			return color;			// Ignore
+		
 		float cc[] = new float[4];
 		color.getColorComponents(cc);
 		if (cc[0] < .1f && cc[1] < .1f && cc[2] < .1f) {
@@ -160,6 +181,14 @@ public class EMBlock{
 	public static EMBlock newBlock(String blockType, AlignedBox3D box, Color color) {
 		EMBlockBase cb_base = EMBlockBase.newBlock(blockType, box, color);
 		return addBlock(cb_base);
+	}
+
+	public static EMBlock newBlock(String blockType, Point3D position,
+				Point3D target,
+				Vector3D up) {
+		EMBlockBase cb_base = EMBlockBase.newBlock(blockType, position, target, up);
+		return addBlock(cb_base);
+		
 	}
 
 
@@ -359,6 +388,18 @@ public class EMBlock{
 	public AlignedBox3D boundingBox() {
 		return baseBlock.boundingBox();
 	}
+
+	public Point3D getPosition() {
+		return baseBlock.getPosition();
+	}
+	
+	public Point3D getTarget() {
+		return baseBlock.getTarget();
+	}
+	
+	public Vector3D getUp() {
+		return baseBlock.getUp();
+	}
 	
 						// Overridden by all nontrivial blocks
 	public boolean intersects(
@@ -487,11 +528,11 @@ public class EMBlock{
 	 * Adjust from control settings
 	 * @throws EMBlockError 
 	 */
-	public void adjustFromControls(ControlsOfView controls, EMBCommand bcmd) throws EMBlockError {
+	public void adjustFromControls(ControlsOfScene controls, EMBCommand bcmd) throws EMBlockError {
 		String[] ctl_names = controls.getControlNames();
 		for (int i = 0; i < ctl_names.length; i++) {
 			String ctl_name = ctl_names[i];
-			ControlOf ctl = controls.getControl(ctl_name);
+			ControlOfScene ctl = controls.getControl(ctl_name);
 			if (ctl == null)
 				continue;		// Ignore if not up
 			
@@ -504,8 +545,8 @@ public class EMBlock{
 	 * Set block from controls
 	 * @throws EMBlockError 
 	 */
-	public void setFromControls(ControlsOfView cov) throws EMBlockError {
-		baseBlock.setFromControls(cov);
+	public void setFromControls(ControlsOfScene controls) throws EMBlockError {
+		baseBlock.setFromControls(controls);
 	}
 
 	/**
@@ -513,6 +554,13 @@ public class EMBlock{
 	 */
 	public void setControls(ControlsOfView cov) {
 		baseBlock.setControls(cov);
+	}
+
+	/**
+	 * Set controls based on current state
+	 */
+	public void setControls(ControlsOfScene cos) {
+		baseBlock.setControls(cos);
 	}
 	
 
