@@ -1,5 +1,7 @@
 package ExtendedModeler;
 
+import java.awt.Color;
+
 import com.jogamp.opengl.GL2;
 
 public class Camera3D {
@@ -100,6 +102,12 @@ public class Camera3D {
 			this.up = up;
 	}
 
+	/**
+	 * 
+	 * @param widthInPixels
+	 * @param heightInPixels
+	 * Sets radius to .5 * shorter dimension
+	 */
 	public void setViewportDimensions( int widthInPixels, int heightInPixels ) {
 		viewportWidthInPixels = widthInPixels;
 		viewportHeightInPixels = heightInPixels;
@@ -116,9 +124,8 @@ public class Camera3D {
 	 * Get Viewing box, including camera, target area under view
 	 * @return
 	 */
-	public AlignedBox3D getViewBox() {
+	public ColoredBox getViewBox() {
 		Vector3D p2target = Point3D.diff(target, position);
-		Vector3D p2end = Vector3D.mult(p2target, 2f);
 		Point3D oside = Point3D.sum(target, p2target);
 		Vector3D p2up = Vector3D.mult(up, p2target.length());
 		Vector3D p2side = Vector3D.cross(p2target, p2up.normalized());
@@ -129,7 +136,13 @@ public class Camera3D {
 		/**
 		 * Need to bound to ensure p0, p1 values
 		 */
-		AlignedBox3D vbox = new AlignedBox3D();
+		
+		ColoredBox vbox = new ColoredBox(
+				target,
+				null,
+				Color.BLUE,
+				up);
+
 		vbox.bound(position_ulc);
 		vbox.bound(oside_lrc);
 		

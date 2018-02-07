@@ -11,7 +11,7 @@ import smTrace.SmTrace;
 class Scene {
 	EMBlockGroup genBlocks;						// Generated
 	EMBlockGroup displayedBlocks;					// Displayed
-	AlignedBox3D boundingBoxOfScene = new AlignedBox3D();
+	ColoredBox boundingBoxOfScene = new ColoredBox();
 	boolean isBoundingBoxOfSceneDirty = false;
 
 
@@ -30,7 +30,7 @@ class Scene {
 		EMBlock.setGenerated(genBlocks);
 		try {
 			EMBlock.setDefaults("box",
-					new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1)),
+					new EMBox3D(new Point3D(0,0,0), EMBox3D.RADIUS),
 					new Color(255, 0, 255));
 		} catch (EMBlockError e) {
 			// TODO Auto-generated catch block
@@ -41,9 +41,8 @@ class Scene {
 	}
 	
 	
-	public AlignedBox3D getBoundingBoxOfScene() {
+	public ColoredBox getBoundingBoxOfScene() {
 		if ( isBoundingBoxOfSceneDirty ) {
-			boundingBoxOfScene.clear();
 			for ( int id : displayedBlocks.getIds()) {
 				EMBlock block = displayedBlocks.getBlock(id);
 				boundingBoxOfScene.bound(block.boundingBox());
@@ -112,7 +111,7 @@ class Scene {
 	public int addBlock(
 		EMBCommand bcmd,		// Current command
 		String blockType, 		// Block type
-		AlignedBox3D box,		// Bounding box
+		EMBox3D box,		// Bounding box
 		Color color
 	) {
 		EMBlock cb = EMBlock.newBlock(blockType, box, color);		
@@ -128,7 +127,7 @@ class Scene {
 
 	public int addColoredBox(
 		EMBCommand bcmd,
-		AlignedBox3D box,
+		EMBox3D box,
 		Color color
 	) {
 		EMBlock cb = EMBlock.newBlock("box", box, color);
@@ -157,6 +156,16 @@ class Scene {
 			}
 
 			if (block.intersects(ray,candidatePoint,candidateNormal)) {
+				///TFD - second try to facilitate tracking
+				if (candidateNormal.lengthSquared() == 0) {
+					SmTrace.lg(String.format("Scene.getIndexOfIntersectedBox: Zero length normal(%s) at intersection:%s ray:%s",
+							candidateNormal, candidatePoint, ray), "intersection");
+					Point3D candidatePoint2 = new Point3D();
+					Vector3D candidateNormal2 = new Vector3D();
+					block.intersects(ray,candidatePoint2,candidateNormal2);
+					candidateNormal = new Vector3D(0,0,1);
+					SmTrace.lg(String.format("Scene.getIndexOfIntersectedBox: FORCED candidateNormal(%s)", candidateNormal), "intersection");
+				}
 				candidateDistance = Point3D.diff(
 					ray.origin, candidatePoint
 				).length();
@@ -170,9 +179,12 @@ class Scene {
 					distanceToIntersection = candidateDistance;
 					intersectionPoint.copy( candidatePoint );
 					normalAtIntersection.copy( candidateNormal );
+					
 				}
 			}
 		}
+		if (indexOfIntersectedBox > 0)
+			SmTrace.lg(String.format("Scene.getIndexOfIntersectedBox: %d", indexOfIntersectedBox));
 		return indexOfIntersectedBox;
 	}
 
@@ -181,7 +193,7 @@ class Scene {
 		return genBlocks.getBlock(id);
 	}
 
-	public AlignedBox3D getBox( int index ) {
+	public EMBox3D getBox( int index ) {
 		EMBlock cb = getBlock(index);
 		if (cb == null)
 			return null;

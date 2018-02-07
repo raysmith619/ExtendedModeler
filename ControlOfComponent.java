@@ -137,6 +137,7 @@ public class ControlOfComponent extends ControlOfScene {
 			case "emc_addBallButton":
 			case "emc_addConeButton":
 			case "emc_addCylinderButton":
+			case "emc_addTextButton":		// Emulate Text control
 				sceneControler.addBlockButton(bcmd, action);
 				if (bcmd != null) {
 					boolean res = bcmd.doCmd();
@@ -145,7 +146,7 @@ public class ControlOfComponent extends ControlOfScene {
 				}
 				break;
 				
-			case "emc_addTextButton":		// Emulate Text control
+			case "OBSOLETE emc_addTextButton":		// Emulate Text control
 				sceneControler.addTextButton(bcmd, action);
 				if (bcmd != null) {
 					boolean res = bcmd.doCmd();

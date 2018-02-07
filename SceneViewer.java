@@ -30,6 +30,7 @@ import javax.swing.JTextField;
 import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 
+import com.jogamp.graph.font.Font;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
@@ -181,7 +182,7 @@ class SceneViewer extends JFrame
 			String title,
 			String name,
 			SceneControler sceneControler,
-			AlignedBox3D viewBox,
+			ColoredBox viewBox,
 			Point3D eyePosition,
 			Point3D eyeTarget,
 			Vector3D eyeUp,
@@ -197,7 +198,7 @@ class SceneViewer extends JFrame
 		this.viewerLevel = viewerLevelBase;
 		
 		if (viewBox == null) {
-			viewBox = new AlignedBox3D();
+			viewBox = new ColoredBox();
 		}
 		if (locationSize == null) {
 			locationSize = new Rectangle(x0, y0, width, height);
@@ -567,7 +568,7 @@ class SceneViewer extends JFrame
 	}
 	
 	
-	public AlignedBox3D getBoundingBoxOfScene() {
+	public ColoredBox getBoundingBoxOfScene() {
 		return sceneControler.getBoundingBoxOfScene();
 	}
 	
@@ -791,17 +792,40 @@ class SceneViewer extends JFrame
 		getControls().display(canvas);
 
 		if (displayWorldAxes) {
+			EMViewedText tr3 = new EMViewedText(gl);
+			float tx = 1;
+			float ty = 0;
+			float tz = 0;
+
 			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(1, 0, 0);
 			gl.glVertex3f(0, 0, 0);
 			gl.glVertex3f(1, 0, 0);
+			gl.glEnd();
+			tx = 1;
+			ty = 0;
+			tz = 0;
+		    tr3.draw("X", tx, ty, tz);
+			
+			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(0, 1, 0);
 			gl.glVertex3f(0, 0, 0);
 			gl.glVertex3f(0, 1, 0);
+			gl.glEnd();
+			tx = 0;
+			ty = 1;
+			tz = 0;
+		    tr3.draw("Y", tx, ty, tz);
+			
+			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(0, 0, 1);
 			gl.glVertex3f(0, 0, 0);
 			gl.glVertex3f(0, 0, 1);
 			gl.glEnd();
+			tx = 0;
+			ty = 0;
+			tz = 1;
+		    tr3.draw("Z", tx, ty, tz);
 		}
 		if (displayCameraTarget) {
 			gl.glBegin(GL.GL_LINES);
@@ -852,7 +876,9 @@ class SceneViewer extends JFrame
 		hilitedPoint.copy(newIntersectionPoint);
 		normalAtHilitedPoint.copy(newNormalAtIntersection);
 		if (newIndexOfHilitedBox != indexOfHilitedBox) {
+			SmTrace.lg(String.format("SceneViewer.updateHiliting: indexOfHiliteBox(%d - was %d)", newIndexOfHilitedBox, indexOfHilitedBox));
 			indexOfHilitedBox = newIndexOfHilitedBox;
+			
 			repaint();
 		}
 	}
@@ -958,7 +984,7 @@ class SceneViewer extends JFrame
 	 * @throws EMBlockError 
 	 */
 	public SceneViewer externalView(String title, String name,
-			AlignedBox3D viewBox,
+			ColoredBox viewBox,
 			Point3D eyePosition,
 			Point3D eyeTarget,
 			Vector3D eyeUp,
@@ -973,8 +999,8 @@ class SceneViewer extends JFrame
 			 * Expand viewing region to show based viewing region plus
 			 * viewing target (lookAt) and camera position (origin)
 			 */
-			AlignedBox3D lvbox = getViewBox();
-			AlignedBox3D evbox = new AlignedBox3D(lvbox);
+			ColoredBox lvbox = getViewBox();
+			ColoredBox evbox = new ColoredBox(lvbox);
 			evbox.bound(camera.target);
 			evbox.bound(camera.position);
 			Vector3D adj = Vector3D.mult(evbox.getDiagonal(), .5f);
@@ -986,6 +1012,7 @@ class SceneViewer extends JFrame
 		}
 		if (eyeTarget == null) {
 			eyeTarget = this.camera.target;		// Use same target
+			eyeTarget = Point3D.average(this.camera.position, this.camera.target);
 		}
 		if (eyeUp == null) {
 			eyeUp = this.camera.up;				// Use same orientation
@@ -1045,7 +1072,7 @@ class SceneViewer extends JFrame
 	 * Get Viewing box, viewed by camera
 	 * @return
 	 */
-	public AlignedBox3D getViewBox() {
+	public ColoredBox getViewBox() {
 		return camera.getViewBox();
 	}
 	

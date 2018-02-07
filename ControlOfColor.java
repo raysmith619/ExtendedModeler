@@ -13,6 +13,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -34,6 +35,7 @@ public class ControlOfColor extends ControlOfScene implements ChangeListener {
 	 */
 	private static final long serialVersionUID = 1L;
 	boolean color_move_duplicate = true; // Move/Duplicate choice
+	JCheckBox autoPickCkBox; 	// Automatically Pick colors for new blocks
 	JTextField colorRedField;
 	JTextField colorGreenField;
 	JTextField colorBlueField;
@@ -60,10 +62,8 @@ public class ControlOfColor extends ControlOfScene implements ChangeListener {
 	/**
 	 * reset to default setting
 	 */
-	public void reset() {
+	public static void reset() {
 		nextColor = 0;		// Reset generated colors
-		setup = false;
-		setup();
 	}
 	
 	
@@ -89,6 +89,9 @@ public class ControlOfColor extends ControlOfScene implements ChangeListener {
 		mdChoicePanel.setBorder(BorderFactory.createLineBorder(Color.green));
 		colorPanel.add(mdChoicePanel);
 		pack();
+
+		autoPickCkBox = new JCheckBox("Auto Pick", true);
+		mdChoicePanel.add(autoPickCkBox);
 
 		JRadioButton md_move_color_button = new JRadioButton("Move");
 		md_move_color_button.setMnemonic(KeyEvent.VK_M);
@@ -128,10 +131,11 @@ public class ControlOfColor extends ControlOfScene implements ChangeListener {
 		
 		EMBlock cb = sceneControler.getSelectedBlock();
 		if (cb == null) {
-			AlignedBox3D box = new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1));
+			EMBox3D box = new EMBox3D(new Point3D(0,0,0), 1);
 			Color color = new Color(1f, 0f, 1f);
 			SmTrace.lg(String.format("addDigital: red=%d", color.getRed()));
-			cb = EMBlock.newBlock("box", box, color);
+			EMBlockBase cb_base = new ColoredBox(box, color);
+			cb = new EMBlock(cb_base);
 		}
 		colorRedField = new JTextField(String.format("%.2f", cb.getRed()));
 		colorRedField.setActionCommand("emc_ENTER");
@@ -606,10 +610,29 @@ public class ControlOfColor extends ControlOfScene implements ChangeListener {
 		return val;
 	}
 	
+	public Color getColor() throws EMBlockError {
+		Color val = null;
+		if (getAutoPick())
+			val = ControlOfColor.nextColor();
+		else
+			val = new Color(getRed(), getGreen(), getBlue(), getAlpha());
+		if (val == null)
+			val = ControlOfColor.nextColor();
+		return val; 
+	}
+	
 	public Color getColor(String string) throws EMBlockError {
 		Color val = null;
 		
 		val = new Color(getRed(), getGreen(), getBlue(), getAlpha());
+		return val;
+	}
+
+	public boolean getAutoPick() throws EMBlockError {
+		boolean val = false;
+		if (autoPickCkBox != null) {
+			val = autoPickCkBox.isSelected();
+		}
 		return val;
 	}
 

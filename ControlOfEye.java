@@ -509,7 +509,7 @@ public class ControlOfEye extends ControlOfView {
 			String text = posZfield.getText();
 			zval = Float.valueOf(text);
 		}
-		SmTrace.lg(String.format("look at x=%.2f y=%.2f z=%.2f", xval, yval, zval));
+		SmTrace.lg(String.format("eye at x=%.2f y=%.2f z=%.2f", xval, yval, zval));
 		bcmd.setEyeAt(new Point3D(xval, yval, zval));
 		bcmd.doCmd();
 	}

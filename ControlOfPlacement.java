@@ -1,4 +1,5 @@
 package ExtendedModeler;
+import java.lang.Math.*;
 import java.awt.GridLayout;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -29,6 +30,10 @@ public class ControlOfPlacement extends ControlOfScene {
 	JTextField sizeXfield;
 	JTextField sizeYfield;
 	JTextField sizeZfield;
+
+	JTextField upXfield;
+	JTextField upYfield;
+	JTextField upZfield;
 
 	JTextField adjXfield;
 	JTextField adjYfield;
@@ -135,16 +140,16 @@ public class ControlOfPlacement extends ControlOfScene {
 		JPanel sizeto_panel = new JPanel();
 		posPanel.add(sizeto_panel);
 		float defdim = .5f;		// Default dimensions
-		sizeXfield = new JTextField(String.format("%.2f", defdim));
+		sizeXfield = new JTextField(String.format("%.2f", defdim*2));
 		SmTrace.lg(String.format("setup sizeXfield"));
 		sizeXfield.setActionCommand("emc_ENTER");
 		sizeXfield.addActionListener(sceneControler);
-		sizeYfield = new JTextField(String.format("%.2f", defdim));
+		sizeYfield = new JTextField(String.format("%.2f", defdim*3));
 		sizeYfield.setActionCommand("emc_ENTER");
 		sizeYfield.addActionListener(sceneControler);
-		sizeZfield = new JTextField(String.format("%.2f", defdim));
+		sizeZfield = new JTextField(String.format("%.2f", defdim*1));
 		sizeZfield.setActionCommand("emc_ENTER");
-		sizeZfield.addActionListener(sceneControler);
+		
 		sizeto_panel.add(Box.createVerticalStrut(15)); // a spacer
 		sizeto_panel.add(new JLabel("Size:"));
 		sizeto_panel.add(new JLabel("x:"));
@@ -153,11 +158,50 @@ public class ControlOfPlacement extends ControlOfScene {
 		sizeto_panel.add(sizeYfield);
 		sizeto_panel.add(new JLabel("z:"));
 		sizeto_panel.add(sizeZfield);
+		sizeZfield.addActionListener(sceneControler);
 
 		JButton sizeToButton = new JButton("SizeTo");
 		sizeToButton.setActionCommand("emc_sizeToButton");
 		sizeToButton.addActionListener(sceneControler);
 		sizeto_panel.add(sizeToButton);
+		
+		JPanel upto_panel = new JPanel();
+		posPanel.add(upto_panel);
+		upto_panel.add(Box.createVerticalStrut(15)); // a spacer
+		upXfield = new JTextField(String.format("%.2f", 0.));
+		SmTrace.lg(String.format("setup upXfield"));
+		upXfield.setActionCommand("emc_ENTER");
+		upXfield.addActionListener(sceneControler);
+		upYfield = new JTextField(String.format("%.2f", 1.));
+		upYfield.setActionCommand("emc_ENTER");
+		upYfield.addActionListener(sceneControler);
+		upZfield = new JTextField(String.format("%.2f", 0.));
+		upZfield.setActionCommand("emc_ENTER");
+		
+		upto_panel.add(new JLabel("Up:"));
+		JButton upXButton = new JButton("x:");
+		upXButton.setActionCommand("emc_upXButton");
+		upXButton.addActionListener(sceneControler);
+		upto_panel.add(upXButton);
+		upto_panel.add(upXfield);
+		
+		JButton upYButton = new JButton("y:");
+		upYButton.setActionCommand("emc_upYButton");
+		upYButton.addActionListener(sceneControler);
+		upto_panel.add(upYButton);
+		upto_panel.add(upYfield);
+		
+		JButton upZButton = new JButton("z:");
+		upZButton.setActionCommand("emc_upZButton");
+		upZButton.addActionListener(sceneControler);
+		upto_panel.add(upZButton);
+		upto_panel.add(upZfield);		
+
+
+		JButton upToButton = new JButton("Up To");
+		upToButton.setActionCommand("emc_upToButton");
+		upToButton.addActionListener(sceneControler);
+		upto_panel.add(upToButton);
 
 		// Adjust by
 		JPanel adj_panel = new JPanel();
@@ -211,14 +255,8 @@ public class ControlOfPlacement extends ControlOfScene {
 	 */
 	public Vector3D getAdj() throws EMBlockError {
 		float tx = getAdjX();
-		if (getAdjByBlock())
-			tx *= getSizeX();
 		float ty = getAdjY();
-		if (getAdjByBlock())
-			ty *= getSizeY();
 		float tz = getAdjZ();
-		if (getAdjByBlock())
-			tz *= getSizeZ();
 		return new Vector3D(tx, ty, tz);
 	}
 
@@ -232,6 +270,55 @@ public class ControlOfPlacement extends ControlOfScene {
 
 	public Point3D getPosition() throws EMBlockError {
 		return new Point3D(getPosX(), getPosY(), getPosZ());
+	}
+
+	public float getRadius() throws EMBlockError {
+		float r3sq = getSizeX()*getSizeX() + getSizeY()*getSizeY() + getSizeZ()*getSizeZ();
+		float radius = (float) Math.sqrt(r3sq)/2;
+		return radius;
+	}
+
+		
+	public Vector3D getUp() throws EMBlockError {
+		return new Vector3D(getUpX(),  getUpY(), getUpZ());
+	}
+
+	/**
+	 * get up vector from controls
+	 * @return
+	 * @throws EMBlockError
+	 */
+	public float getUpX() throws EMBlockError {
+		if (upXfield == null)
+			return 0;
+		String text = upXfield.getText();
+		try {
+			return Float.valueOf(text);
+		} catch (NumberFormatException e) {
+			throw new EMBlockError(String.format("UpX %s not valid: %s", text, e.getMessage()));
+		}
+	}
+
+	public float getUpY() throws EMBlockError {
+		if (upYfield == null)
+			return 0;
+		String text = upYfield.getText();
+		try {
+			return Float.valueOf(text);
+		} catch (NumberFormatException e) {
+			throw new EMBlockError(String.format("UpY %s not valid: %s", text, e.getMessage()));
+		}
+	}
+
+	public float getUpZ() throws EMBlockError {
+		if (upZfield == null)
+			return 0;
+		String text = upZfield.getText();
+		try {
+			return Float.valueOf(text);
+		} catch (NumberFormatException e) {
+			throw new EMBlockError(String.format("UpZ %s not valid: %s", text, e.getMessage()));
+		}
 	}
 	
 	
@@ -268,12 +355,20 @@ public class ControlOfPlacement extends ControlOfScene {
 		}
 	}
 
+	/**
+	 * Return change, scaled by block size if appropriate
+	 * @return
+	 * @throws EMBlockError
+	 */
 	public float getAdjX() throws EMBlockError {
 		if (posXfield == null)
 			return 0;
 		String text = adjXfield.getText();
 		try {
-			return Float.valueOf(text);
+			float val = Float.valueOf(text);
+			if (getAdjByBlock())
+				val *= getSizeX();
+			return val;
 		} catch (NumberFormatException e) {
 			throw new EMBlockError(String.format("%s not valid: %s", text, e.getMessage()));
 		}
@@ -284,7 +379,10 @@ public class ControlOfPlacement extends ControlOfScene {
 			return 0;
 		String text = adjYfield.getText();
 		try {
-			return Float.valueOf(text);
+			float val = Float.valueOf(text);
+			if (getAdjByBlock())
+				val *= getSizeY();
+			return val;
 		} catch (NumberFormatException e) {
 			throw new EMBlockError(String.format("%s not valid: %s", text, e.getMessage()));
 		}
@@ -295,12 +393,26 @@ public class ControlOfPlacement extends ControlOfScene {
 			return 0;
 		String text = adjZfield.getText();
 		try {
-			return Float.valueOf(text);
+			float val = Float.valueOf(text);
+			if (getAdjByBlock())
+				val *= getSizeZ();
+			return val;
 		} catch (NumberFormatException e) {
 			throw new EMBlockError(String.format("%s not valid: %s", text, e.getMessage()));
 		}
 	}
 
+	/**
+	 * xyz - dimensions
+	 */
+	public Vector3D getSizeXYZ() throws EMBlockError {
+		Vector3D v = new Vector3D(Math.abs(getSizeX()),
+				Math.abs(getSizeY()),
+				Math.abs(getSizeZ()));
+		return v;
+	}
+	
+	
 	public float getSizeX() throws EMBlockError {
 		if (sizeXfield == null)
 			return 0;
@@ -334,10 +446,12 @@ public class ControlOfPlacement extends ControlOfScene {
 		}
 	}
 
-	public AlignedBox3D getBox() throws EMBlockError {
-		Point3D p0 = new Point3D(getPosX(), getPosY(), getPosZ());
-		Point3D p1 = new Point3D(getPosX() + getSizeX(), getPosY() + getSizeY(), getPosZ() + getSizeZ());
-		AlignedBox3D box = new AlignedBox3D(p0, p1);
+	public EMBox3D getBox() throws EMBlockError {
+		Point3D center = new Point3D(getPosX(), getPosY(), getPosZ());
+		float radius2 = getSizeX()*getSizeX() + getSizeY()*getSizeY() + getSizeZ()*getSizeZ();
+		float radius = (float) java.lang.Math.sqrt(radius2)/2;
+		Vector3D up = EMBox3D.UP;
+		EMBox3D box = new EMBox3D(center, radius, up);
 		return box;
 	}
 
@@ -481,31 +595,14 @@ public class ControlOfPlacement extends ControlOfScene {
 		if (cbs.length == 0)
 			return;
 
-		float adj_xval = 0;
-		float adj_yval = 0;
-		float adj_zval = 0;
-		if (adjXfield != null) {
-			String text = adjXfield.getText();
-			adj_xval = Float.valueOf(text);
-		}
-		if (adjYfield != null) {
-			String text = adjYfield.getText();
-			adj_yval = Float.valueOf(text);
-		}
-		if (adjZfield != null) {
-			String text = adjZfield.getText();
-			adj_zval = Float.valueOf(text);
-		}
+		float adj_xval = getAdjX();
+		float adj_yval = getAdjY();
+		float adj_zval = getAdjZ();
+
 		if (direction < 0) {
-			if (pos_size_position) {
-				adj_xval *= -1;
-				adj_yval *= -1;
-				adj_zval *= -1;
-			} else {
-				adj_xval *= -1;
-				adj_yval *= -1;
-				adj_zval *= -1;
-			}
+			adj_xval *= -1;
+			adj_yval *= -1;
+			adj_zval *= -1;
 		}
 
 		BlockSelect new_selected = new BlockSelect();	// Record newly selected
@@ -519,17 +616,17 @@ public class ControlOfPlacement extends ControlOfScene {
 			bcmd.addPrevBlock(cb); // Save copy for undo/redo
 			EMBlock cb1 = cb.duplicate(); // New or modified
 	
-			Point3D base_point = cb.getBasePoint();
+			Point3D center = cb.getCenter();
 			Vector3D adj_vector = new Vector3D(adj_xval, adj_yval, adj_zval);
-			Point3D adj_point = Point3D.sum(base_point, adj_vector);
+			Point3D adj_point = Point3D.sum(center, adj_vector);
 			if (pos_size_position) {
 				cb1.moveTo(adj_point);
-				System.out.println(
-						String.format("adjust to x=%.2f y=%.2f z=%.2f", adj_point.x(), adj_point.y(), adj_point.z()));
+				SmTrace.lg(
+						String.format("adjust center to x=%.2f y=%.2f z=%.2f", adj_point.x(), adj_point.y(), adj_point.z()));
 			} else {
 				cb1.resize(adj_vector);
 				Vector3D size = cb1.getSize();
-				System.out.println(String.format("adjust size to x=%.2f y=%.2f z=%.2f", size.x(), size.y(), size.z()));
+				SmTrace.lg(String.format("adjust size to x=%.2f y=%.2f z=%.2f", size.x(), size.y(), size.z()));
 			}
 			bcmd.addBlock(cb1); // Add New / modified block
 			new_selected.addIndex(cb1.iD());
@@ -538,51 +635,111 @@ public class ControlOfPlacement extends ControlOfScene {
 	}
 
 	/**
-	 * Move to position/size accordingly
+	 * Move selected block(s) to position according to control settings
 	 * 
 	 * @throws EMBlockError
 	 */
 	private void moveToPosition(EMBCommand bcmd) throws EMBlockError {
 		if (sceneControler.getSelected() == null)
 			return;
-		float xval = 0;
-		float yval = 0;
-		float zval = 0;
-		if (posXfield != null) {
-			String text = posXfield.getText();
-			xval = Float.valueOf(text);
-		}
-		if (posYfield != null) {
-			String text = posYfield.getText();
-			yval = Float.valueOf(text);
-		}
-		if (posZfield != null) {
-			String text = posZfield.getText();
-			zval = Float.valueOf(text);
-		}
+		float xval = getPosX();
+		float yval = getPosY();
+		float zval = getPosZ();
 
-		EMBlock cb = sceneControler.getSelectedBlock();
-		if (cb == null)
+		EMBlock[] cbs = sceneControler.getSelectedBlocks();
+		if (cbs.length == 0)
 			return;
 
-		if (!pos_move_duplicate) {
-			bcmd.addBlock(cb); // Keep original also
+		for (int i = 0; i < cbs.length; i++) {
+			EMBlock cb = cbs[i];
+			bcmd.addPrevBlock(cb);
+			if (!pos_move_duplicate) {
+				bcmd.addBlock(cb); // Keep original also
+			}
+			cb.moveTo(new Point3D(xval, yval, zval));
+			SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f", xval, yval, zval));
+			bcmd.addBlock(cb);
 		}
-		bcmd.addPrevBlock(cb); // Save original, for undo
-		EMBlock cb1 = cb.duplicate(); // New or modified
-
-		Point3D new_point = new Point3D(xval, yval, zval);
-		if (pos_size_position) {
-			cb1.moveTo(new_point);
-		} else {
-			Vector3D size = new Vector3D(new_point);
-			cb1.resize(0, size);
-		}
-		bcmd.addBlock(cb1); // Save new or modified
-		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f", xval, yval, zval));
+		bcmd.doCmd();
 		sceneControler.repaint();
 	}
 
+	/**
+	 * Move selected block(s) to size based on control setting
+	 * 
+	 * @throws EMBlockError
+	 */
+	private void moveToSize(EMBCommand bcmd) throws EMBlockError {
+		if (sceneControler.getSelected() == null)
+			return;
+		float xval = getSizeX();
+		float yval = getSizeY();
+		float zval = getSizeZ();
+
+		EMBlock[] cbs = sceneControler.getSelectedBlocks();
+		if (cbs.length == 0)
+			return;
+
+		for (int i = 0; i < cbs.length; i++) {
+			EMBlock cb = cbs[i];
+			bcmd.addPrevBlock(cb);
+			if (!pos_move_duplicate) {
+				bcmd.addBlock(cb); // Keep original also
+			}
+			cb.resize(new Vector3D(xval, yval, zval));
+			SmTrace.lg(String.format("resize to x=%.2f y=%.2f z=%.2f", xval, yval, zval));
+			bcmd.addBlock(cb);
+		}
+		bcmd.doCmd();
+		sceneControler.repaint();
+	}
+
+	/**
+	 * Orient selected block(s) "Up" to up according to control settings
+	 * 
+	 * @throws EMBlockError
+	 */
+	
+	private void moveXToUp(EMBCommand bcmd) throws EMBlockError {
+		setUp(new Vector3D(new Vector3D(1,0,0)));
+		moveToUp(bcmd);
+	}
+	
+	private void moveYToUp(EMBCommand bcmd) throws EMBlockError {
+		setUp(new Vector3D(new Vector3D(0,1,0)));		
+		moveToUp(bcmd);
+	}
+	
+	private void moveZToUp(EMBCommand bcmd) throws EMBlockError {
+		setUp(new Vector3D(new Vector3D(0,0,1)));		
+		moveToUp(bcmd);
+	}
+	
+	private void moveToUp(EMBCommand bcmd) throws EMBlockError {
+		if (sceneControler.getSelected() == null)
+			return;
+		
+		Vector3D up = getUp();
+
+		EMBlock[] cbs = sceneControler.getSelectedBlocks();
+		if (cbs.length == 0)
+			return;
+
+		for (int i = 0; i < cbs.length; i++) {
+			EMBlock cb = cbs[i];
+			bcmd.addPrevBlock(cb);
+			if (!pos_move_duplicate) {
+				bcmd.addBlock(cb); // Keep original also
+			}
+			cb.setUp(getUp());
+			SmTrace.lg(String.format("set up to %s", cb.getUp()));
+			bcmd.addBlock(cb);
+		}
+		bcmd.doCmd();
+		sceneControler.repaint();
+	}
+
+	
 	/**
 	 * Adjust control based on selection
 	 */
@@ -641,6 +798,26 @@ public class ControlOfPlacement extends ControlOfScene {
 
 		case "emc_moveToButton":
 			moveToPosition(bcmd);
+			break;
+
+		case "emc_sizeToButton":
+			moveToSize(bcmd);
+			break;
+
+		case "emc_upToButton":
+			moveToUp(bcmd);
+			break;
+
+		case "emc_upXButton":
+			moveXToUp(bcmd);
+			break;
+
+		case "emc_upYButton":
+			moveYToUp(bcmd);
+			break;
+
+		case "emc_upZButton":
+			moveZToUp(bcmd);
 			break;
 
 		case "emc_ENTER":
@@ -702,6 +879,28 @@ public class ControlOfPlacement extends ControlOfScene {
 
 	}
 
+	public void setUp(Vector3D up) {
+		setUpX(up.x());
+		setUpY(up.y());
+		setUpZ(up.z());
+	}
+
+	public void setUpX(float val) {
+		String text = String.format("%.2g", val);
+		upXfield.setText(text);
+	}
+
+	public void setUpY(float val) {
+		String text = String.format("%.2g", val);
+		upYfield.setText(text);
+	}
+
+	public void setUpZ(float val) {
+		String text = String.format("%.2g", val);
+		upZfield.setText(text);
+	}
+	
+	
 	public void setPos(Point3D cbPos) {
 		Float val;
 		String text;

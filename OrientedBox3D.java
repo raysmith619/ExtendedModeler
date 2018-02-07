@@ -1,108 +1,157 @@
 package ExtendedModeler;
 
-import smTrace.SmTrace;
+/**
+ *  This class is for storing vector-aligned boxes.
+ *  Patterned on AlignedBox3D
+ * @author raysm
+ *
+ */
+public class OrientedBox3D {
+	private Vector3D up;				// Box orientation, in world coordinates
+										// null - world's up
+	private AlignedBox3D abox = new AlignedBox3D();			// Box aligned in world coordinates
 
-// This class is for storing axis-aligned boxes.
-public class AlignedBox3D {
-
-	private boolean isEmpty = true;
-
-	// diagonally opposite corners
-	private Point3D p0 = new Point3D(0,0,0);
-	private Point3D p1 = new Point3D(0,0,0);
-
-	public AlignedBox3D() {
+	public OrientedBox3D() {
 	}
-
-	/**
-	 * Create box with standard dimension specifications
-	 */
-	public AlignedBox3D(float width, float height, float depth, Point3D center) {
-		this(center, new Vector3D(width, height, depth));
-	}
-	
-	
-	public AlignedBox3D(float width, float height, float depth) {
-		this(width, height, depth, new Point3D(0,0,0));
-	}
-
 	
 	/**
 	 * Deep copy, allowing modifications
 	 */
-	public AlignedBox3D(AlignedBox3D box) {
-		this.isEmpty = box.isEmpty;
-		this.p0 = new Point3D(box.p0.x(), box.p0.y(), box.p0.z());
-		this.p1 = new Point3D(box.p1.x(), box.p1.y(), box.p1.z()); 
+	public OrientedBox3D(OrientedBox3D obox) {
+		this(obox.abox, obox.up);
+	}
+	
+	
+	public OrientedBox3D(AlignedBox3D abox, Vector3D up) {
+		this.abox = new AlignedBox3D(abox);
+		this.up = new Vector3D(up);
 	}
 
 	/**
-	 * Box from size and center
+	 * Create Oriented box
+	 * @param width (x)
+	 * @param height (y)
+	 * @param depth (z)
+	 * @param up
 	 */
-	public AlignedBox3D(Point3D center, Vector3D size) {
-		this.p0 = Point3D.diff(center, new Vector3D(size.x()/2, size.y()/2, size.z()/2));
-		this.p1 = Point3D.sum(center, new Vector3D(size.x()/2, size.y()/2, size.z()/2));
-	}
-	
-	public AlignedBox3D( Point3D min, Point3D max ) {
-		/*** If assert is not enabled
-		assert min.x() <= max.x() : "bounds error";
-		assert min.y() <= max.y() : "bounds error";
-		assert min.z() <= max.z() : "bounds error";
-		***/
-		if (min.x() > max.x())
-			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
-				min.x(), max.x()));
-		if (min.y() > max.y())
-			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
-				min.y(), max.x()));
-		if (min.z() > max.z())
-			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
-				min.z(), max.z()));
-		p0.copy( min );
-		p1.copy( max );
-		isEmpty = false;
-	}
-
-	public AlignedBox3D(Vector3D size) {
-		this(new Point3D(0, 0, 0), new Point3D(size.x(), size.y(), size.z()));
+	public OrientedBox3D(float width, float height, float depth, Point3D center, Vector3D up) {
+		this.abox = new AlignedBox3D(width, height, depth, center);
+		this.up = up;
 	}
 
 	/**
 	 * Get standard dimensions
 	 */
 	public float getDepth() {
-		Vector3D size = getSize();		// May want to optimize TBD
-		return size.z();
+		return abox.getDepth();
 	}
 	public float getHeight() {
-		Vector3D size = getSize();
-		return size.y();
+		return abox.getHeight();
 	}
 	public float getWidth() {
-		Vector3D size = getSize();
-		return size.z();
+		return abox.getWidth();
+	}
+	/**
+	 * Get local box - without regard to rotation
+	 * no copy
+	 */
+	public AlignedBox3D getAlignedBox() {
+		return abox;
+	}
+	
+	
+	/**
+	 * Oriented box, given lower(min), upper(max) corners
+	 * A rotated Aligned box
+	 * @param min
+	 * @param max
+	 */
+	public OrientedBox3D(Point3D min, Point3D max) {
+		Vector3D diag = Point3D.diff(max, min);
+		
 	}
 
-	public boolean isEmpty() { return isEmpty; }
-	public void clear() { isEmpty = true; }
+	public OrientedBox3D(Point3D center, Vector3D size, Vector3D up) {
+		this(new AlignedBox3D(center, size), up);
+	}
 
-	public Point3D getMin() { return p0; }
-	public Point3D getMax() { return p1; }
+	public boolean isEmpty() { return abox.isEmpty(); }
+	public void clear() { abox.clear(); }
 
 	/**
-	 * Get size (non zero) xyz dimensions
-	 * @return
+	 * "points" with minimum x,y,z (global coordinates)
+	 * Not necessarily on the box
 	 */
-	public Vector3D getSize() {
-		Vector3D diag = getDiagonal();
-		return new Vector3D(Math.abs(diag.x()), Math.abs(diag.y()), Math.abs(diag.z()));
+	public float getMinX() {
+		float min = getCorner(0).x();
+		for (int ic = 1; ic < 8; ic++) {
+			float val = getCorner(ic).x();
+			if (val < min)
+				min = val;
+		}
+		return min;
 	}
 	
+	public float getMinY() {
+		float min = getCorner(0).y();
+		for (int ic = 1; ic < 8; ic++) {
+			float val = getCorner(ic).y();
+			if (val < min)
+				min = val;
+		}
+		return min;
+	}
+
+	public float getMinZ() {
+		float min = getCorner(0).z();
+		for (int ic = 1; ic < 8; ic++) {
+			float val = getCorner(ic).z();
+			if (val < min)
+				min = val;
+		}
+		return min;
+	}
+
+	/**
+	 * "points" with minimum x,y,z (global coordinates)
+	 * Not necessarily on the box
+	 */
+	public float getMaxX() {
+		float max = getCorner(0).x();
+		for (int ic = 1; ic < 8; ic++) {
+			float val = getCorner(ic).x();
+			if (val > max)
+				max = val;
+		}
+		return max;
+	}
 	
-	public Vector3D getDiagonal() { return Point3D.diff(p1,p0); }
+	public float getMaxY() {
+		float max = getCorner(0).y();
+		for (int ic = 1; ic < 8; ic++) {
+			float val = getCorner(ic).y();
+			if (val > max)
+				max = val;
+		}
+		return max;
+	}
+
+	public float getMaxZ() {
+		float max = getCorner(0).z();
+		for (int ic = 1; ic < 8; ic++) {
+			float val = getCorner(ic).z();
+			if (val > max)
+				max = val;
+		}
+		return max;
+	}
+
+	public Point3D getMin() { return new Point3D(getMinX(), getMinY(), getMinZ()); }
+	public Point3D getMax() { return new Point3D(getMaxX(), getMaxY(), getMaxZ()); }
+	public Vector3D getDiagonal() { return Point3D.diff(getMin(), getMax()); }
+	public float getRadius() { return getDiagonal().length()/2; }
 	public Point3D getCenter() {
-		return Point3D.average( p0, p1 );
+		return abox.getCenter();
 	}
 
 	
@@ -110,52 +159,33 @@ public class AlignedBox3D {
 	 * Box enclosing sphere
 	 * @param p
 	 */
-	public AlignedBox3D(EMBox3D sphere) {
+	public OrientedBox3D(EMBox3D sphere) {
 		Point3D center = sphere.getCenter();
 		float radius = sphere.getRadius();
-		p0 = new Point3D(center.x()-radius, center.y()-radius, center.z()-radius);
-		p1 = new Point3D(center.x()+radius, center.y()+radius, center.z()+radius);
+		Point3D p0 = new Point3D(center.x()-radius, center.y()-radius, center.z()-radius);
+		Point3D p1 = new Point3D(center.x()+radius, center.y()+radius, center.z()+radius);
+		this.abox = new AlignedBox3D(p0, p1);
 	}
 	
 	
 	// Enlarge the box as necessary to contain the given point
 	public void bound( Point3D p ) {
-		if ( isEmpty ) {
-			p0.copy(p);
-			p1.copy(p);
-			isEmpty = false;
-		}
-		else {
-			if ( p.x() < p0.x() )
-				p0.p[0] = p.x();
-			else if ( p.x() > p1.x() )
-				p1.p[0] = p.x();
-
-			if ( p.y() < p0.y() )
-				p0.p[1] = p.y();
-			else if ( p.y() > p1.y() )
-				p1.p[1] = p.y();
-
-			if ( p.z() < p0.z() )
-				p0.p[2] = p.z();
-			else if ( p.z() > p1.z() )
-				p1.p[2] = p.z();
-		}
+		abox.bound(p);		/// TBD - approximation - workaround
 	}
 
 	// Enlarge the box as necessary to contain the given box
-	public void bound( AlignedBox3D box ) {
-		bound( box.p0 );
-		bound( box.p1 );
+	public void bound( OrientedBox3D obox ) {
+		bound( obox.getMin());
+		bound( obox.getMax());
 	}
 
 	// Enlarge the box as necessary to contain the given block
-	public AlignedBox3D boundingBox() {
+	public OrientedBox3D boundingBox() {
 		return this;
 	}
 
 	// if we are a box it is us
-	public AlignedBox3D getBox() {
+	public OrientedBox3D getBox() {
 		return this;
 	}
 
@@ -165,38 +195,66 @@ public class AlignedBox3D {
 	 * @param p
 	 * @return -1, 0, 1
 	 */
-	public int cmp(AlignedBox3D box2) {
+	public int cmp(OrientedBox3D box2) {
 		
-		int p0cmp = p0.cmp(box2.p0);
-		if (p0cmp != 0)
-			return p0cmp;
+		int boxcmp = abox.cmp(box2.abox);
+		if (boxcmp != 0)
+			return boxcmp;
 		
-		int p1cmp = p1.cmp(box2.p1);
-		if (p1cmp != 0)
-			return p1cmp;
+		float updiff = Vector3D.diff(getUp(), EMBox3D.UP).length();
 		
-		return 0;
-
+		int upcmp = (int) Math.signum(updiff);
+		return upcmp;
 	}
 	
 	
 	public boolean contains( Point3D p ) {
-		return !isEmpty
+		Point3D center = getCenter();
+		float radius = getRadius();
+		if (Point3D.diff(center, p).length() > radius)
+			return false;				// Can't be - too far
+
+		Point3D p0 = getMin();			/// TBD - approximation!!!
+		Point3D p1 = getMax();
+		return !isEmpty()
 			&& p0.x() <= p.x() && p.x() <= p1.x()
 			&& p0.y() <= p.y() && p.y() <= p1.y()
 			&& p0.z() <= p.z() && p.z() <= p1.z();
 	}
 
-	public Point3D getCorner(int i) {
-		return new Point3D(
-			((i & 1)!=0) ? p1.x() : p0.x(),
-			((i & 2)!=0) ? p1.y() : p0.y(),
-			((i & 4)!=0) ? p1.z() : p0.z()
-		);
+	/**
+	 * Orient point (translate around center of box)
+	 * @return
+	 */
+	public Point3D orient(Point3D pt) {
+		Point3D center = abox.getCenter();
+		Vector3D up = getUp();
+		Point3D new_pt = EMBox3D.orient(pt, EMBox3D.UP, up, center);
+		return new_pt;
 	}
 
-	// Return the corner that is furthest along the given direction.
+	public Vector3D getUp() {
+		if (up == null)
+			up = EMBox3D.UP;
+		return up;
+	}
+
+	/**
+	 * Get corner in global coordinates
+	 * @param i
+	 * @return
+	 */
+	public Point3D getCorner(int i) {
+		Point3D pt = abox.getCorner(i);
+		Point3D pto = orient(pt);
+		return pto;
+	}
+
+	// Return the corner that is farthest along the given direction.
 	public Point3D getExtremeCorner( Vector3D v ) {
+		Point3D p0 = getMin();		/// TBD !!! approximation / workaround
+		Point3D p1 = getMax();
+		
 		return new Point3D(
 			v.x() > 0 ? p1.x() : p0.x(),
 			v.y() > 0 ? p1.y() : p0.y(),
@@ -205,7 +263,7 @@ public class AlignedBox3D {
 	}
 
 	// Return the index of the corner that
-	// is furthest along the given direction.
+	// is farthest along the given direction.
 	public int getIndexOfExtremeCorner( Vector3D v ) {
 		int returnValue = 0;
 		if (v.x() > 0) returnValue |= 1;
@@ -224,7 +282,7 @@ public class AlignedBox3D {
 		// it *may* intersect the box.
 		// If the ray does NOT intersect the bounding sphere,
 		// then it cannot intersect the box.
-		if ( ! new Sphere( getCenter(), Point3D.diff(p1,p0).length() / 2 ).intersects(
+		if ( ! new Sphere( getCenter(), getRadius()).intersects(
 			ray, intersection, true
 		) ) {
 			return false;
@@ -232,7 +290,8 @@ public class AlignedBox3D {
 
 		boolean intersectionDetected = false;
 		float distance = 0;
-
+		Point3D p0 = getMin();			/// TBD an approximation/workaround
+		Point3D p1 = getMax();
 		// candidate intersection
 		float candidateDistance;
 		Point3D candidatePoint;
@@ -333,17 +392,28 @@ public class AlignedBox3D {
 
 	
 	/**
-	 * Resize with same center
+	 * Resize in local orientation
 	 */
 	public void resize(Vector3D size) {
-		Point3D center = getCenter();
-		p0 = new Point3D(center.x()-size.x()/2, center.y()-size.y()/2, center.z()-size.z()/2);
-		p0 = new Point3D(center.x()+size.x()/2, center.y()+size.y()/2, center.z()+size.z()/2);
+		abox.resize(size);
 	}
-	
-	
+
+	/**
+	 * Adjust dimensions in local orientation
+	 */
+	public void adjSize(float adjX, float adjY, float adjZ) {
+		Vector3D size = abox.getSize();
+		float sizex = size.x() * adjX;
+		float sizey = size.y() * adjY;
+		float sizez = size.z() * adjZ;
+		abox.resize(new Vector3D(sizex, sizey, sizez));
+	}
+		
+
 	public String toString() {
-		return String.format("p0: %s  p1: %s", p0, p1);
+		Point3D p0 = abox.getMin();		/// better?
+		Point3D p1 = abox.getMax();
+		return String.format("p0: %s  p1: %s", p0, p1, up);
 	}
 }
 

@@ -1,8 +1,11 @@
+package ExtendedModeler;
 import java.awt.List;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Stack;
 
 /**
@@ -22,6 +25,12 @@ public class EMBlockGroup {
 	}
 
 	
+	public EMBlockGroup(EMBlockGroup group) {
+		this();
+		this.blocks.putAll(group.blocks);
+	}
+
+
 	/**
 	 * Get unique block
 	 * null if none
@@ -34,7 +43,32 @@ public class EMBlockGroup {
 	}
 
 	/**
+	 * Iterator support
+	 */
+	
+	/**
+	 * get iterator over group
+	 * sets local copy to facilitate single iteration
+	 * @return - copy of iterator
+	 */
+	public Iterator<EMBlock> getIterator() {
+		Collection<EMBlock> bc = blocks.values();
+		Iterator<EMBlock> itr;
+		itr = bc.iterator();
+		return itr;
+	}
+	
+	public boolean hasNext(Iterator<EMBlock> itr) {
+		return itr.hasNext();
+	}
+	
+	public EMBlock next(Iterator<EMBlock> itr) {
+		return itr.next();
+	}
+	
+	/**
 	 * Get array of ids(indexes)
+	 * TBD Use Iterator
 	 */
 	public int[] getIds( ) {
 ///		Object[] idso = blocks.keySet().toArray();

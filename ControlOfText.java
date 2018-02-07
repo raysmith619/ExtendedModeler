@@ -3,6 +3,8 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
+import java.awt.event.KeyAdapter;
+
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
@@ -89,7 +91,11 @@ public class ControlOfText extends ControlOfScene {
 
 		textPanel.add(new JLabel("Text"));
 		textStringTxFld = new JTextField("~~~");
+		textStringTxFld.setColumns(10);
 		textPanel.add(textStringTxFld);
+		textStringTxFld.setActionCommand("emc_text_new");
+		textStringTxFld.addActionListener(sceneControler);
+
 		textPanel.add(new JLabel("Font"));
 		Font font = ColoredText.getFont();
 		String font_name = font.getFontName();
@@ -263,6 +269,10 @@ public class ControlOfText extends ControlOfScene {
 				
 			case "emc_text_select":
 				sceneControler.selectTextButton(bcmd, action);
+				break;
+
+			case "emc_ENTER":
+				sceneControler.addTextButton(bcmd, "emc_text_new");
 				break;
 			
 				default:

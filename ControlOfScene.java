@@ -387,9 +387,10 @@ public class ControlOfScene extends JDialog implements java.awt.event.WindowList
 	// Overridden by appropriate controls
 	public void adjustFromControl(EMBlock cb, EMBCommand bcmd) throws EMBlockError {
 	}
-
+	/***
 	// Overridden by appropriate controls
 	public void reset() {
 		setPoint = new Point3D();
 	}
+	***/
 }

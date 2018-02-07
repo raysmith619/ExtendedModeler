@@ -9,6 +9,7 @@ import java.awt.Component;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.BorderLayout;
+import java.awt.Color;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -137,7 +138,8 @@ public class ExtendedModeler implements ActionListener {
 			);
 
 			if (response == JOptionPane.YES_OPTION) {
-				sceneControler.reset();
+				///sceneControler.reset();
+				reset();
 			}
 			return;
 		}
@@ -277,39 +279,6 @@ public class ExtendedModeler implements ActionListener {
 		// to a bug in JOGL. See JOGL Issue #54 for more information on this
 		// https://jogl.dev.java.net/issues/show_bug.cgi?id=54
 		frame.setVisible(true);
-
-		scene = new Scene();			// The one instance of scene
-		
-		try {
-			sceneControler = new SceneControler(this);
-		} catch (EMBlockError e) {
-			SmTrace.lg(String.format("externalsceneControler error %s", e.getMessage()));
-			e.printStackTrace();
-			System.exit(1);
-		}
-		
-
-		String[] viewNames = {"Local_View"};
-		///String[] viewNames = {"Local_View", "External_View"};
-		int nv = viewNames.length * 2;		// Room for extended viewer
-		sceneViewers = new SceneViewer[nv];
-		for (int i = 0; i < nv; i += 2) {
-			String viewName = viewNames[i];
-			String viewTitle = viewName.replace(' ', '_');
-			try {
-				SceneViewer sceneViewer = new SceneViewer(viewTitle, viewName, sceneControler);
-				sceneViewers[i] = sceneViewer;
-				sceneControler.addViewer(sceneViewer);
-				SceneViewer extv = sceneViewer.externalView(
-						"External View", null);
-				sceneControler.addViewer(extv);
-				sceneViewers[i+1] = extv;
-			} catch (EMBlockError e) {
-				SmTrace.lg(String.format("sceneControler %s error %s", viewName, e.getMessage()));
-				e.printStackTrace();
-				System.exit(1);
-			}
-		}
 		
 		JMenu menu = new JMenu("File");
 			deleteAllMenuItem = new JMenuItem("Delete All");
@@ -353,27 +322,74 @@ public class ExtendedModeler implements ActionListener {
 		resetButton.addActionListener(this);
 		menuBar.add(resetButton);
 		frame.setJMenuBar(menuBar);
-					
+
+		/***
 		Container pane = frame.getContentPane();
 		// We used to use a BoxLayout as the layout manager here,
 		// but it caused problems with resizing behavior due to
 		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
 		pane.setLayout( new BorderLayout() );
 		pane.add( sceneControler, BorderLayout.CENTER );
+		***/
 		int height = 100;
 		int width = 500;
 		frame.setSize(width, height);
-		///sceneControler.setSize(300,400);
-		///pane.setVisible(true);
-		///sceneControler.setVisible(true);
+		setScene();			// Setup scene and controller(s)
+	}
+
+	
+	/**
+	 * Setup / re-setup scene
+	 */
+	private void setScene() {
+		scene = new Scene();			// The one instance of scene
+		
+		try {
+			sceneControler = new SceneControler(this);
+		} catch (EMBlockError e) {
+			SmTrace.lg(String.format("externalsceneControler error %s", e.getMessage()));
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
+		try {
+			EMBlockBase.setDefaults("box", new EMBox3D(), Color.WHITE);
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 		sceneControler.setControl("component", sceneControler.displayAddControl);
 		sceneControler.setControl("placement", sceneControler.displayPlacementControl);
 		sceneControler.setControl("color", sceneControler.displayColorControl);
 		sceneControler.setControl("text", sceneControler.displayTextControl);
+		
 
-
+		String[] viewNames = {"Local_View"};
+		///String[] viewNames = {"Local_View", "External_View"};
+		int nv = viewNames.length * 2;		// Room for extended viewer
+		sceneViewers = new SceneViewer[nv];
+		for (int i = 0; i < nv; i += 2) {
+			String viewName = viewNames[i];
+			String viewTitle = viewName.replace(' ', '_');
+			try {
+				SceneViewer sceneViewer = new SceneViewer(viewTitle, viewName, sceneControler);
+				sceneViewers[i] = sceneViewer;
+				sceneControler.addViewer(sceneViewer);
+				SceneViewer extv = sceneViewer.externalView(
+						"External View", null);
+				sceneControler.addViewer(extv);
+				sceneViewers[i+1] = extv;
+			} catch (EMBlockError e) {
+				SmTrace.lg(String.format("sceneControler %s error %s", viewName, e.getMessage()));
+				e.printStackTrace();
+				System.exit(1);
+			}
+		}
+		
 	}
-
+	
+	
 	/**
 	 * Get access to scene
 	 */
@@ -442,6 +458,15 @@ public class ExtendedModeler implements ActionListener {
 	 */
 	public JPanel traceCkBoxPanel() {
 		return new JPanel();	/// TBD
+	}
+
+	/**
+	 * Reset program running
+	 */
+	public void reset() {
+		ColoredText.reset();
+		ControlOfColor.reset();
+		setScene();
 	}
 	
 	

@@ -117,7 +117,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		radialMenu.setItemLabelAndID(4, "Set Color to Green", COMMAND_COLOR_GREEN);
 		radialMenu.setItemLabelAndID(5, "Set Color to Blue", COMMAND_COLOR_BLUE);
 		radialMenu.setItemLabelAndID(7, "Delete Box", COMMAND_DELETE);
-
+		reset();
 	}
 
 	
@@ -128,12 +128,12 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		sceneViewers.add(viewer);
 	}
 
-	public AlignedBox3D getBox( int index ) {
+	public EMBox3D getSphere( int index ) {
 		return scene.getBox(index);
 	}
 	
 	
-	public AlignedBox3D getBoundingBoxOfScene() {
+	public ColoredBox getBoundingBoxOfScene() {
 		return scene.getBoundingBoxOfScene();
 	}
 	
@@ -575,13 +575,13 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		scene.addBlock(bcmd, id);
 	}
 
-	public int addNewBlock(EMBCommand bcmd, String blocktype, AlignedBox3D box, Color color) {
+	public int addNewBlock(EMBCommand bcmd, String blocktype, EMBox3D box, Color color) {
 		 EMBlock cb = newBlock(blocktype, box, color);
 		bcmd.addBlock(cb.iD());
 		return cb.iD();
 	}
 
-	private EMBlock newBlock(String blocktype, AlignedBox3D box, Color color) {
+	private EMBlock newBlock(String blocktype, EMBox3D box, Color color) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -612,30 +612,28 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		}
 		EMBlock cb = null;
 		try {
-			cb = EMBlock.newBlock(blockType);
+			cb = EMBlock.newBlock(blockType, controls);
 		} catch (EMBlockError e) {
 			SmTrace.lg(String.format("createNewBlock %s error: %s",
 					blockType, e.getMessage()));
 			return -1;
 		}
-		try {
-			cb.setFromControls(controls);
-		} catch (EMBlockError e) {
-			SmTrace.lg(String.format("createNewBlock %s error: %s",
-					blockType, e.getMessage()));
-			return -1;
+
+		if (cb_sel != null) {
+			ControlOfPlacement cop = (ControlOfPlacement) controls.getControl("placement");
+			Vector3D posadj = cop.getAdj();
+			cb.translate(posadj);
 		}
 		
-		cb.adjustFromControls(controls, bcmd);
+		///cb.adjustFromControls(controls, bcmd);
 		int id = bcmd.addBlock(cb);
-		bcmd.selectBlock(id);		// Select new block
+		selectAdd(bcmd, id, false);
+		///bcmd.selectBlock(id);		// Select new block
 		return id;
 		
 	}
 
 	public void createNewBlock(EMBCommand bcmd, String blockType, Point3D at_point, Vector3D size) {
-		Vector3D halfDiagonalOfNewBox = new Vector3D(EMBlockBase.DEFAULT_SIZE * 0.5f, EMBlockBase.DEFAULT_SIZE * 0.5f,
-				EMBlockBase.DEFAULT_SIZE * 0.5f);
 		EMBlock cb = null;
 		if (anySelected()) {
 			cb = getSelectedBlock();
@@ -644,8 +642,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 							Vector3D.mult(normalAtSelectedPoint,
 									0.5f * (float) Math.abs(Vector3D.dot(cb.getDiagonal(), normalAtSelectedPoint)))),
 					Vector3D.mult(normalAtSelectedPoint, EMBlockBase.DEFAULT_SIZE * 0.5f));
-			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
-					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
+			EMBox3D box = new EMBox3D(centerOfNewBox, cb.getSize().length()/2);
 			Color color = new Color(clamp(cb.getRed() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getGreen() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), cb.getAlpha());
@@ -653,8 +650,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 			cb = EMBlock.newBlock(blockType, box, color);
 		} else {
 			Point3D centerOfNewBox = currentViewerCamera().target;
-			AlignedBox3D box = new AlignedBox3D(Point3D.diff(centerOfNewBox, halfDiagonalOfNewBox),
-					Point3D.sum(centerOfNewBox, halfDiagonalOfNewBox));
+			EMBox3D box = new EMBox3D(centerOfNewBox, EMBox3D.defaultRadius());
 			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
 					EMBlockBase.DEFAULT_ALPHA);
 			cb = EMBlock.newBlock(blockType, box, color);
@@ -868,8 +864,6 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	 */
 	public void reset() {
 		SmTrace.lg("Reset");
-		scene.reset();
-		resetCameras();
 		controls.reset();
 		commandManager = new EMBCommandManager(this);
 		mousePressed = false;
@@ -1369,8 +1363,9 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 			return;
 		}
 		
-		EMBlock cb = new EMBlock(new ColoredText(controls));
-		if (cb != null) {
+		EMBlockBase cb_base = ColoredText.newBlock(controls);
+		if (cb_base != null) {
+			EMBlock cb = new EMBlock(cb_base);
 			int id = bcmd.addBlock(cb);
 			bcmd.selectBlock(id);		// Select new block
 		}
@@ -1433,7 +1428,8 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		Point3D target = new Point3D(0, 0, 0);
 		Vector3D up = new Vector3D(0, 1, 0);
 		
-		if (anySelected()) {
+		if (anySelected() && getSelectedBlock() != null) {
+		///if (anySelected()) {
 			cb = getSelectedBlock();
 			Point3D center = Point3D.sum(
 					Point3D.sum(cb.getCenter(),

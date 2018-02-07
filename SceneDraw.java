@@ -103,14 +103,14 @@ class SceneDraw {
 	}
 
 	public void drawLocalView(GLAutoDrawable drawable) {
-		AlignedBox3D box = sceneViewer.localView.getViewBox();
-		if ( ! box.isEmpty() )
+		ColoredBox box = sceneViewer.localView.getViewBox();
+		if ( box != null )
 			ColoredBox.drawBox(drawable, box, false, true, false );
 	}
 
 	public void drawBoundingBoxOfScene(GLAutoDrawable drawable) {
-		AlignedBox3D box = sceneViewer.getScene().getBoundingBoxOfScene();
-		if ( ! box.isEmpty() )
+		ColoredBox box = sceneViewer.getScene().getBoundingBoxOfScene();
+		if (box != null)
 			ColoredBox.drawBox(drawable, box, false, true, false );
 	}
 }

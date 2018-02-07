@@ -6,15 +6,26 @@ import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.util.gl2.GLUT;
 
+import smTrace.SmTrace;
+
 public class ColoredBall extends EMBlockBase {
-	private boolean isOk = false;	// Set OK upon successful construction
+	///private boolean isOk = false;	// Set OK upon successful construction
 
 	public boolean intersects(
 		Ray3D ray, // input
 		Point3D intersection, // output
 		Vector3D normalAtIntersection // output
 	) {
-		return getBox().intersects(ray, intersection, normalAtIntersection);		
+		EMBox3D box = getBox();
+		boolean ret = box.intersects(ray, intersection, normalAtIntersection);
+		SmTrace.lg(String.format("ColoredBall.intersects(ray:%s, intersection(%s), normalAtIntersection(%s)",
+				ray, intersection, normalAtIntersection), "intersection");
+		if (normalAtIntersection.lengthSquared() == 0) {		
+			normalAtIntersection = new Vector3D(1,0,0);		///TFD
+			SmTrace.lg(String.format("ColoredBall.intersects FORCED (ray:%s, intersection(%s), normalAtIntersection(%s)",
+					ray, intersection, normalAtIntersection), "intersection");
+		}
+		return ret;		
 	}
 	/**
 	 * Check if ok block
@@ -23,15 +34,45 @@ public class ColoredBall extends EMBlockBase {
 	public boolean isOk() {
 		return isOk;
 	}
+
 	
+	public ColoredBall(Point3D center, float radius, Color color, Vector3D up) {
+		super(center, radius, color, up);
+	}
 	public ColoredBall(
-		AlignedBox3D box,
+		EMBox3D box,
 		Color color
 	) {
 		super(box, color);
 		isOk = true;
 	}
+
+	/**
+	 * Same iD
+	 * @param cb_base
+	 */
+	public ColoredBall(EMBlockBase cb_base) {
+		super(cb_base);
+	}
 	
+
+	/**
+	 * Create new object, from controls
+	 * @throws EMBlockError 
+	 **/
+	public static ColoredBall newBlock(ControlsOfScene controlsOfScene) throws EMBlockError {
+		ControlOfColor ctc = (ControlOfColor)controlsOfScene.getControl("color");
+		Color color = ctc.getColor();
+		ControlOfScene ctl = controlsOfScene.getControl("placement");
+		ControlOfPlacement cop = (ControlOfPlacement)ctl;
+		Point3D center = cop.getPosition();
+		Vector3D size = cop.getSizeXYZ();
+		float diameter = java.lang.Math.min(size.x(), size.y());				// Inside the box
+		diameter = java.lang.Math.min(diameter, size.z());
+		float radius = diameter/2;
+		Vector3D up =  cop.getUp();
+		return new ColoredBall(center, radius, color, up);
+	}
 
 
 	public void draw(
@@ -40,7 +81,7 @@ public class ColoredBall extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		AlignedBox3D box = getBox();
+		EMBox3D box = getBox();
 		drawBall(drawable, box, expand, drawAsWireframe, cornersOnly);
 	}
 
@@ -50,9 +91,9 @@ public class ColoredBall extends EMBlockBase {
 
 
 
-	static public void drawBall(
+	public static void drawBall(
 		GLAutoDrawable drawable,
-		AlignedBox3D box,
+		EMBox3D box,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
@@ -67,7 +108,7 @@ public class ColoredBall extends EMBlockBase {
 			float diagonal = box.getDiagonal().length();
 			diagonal /= 20;
 			Vector3D v = new Vector3D( diagonal, diagonal, diagonal );
-			box = new AlignedBox3D( Point3D.diff(box.getMin(),v), Point3D.sum(box.getMax(),v) );
+			box = new EMBox3D(box.getCenter(), box.getRadius() + diagonal);
 		}
 		if ( drawAsWireframe ) {
 			///***
@@ -111,19 +152,15 @@ public class ColoredBall extends EMBlockBase {
 				gl.glEnd();
 			}***/
 			///***/
-			Vector3D diagonal = box.getDiagonal();
-			float xlen = Math.abs(diagonal.x());
-			float ylen = Math.abs(diagonal.y());
-			float zlen = Math.abs(diagonal.z());
-			float minlen = Math.min(xlen, ylen);
-			minlen = Math.min(minlen, zlen);
-			float r = minlen/2;
+			float r = box.getRadius();
 			Point3D center = box.getCenter();
 			GLUT glut = new GLUT();
 			int nLongitudes = 20;
 			int nLatitudes = nLongitudes;
 			gl.glTranslatef(center.x(), center.y(), center.z());
+			EMBox3D.rotate2v(drawable, EMBox3D.UP, box.getUp());
 			glut.glutWireSphere(r, nLongitudes, nLatitudes);
+			EMBox3D.rotate2vRet(drawable);
 			gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 		else {
@@ -141,6 +178,7 @@ public class ColoredBall extends EMBlockBase {
 			
 			gl.glTranslatef(center.x(), center.y(), center.z());
 			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
+			EMBox3D.rotate2vRet(drawable);
 			gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 	}
@@ -156,7 +194,7 @@ public class ColoredBall extends EMBlockBase {
  */
 	static public void drawBallGl(
 		GL2 gl,
-		AlignedBox3D box,
+		EMBox3D box,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
@@ -169,8 +207,7 @@ public class ColoredBall extends EMBlockBase {
 		if ( expand ) {
 			float diagonal = box.getDiagonal().length();
 			diagonal /= 20;
-			Vector3D v = new Vector3D( diagonal, diagonal, diagonal );
-			box = new AlignedBox3D( Point3D.diff(box.getMin(),v), Point3D.sum(box.getMax(),v) );
+			box = new EMBox3D(box.getCenter(), box.getRadius() + diagonal);
 		}
 		if ( drawAsWireframe ) {
 			///***
@@ -246,6 +283,20 @@ public class ColoredBall extends EMBlockBase {
 			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
 			gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
+	}
+
+	public Point3D getMin() {
+		float xmin = box.getCenter().x()-getRadius();
+		float ymin = box.getCenter().y()-getRadius();
+		float zmin = box.getCenter().z()-getRadius();
+		return new Point3D(xmin, ymin, zmin);
+	}
+
+	public Point3D getMax() {
+		float xmax = box.getCenter().x()+getRadius();
+		float ymax = box.getCenter().y()+getRadius();
+		float zmax = box.getCenter().z()+getRadius();
+		return new Point3D(xmax, ymax, zmax);
 	}
 
 	
@@ -264,6 +315,18 @@ public class ColoredBall extends EMBlockBase {
 	public EMBlockBase copy() {
 		super.copy();
 		return null;
+	}
+
+
+	/**
+	 * 
+	 * @param new_size - new size with center in place
+	 */
+	public void resize(
+		Vector3D size
+	) {
+		float radius = size.length()/2;
+		setRadius(radius);
 	}
 	
 

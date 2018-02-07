@@ -1,3 +1,4 @@
+package ExtendedModeler;
 
 import java.lang.Math;
 
@@ -19,6 +20,10 @@ public class Vector3D {
 		v[0] = P.p[0];
 		v[1] = P.p[1];
 		v[2] = P.p[2];
+	}
+
+	public Vector3D( Vector3D v ) {
+		this(v.v[0], v.v[1], v.v[2]);
 	}
 
 	public void copy( float x, float y, float z ) {
@@ -44,6 +49,22 @@ public class Vector3D {
 		return (float)Math.sqrt( lengthSquared() );
 	}
 
+	/**
+	 * Simple comparison
+	 * @return
+	 */
+	public boolean equals(Vector3D v2) {
+		if (x() != v2.x())
+			return false;
+		if (y() != v2.y())
+			return false;
+		if (z() != v2.z())
+			return false;
+		
+		return true;
+	}
+
+	
 	public Vector3D negated() {
 		return new Vector3D(-x(),-y(),-z());
 	}

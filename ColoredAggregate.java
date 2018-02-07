@@ -1,5 +1,6 @@
 package ExtendedModeler;
 import java.awt.Color;
+import java.util.Iterator;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -10,19 +11,20 @@ import smTrace.SmTrace;
 
 import com.jogamp.opengl.glu.GLU;
 
-public class ColoredCylinder extends EMBlockBase {
-	float height;			// Height - base to top
-	float rBase;			// Radius of base
-
+public class ColoredAggregate extends EMBlockBase {
+	private EMBlockGroup group;
 
 
 	/**
 	 * Base object
 	 */
-	public ColoredCylinder(Point3D center, float height, float rBase, Color color, Vector3D up) {
-		super(center, dim2radius(height, rBase), color, up);
-		this.height = height;
-		this.rBase = rBase;
+	public ColoredAggregate(EMBlockGroup group, Vector3D up) {
+		super(null, null, up);
+		this.group = new EMBlockGroup(group);
+	}
+
+	public ColoredAggregate() {
+		this(new EMBlockGroup(), null);
 	}
 
 	/**
@@ -42,16 +44,12 @@ public class ColoredCylinder extends EMBlockBase {
 	 * Create new object, from controls
 	 * @throws EMBlockError 
 	 **/
-	public static ColoredCylinder newBlock(ControlsOfScene controlsOfScene) throws EMBlockError {
-		ControlOfColor ctc = (ControlOfColor)controlsOfScene.getControl("color");
-		Color color = ctc.getColor();
+	public static ColoredAggregate newBlock(ControlsOfScene controlsOfScene) throws EMBlockError {
 		ControlOfScene ctl = controlsOfScene.getControl("placement");
 		ControlOfPlacement cop = (ControlOfPlacement)ctl;
 		Point3D center = cop.getPosition();
-		float height = cop.getSizeY();
-		float rBase = cop.getSizeX()/2;
 		Vector3D up =  cop.getUp();
-		return new ColoredCylinder(center, height, rBase, color, up);
+		return new ColoredAggregate();
 	}
 
 	public String blockType() {
@@ -66,7 +64,7 @@ public class ColoredCylinder extends EMBlockBase {
 		return getBox().intersects(ray, intersection, normalAtIntersection);		
 	}
 	
-	public ColoredCylinder(
+	public ColoredAggregate(
 		EMBox3D box,
 		Color color
 	) {
@@ -78,7 +76,7 @@ public class ColoredCylinder extends EMBlockBase {
 	 * Same iD
 	 * @param cb_base
 	 */
-	public ColoredCylinder(EMBlockBase cb_base) {
+	public ColoredAggregate(EMBlockBase cb_base) {
 		super(cb_base);
 	}
 	
@@ -90,8 +88,11 @@ public class ColoredCylinder extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		EMBox3D box = getBox();
-		drawCylinder(drawable, box, height, rBase, expand, drawAsWireframe, cornersOnly);
+		Iterator<EMBlock> itr = group.getIterator();
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			cb.draw(drawable, expand, drawAsWireframe, cornersOnly);
+		}
 	}
 
 
@@ -187,31 +188,138 @@ public class ColoredCylinder extends EMBlockBase {
 
 
 	public Point3D getMin() {
-		float xmin = box.getCenter().x()-rBase;
-		float ymin = box.getCenter().y()-height/2;
-		float zmin = box.getCenter().z()-rBase;
+		float xmin = getMinX();
+		float ymin = getMinY();
+		float zmin = getMinZ();
 		return new Point3D(xmin, ymin, zmin);
 	}
 
+	
+	public float getMinX() {
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMinX();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+
+	
+	public float getMinY() {
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMinY();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+
+	
+	public float getMinZ() {
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMinZ();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+	
+	
 	public Point3D getMax() {
-		float xmax = box.getCenter().x()+rBase;
-		float ymax = box.getCenter().y()+height/2;
-		float zmax = box.getCenter().z()+rBase;
+		float xmax = getMaxX();
+		float ymax = getMaxY();
+		float zmax = getMaxZ();
 		return new Point3D(xmax, ymax, zmax);
+	}
+
+	
+	public float getMaxX() {
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMaxX();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+
+	
+	public float getMaxY() {
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMaxY();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+
+	
+	public float getMaxZ() {
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMaxZ();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
 	}
 
 
 
 	/**
 	 * 
-	 * @param new_size - new size with center in place
+	 * @param new_size - calculate from components
 	 */
 	public void resize(
 		Vector3D size
 	) {
-		this.height = size.y();
-		this.rBase = Math.max(size.x(),  size.x())/2;
-		setRadius(dim2radius(this.height, this.rBase));
+		///TBD
 	}
 	
 }

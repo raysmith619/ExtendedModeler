@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Color;
 
 import com.jogamp.opengl.GL;
@@ -6,24 +7,83 @@ import com.jogamp.opengl.GLAutoDrawable;
 
 import smTrace.SmTrace;
 
-public class ColoredBox extends EMBlockBase {
 
-	public boolean intersects(
-		Ray3D ray, // input
-		Point3D intersection, // output
-		Vector3D normalAtIntersection // output
-	) {
-		return getBox().intersects(ray, intersection, normalAtIntersection);		
+public class ColoredBox extends EMBlockBase {
+	/**
+	 *  Oriented box
+	 * Use this for object size and orientation
+	 * Functions that depend / affect position
+	 * MUST be overridden to use "obox"
+	 * instead of super.box
+	 */
+	OrientedBox3D obox = new OrientedBox3D();
+
+	/**
+	 * Generic object
+	 */
+	public ColoredBox() {
 	}
 	
 	public ColoredBox(
-		AlignedBox3D box,
+		EMBox3D box,
 		Color color
 	) {
 		super(box, color);
+		setBox(box);
 		isOk = true;
 	}
 
+
+	/**
+	 * Base object
+	 */
+	public ColoredBox(Point3D center, Vector3D size, Color color, Vector3D up) {
+		super(center, size2radius(size), color, up);
+		if (size == null)
+			size = new Vector3D(0,0,0);
+
+		this.obox = new OrientedBox3D(center, size, up);
+	}
+	/**
+	 * Create new object, from controls
+	 * @throws EMBlockError 
+	 **/
+	public static ColoredBox newBlock(ControlsOfScene controlsOfScene) throws EMBlockError {
+		ControlOfColor ctc = (ControlOfColor)controlsOfScene.getControl("color");
+		Color color = ctc.getColor();
+		ControlOfScene ctl = controlsOfScene.getControl("placement");
+		ControlOfPlacement cop = (ControlOfPlacement)ctl;
+		Point3D center = cop.getPosition();
+		Vector3D size = cop.getSizeXYZ();
+		Vector3D up =  cop.getUp();
+		return new ColoredBox(center, size, color, up);
+	}
+	
+	public ColoredBox(ColoredBox cbox) {
+		this(cbox.getCenter(), cbox.getSize(), cbox.color, cbox.getUp());
+	}
+
+	
+	public ColoredBox(EMBox3D box, Color color, int iD) {
+		super(box, color, iD);
+	}
+
+	/**
+	 * Same iD
+	 * @param cb_base
+	 */
+	public ColoredBox(EMBlockBase cb_base) {
+		super(cb_base);
+	}
+
+	/**
+	 * Convert xyz size to radius of object, enclosing object
+	 */
+	public static float size2radius(Vector3D size) {
+		if (size == null)
+			size = new Vector3D(0,0,0);
+		return size.length()/2;
+	}
 	
 	
 	/**
@@ -51,6 +111,39 @@ public class ColoredBox extends EMBlockBase {
 	public String blockType() {
 		return "box";
 	}
+	
+
+	/**
+	 * Get corner (global coordinates)
+	 * @param i
+	 * @return
+	 */
+	public Point3D getCorner(int i) {
+		return new Point3D(
+			((i & 1)!=0) ? getMax().x() : getMin().x(),
+			((i & 2)!=0) ? getMax().y() : getMin().y(),
+			((i & 4)!=0) ? getMax().z() : getMin().z()
+		);
+	}
+
+	// Return the corner that is farthest along the given direction.
+	public Point3D getExtremeCorner( Vector3D v ) {
+		return new Point3D(
+			v.x() > 0 ? getMax().x() : getMin().x(),
+			v.y() > 0 ? getMax().y() : getMin().y(),
+			v.z() > 0 ? getMax().z() : getMin().z()
+		);
+	}
+
+	// Return the index of the corner that
+	// is farthest along the given direction.
+	public int getIndexOfExtremeCorner( Vector3D v ) {
+		int returnValue = 0;
+		if (v.x() > 0) returnValue |= 1;
+		if (v.y() > 0) returnValue |= 2;
+		if (v.z() > 0) returnValue |= 4;
+		return returnValue;
+	}
 
 
 	public void draw(
@@ -59,95 +152,237 @@ public class ColoredBox extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		AlignedBox3D box = getBox();
-		drawBox(drawable, box, expand, drawAsWireframe, cornersOnly);
+		drawBox(drawable, this, expand, drawAsWireframe, cornersOnly);
 	}
-
 
 
 	static public void drawBox(
 		GLAutoDrawable drawable,
-		AlignedBox3D box,
+		ColoredBox cbox,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
 		GL2 gl = (GL2) drawable.getGL();
+		glp = gl;					// For tracking
+		OrientedBox3D obox = cbox.orientedBox3D();
 		if ( expand ) {
-			float diagonal = box.getDiagonal().length();
-			diagonal /= 20;
-			Vector3D v = new Vector3D( diagonal, diagonal, diagonal );
-			box = new AlignedBox3D( Point3D.diff(box.getMin(),v), Point3D.sum(box.getMax(),v) );
+			float adj = (float) 1.1;
+			obox.adjSize(adj, adj, adj);
 		}
+		AlignedBox3D abox = obox.getAlignedBox();
+		EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 		if ( drawAsWireframe ) {
 			if ( cornersOnly ) {
-				gl.glBegin( GL.GL_LINES );
+				gl_glBegin( GL.GL_LINES, "drawAsWireframe cornersOnly GL.GL_LINES" );
 				for ( int dim = 0; dim < 3; ++dim ) {
-					Vector3D v = Vector3D.mult( Point3D.diff(box.getCorner(1<<dim),box.getCorner(0)), 0.1f );
+					Point3D pvto = abox.getCorner(1<<dim);
+					Point3D pv0 = abox.getCorner(0);
+					Vector3D pdiff = Point3D.diff( pvto, pv0);
+					Vector3D v = Vector3D.mult(pdiff, 0.1f );
 					for ( int a = 0; a < 2; ++a ) {
 						for ( int b = 0; b < 2; ++b ) {
 							int i = (a << ((dim+1)%3)) | (b << ((dim+2)%3));
-							gl.glVertex3fv( box.getCorner(i).get(), 0 );
-							gl.glVertex3fv( Point3D.sum( box.getCorner(i), v ).get(), 0 );
+							Point3D pvi = abox.getCorner(i);
+							gl_glVertex3fv( pvi.get(), 0 );
+							gl_glVertex3fv( Point3D.sum( pvi, v ).get(), 0 );
 							i |= 1 << dim;
-							gl.glVertex3fv( box.getCorner(i).get(), 0 );
-							gl.glVertex3fv( Point3D.diff( box.getCorner(i), v ).get(), 0 );
+							Point3D pvi2 = abox.getCorner(i);
+							gl_glVertex3fv( pvi2.get(), 0 );
+							gl_glVertex3fv( Point3D.diff( pvi2, v ).get(), 0 );
 						}
 					}
 				}
-				gl.glEnd();
+				gl_glEnd();
 			}
 			else {
-				gl.glBegin( GL.GL_LINE_STRIP );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-				gl.glEnd();
-				gl.glBegin( GL.GL_LINES );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-				gl.glEnd();
+				gl_glBegin(GL.GL_LINE_STRIP, "drawAsWireframe GL.GL_LINE_STRIP");
+					gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
+				gl_glEnd();
+				gl_glBegin( GL.GL_LINES, "drawAsWireframe GL.GL_LINE_STRIP" );
+					gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
+					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
+				gl_glEnd();
 			}
 		}
 		else {
 			gl.glBegin( GL2.GL_QUAD_STRIP );
-				gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-			gl.glEnd();
+				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
+			gl_glEnd();
 
-			gl.glBegin( GL2.GL_QUADS );
-				gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
+			gl_glBegin( GL2.GL_QUADS, "solid GL2.GL_QUADS" );
+				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
 
-				gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-				gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-			gl.glEnd();
+				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
+				gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
+			gl_glEnd();
 		}
+		EMBox3D.rotate2vRet(drawable);
+	}
+
+	/**
+	 * Tracking / Debugging 
+	 * @param v
+	 * @param offset
+	 */
+
+	/**
+	 * Tracking / Debugging 
+	 * @param v
+	 * @param offset
+	 */
+	private static GL2 glp;				// for tracking routine
+	private static String block = "box";
+	private static void gl_glVertex3fv(float [] v, int offset) {
+		String desc = traceDesc;
+		glp.glVertex3fv(v, offset);
+		SmTrace.lg(String.format("%s glVertex3fv %.2f %.2f %.2f", block, v[0], v[1], v[2], desc), "draw");
+	}
+	private static String traceDesc = "trace description";
+	private static void gl_glBegin(int mode, String desc) {
+		traceDesc = desc;
+		glp.glBegin(mode);
+		SmTrace.lg(String.format("%s gl_glBegin(%s)", block, desc), "draw");
+	}
+	private static void gl_glBegin(int mode) {
+		String desc = String.format("mode(%d)", mode);
+		gl_glBegin(mode, desc);
+	}
+	
+	private static void gl_glEnd(String desc) {
+		glp.glEnd();
+		SmTrace.lg(String.format("%s gl_glEnd %s", block, desc), "draw");
+	}
+	private static void gl_glEnd() {
+		String desc = traceDesc;
+		gl_glEnd(desc);
 	}
 	
 
+	public Point3D getMin() {
+		return obox.getMin();
+	}
+
+	public Point3D getMax() {
+		return obox.getMax();
+	}
+	
+	
+	/**
+	 * Return copy of inner box
+	 * 
+	 */
+	public OrientedBox3D orientedBox3D() {
+		return new OrientedBox3D(obox);
+	}
+
+
+	/**
+	 * Enlarge to contain box
+	 * @param box
+	 */
+	@Override
+	public void bound(Point3D pt) {
+		this.obox.bound(pt);
+	}
+
+
+	/**
+	 * 
+	 * @param new_size - new size with center in place
+	 */
+	public void resize(
+		Vector3D size
+	) {
+		obox.resize(size);
+		float radius = size2radius(size);
+		setRadius(radius);
+	}
+
+	/**
+	 * Setup location info
+	 */
+	public void setBox(EMBox3D box) {
+		this.obox = new OrientedBox3D(box);
+	}
+
+
+	public void resize(
+		int indexOfCornerToResize, Vector3D translation
+	) {
+		EMBox3D oldBox = getBox();
+		box = new EMBox3D();
+
+		// One corner of the new box will be the corner of the old
+		// box that is diagonally opposite the corner being resized ...
+		 box.bound( oldBox.getCorner( indexOfCornerToResize ^ 7 ) );
+
+		// ... and the other corner of the new box will be the
+		// corner being resized, after translation.
+		box.bound( Point3D.sum( oldBox.getCorner( indexOfCornerToResize ), translation ) );
+	}
+
+	// Overridden when necessary
+	public void translate(Vector3D translation ) {
+		box.translate(translation);
+	}
+
+	
+	/**
+	 * Get base point - currently min x,y,z
+	 * @param point
+	 */
+	public Point3D getBasePoint() {
+		EMBox3D box = getBox();
+		return box.getMin();
+	}
+	
+
+	/**
+	 * Move center to new point
+	 * @param point
+	 */
+	public void moveTo(Point3D point ) {
+		box.setPosition(point);
+	}
+	
+
+	/**
+	 * Move base corner to new point
+	 * @param point
+	 */
+	public void moveBaseTo(Point3D point ) {
+		EMBox3D oldBox = getBox();
+		Vector3D vm = Point3D.diff(point, oldBox.getMin());
+		translate(vm);
+	}
+	
 	
 }

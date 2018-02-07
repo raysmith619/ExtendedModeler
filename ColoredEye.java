@@ -4,6 +4,9 @@ import java.awt.Color;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.glu.GLU;
+import com.jogamp.opengl.glu.GLUquadric;
+import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.gl2.GLUT;
 
 import smTrace.SmTrace;
@@ -44,7 +47,12 @@ public class ColoredEye extends EMBlockBase {
 		normalAtIntersection.copy(direction_to_center);
 		return true;
 		***/
-		return getBox().intersects(ray, intersection, normalAtIntersection);		
+		boolean ret = getBox().intersects(ray, intersection, normalAtIntersection);
+		if (ret) {
+			SmTrace.lg(String.format("ColoredEye intersection=%s, ray=%s, normalAtIntersection=%s)",
+					intersection, ray, normalAtIntersection));
+		}
+		return ret;		
 
 	}
 
@@ -80,6 +88,14 @@ public class ColoredEye extends EMBlockBase {
 	public ColoredEye(
 		) {
 		this(null, null, null, null);
+	}
+
+	/**
+	 * Same iD
+	 * @param cb_base
+	 */
+	public ColoredEye(EMBlockBase cb_base) {
+		super(cb_base);
 	}
 
 	/**
@@ -121,19 +137,11 @@ public class ColoredEye extends EMBlockBase {
 	 * Convert position to box
 	 **/ 
 
-	public AlignedBox3D position2box(Point3D position) {
+	public  EMBox3D position2box(Point3D position) {
 		if (position == null)
 			position = new Point3D(0, 0, 0);
 		Vector3D size = getSize();
-		float p1x = position.x() - size.x()*getWidth();
-		float p2x = position.x() + size.x()*getWidth();
-		float p1y = position.y() - size.y()*getWidth();
-		float p2y = position.y() + size.y()*getWidth();
-		float p1z = position.z() - size.z()*getWidth();
-		float p2z = position.z() + size.z()*getWidth();
-		Point3D p1 = new Point3D(p1x, p1y, p1z);
-		Point3D p2 = new Point3D(p2x, p2y, p2z);
-		AlignedBox3D box = new AlignedBox3D(p1, p2);
+		box = new EMBox3D(position, size.length()/2);
 		return box;
 	}
 
@@ -150,6 +158,46 @@ public class ColoredEye extends EMBlockBase {
 		Vector3D eye_dir = eye_to_target.normalized();
 		
 		GL2 gl = (GL2) drawable.getGL();
+		gl.glColor4d(.303, .18, .16, .565);	// cone around eye with point away from target
+		GLUT glut = new GLUT();
+		Point3D center = new Point3D(eye_pt);
+		float bx = center.x();
+		float by = center.y();
+		float bz = center.z();
+		float rvx = eye_dir.x();
+		float rvy = eye_dir.y();
+		float rvz = eye_dir.z();
+		Vector3D xaxis = new Vector3D(1,0,0);
+		Vector3D yaxis = new Vector3D(0,1,0);
+		Vector3D zaxis = new Vector3D(0,0,1);
+		Vector3D coneup = new Vector3D(0,1,0);	///TBD - External up
+		float rad2deg = (float) (180./Math.PI);
+		float ax = Vector3D.computeSignedAngle(coneup, eye_dir, xaxis ) * rad2deg;
+		float ay = Vector3D.computeSignedAngle(coneup, eye_dir, yaxis ) * rad2deg; 
+		float az = Vector3D.computeSignedAngle(coneup, eye_dir, zaxis ) * rad2deg; 
+		SmTrace.lg(String.format("eye_dir(%s) angle ax=%.1f, ay=%.1f, az=%.1f coneup=%s",
+				eye_dir, ax, ay, az, coneup));
+		float r = getWidth();
+		float h = 2*r;
+		int nLongitudes = 10;
+		int nLatitudes = nLongitudes;
+		gl.glPushAttrib(GL2.GL_TRANSFORM_BIT);
+		gl.glMatrixMode(GL2.GL_MODELVIEW);
+		gl.glPushMatrix();
+		gl.glTranslatef(bx, by, bz);
+		
+		gl.glRotatef(ax, eye_dir.x(), eye_dir.y(), eye_dir.z());
+		gl.glRotatef(ay, eye_dir.x(), eye_dir.y(), eye_dir.z());
+		gl.glRotatef(az, eye_dir.x(), eye_dir.y(), eye_dir.z());
+		///gl.glRotatef(ax, 1, 0, 0);
+		///gl.glRotatef(ay, 0, 1, 0);
+		///gl.glRotatef(az, 0, 0, 1);
+		glut.glutSolidCone(r, h, nLongitudes, nLatitudes);
+//		gl.glRotatef(-45, rvx, rvy, rvz);
+//		gl.glTranslatef(-bx, -by, -bz);
+		gl.glPopMatrix();
+		gl.glPopAttrib();
+
 		gl.glColor3d(.8,.8,.8);
 		ColoredBall.drawBall(drawable, box, expand, drawAsWireframe, cornersOnly);
 		if (rayDisplayed != null) {
@@ -180,7 +228,7 @@ public class ColoredEye extends EMBlockBase {
 
 	static public void drawEye(
 		GLAutoDrawable drawable,
-		AlignedBox3D box,
+		EMBox3D box,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
@@ -211,7 +259,7 @@ public class ColoredEye extends EMBlockBase {
  */
 	static public void drawBallGl(
 		GL2 gl,
-		AlignedBox3D box,
+		EMBox3D box,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
@@ -224,8 +272,7 @@ public class ColoredEye extends EMBlockBase {
 		if ( expand ) {
 			float diagonal = box.getDiagonal().length();
 			diagonal /= 20;
-			Vector3D v = new Vector3D( diagonal, diagonal, diagonal );
-			box = new AlignedBox3D( Point3D.diff(box.getMin(),v), Point3D.sum(box.getMax(),v) );
+			box = new EMBox3D(box.getCenter(), box.getRadius() + diagonal);
 		}
 		if ( drawAsWireframe ) {
 			///***
@@ -277,6 +324,7 @@ public class ColoredEye extends EMBlockBase {
 			minlen = Math.min(minlen, zlen);
 			float r = minlen/2;
 			Point3D center = box.getCenter();
+			GLU glu = new GLU();
 			GLUT glut = new GLUT();
 			int nLongitudes = 20;
 			int nLatitudes = nLongitudes;

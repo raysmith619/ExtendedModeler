@@ -46,11 +46,10 @@ public class ControlsOfScene {
 	 * 
 	 */
 	public void reset() {
-			for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
-				String controlName = entry.getKey();
-				ControlOfScene control = getControl(controlName);
-				control.reset();
-			}
+		for (Map.Entry<String,ControlEntry> entry : controlh.entrySet()) {
+			String controlName = entry.getKey();
+			ControlOfScene control = getControl(controlName);
+		}
 	}
 	/**
 	 * Add/Remove Control/Display

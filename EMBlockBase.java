@@ -1,8 +1,5 @@
 package ExtendedModeler;
 import java.awt.Color;
-import java.util.ArrayList;
-
-import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 
 import smTrace.SmTrace;
@@ -17,26 +14,27 @@ public class EMBlockBase {
 ///	public Object block = null;
 	
 						// Universal object traits
-	public AlignedBox3D box;	// Bounding box
+	public EMBox3D box = new EMBox3D();	// Bounding box (sphere), with orientation
 	protected Color color;		// Object color
 	///public Point3D position;	// Position:  CALCULATED
-	public Point3D target;		// target
-	public Vector3D up;			// "UP" direction 
+	public Point3D target = box.getCenter();		// target
 	private boolean isSelected = false;
 	private static EMBlockBase defaultAtt;	// Default attributes for creation/access
+
 	public boolean isOk = false;		// Set OK upon successful construction
 	private int viewerLevel;			// Visible if viewer level > visible
 		
-
 	/**
 	 * Setup for defaults
 	 * @throws EMBlockError 
 	 */
-	public static void setDefaults(String blockType, AlignedBox3D box, Color color) throws EMBlockError {
+	public static void setDefaults(String blockType, EMBox3D box, Color color) throws EMBlockError {
 		color = EMBlockBase.colorCheck(color, "setDefaults");
 		defaultAtt = EMBlockBase.newBlock(blockType, box, color);		// Use std creation
 	}
 
+	
+	
 	public EMBlockBase(EMBlockBase cb) {
 		this(cb.box, cb.color, cb.iD());
 		this.isOk = cb.isOk();
@@ -53,7 +51,7 @@ public class EMBlockBase {
 	 * @throws EMBlockError 
 	 */
 	public void adjustFromControl(ControlOfColor ctl, EMBCommand bcmd) throws EMBlockError {
-		setFromControl(ctl);
+		adjustFromControl(ctl, bcmd);
 	}
 		
 	/**
@@ -61,7 +59,7 @@ public class EMBlockBase {
 	 * @throws EMBlockError 
 	 */
 	public void adjustFromControl(ControlOfPlacement ctl, EMBCommand bcmd) throws EMBlockError {
-		setFromControl(ctl);
+		adjustFromControl(ctl, bcmd);
 
 	}
 	
@@ -71,6 +69,7 @@ public class EMBlockBase {
 	 */
 	// Overridden for objects with text control e.g. ColoredText
 	public void adjustFromControl(ControlOfText ctl, EMBCommand bcmd) throws EMBlockError {
+		adjustFromControl(ctl, bcmd);
 	}
 
 	/**
@@ -78,7 +77,7 @@ public class EMBlockBase {
 	 * @throws EMBlockError 
 	 */
 	public void setFromControl(ControlOfColor ctl) throws EMBlockError {
-		Color color = ctl.nextColor();
+		Color color = ControlOfColor.nextColor();
 		this.color = color;
 	}
 		
@@ -90,8 +89,6 @@ public class EMBlockBase {
 		this.box = ctl.getBox();
 		if (this.target == null)
 			this.target = new Point3D(0, 0, 0);
-		if (this.up == null)
-			this.up  = new Vector3D(0, 1, 0);
 	}
 	
 /**
@@ -164,20 +161,46 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	public void setControl(ControlOfText ctl) {
 		return;
 	}
-	
+
 	/**
-	 * Base constructor
+	 * Base
 	 */
-	public EMBlockBase(AlignedBox3D box, Color color) {
-		this.iD = EMBlock.nextId();
-		this.box = box;
-		this.color = color;
-		colorCheck(color, "EMBlock");
+	/**
+	 * Base constructor with osition info held elsewhere
+	 * Position/orientation members must be overridden
+	 */
+	public EMBlockBase() {
+		this(null, null, 0);
 	}
 	
-	public EMBlockBase(AlignedBox3D box, Color color, int iD) {
+	
+	public EMBlockBase(Color color, int iD) {
+		if (color == null)
+			color = defaultAtt.color;
+		if (iD == 0)
+			iD = EMBlock.nextId();
+		this.color = color;
+	}
+
+	/**
+	 * Base constructor with some size/position info
+	 */
+	public EMBlockBase(EMBox3D box, Color color) {
+		this(box, color, 0);
+	}
+	
+	public EMBlockBase(EMBox3D box, Color color, int iD) {
+		if (iD == 0)
+			iD = EMBlock.nextId();
 		this.iD = iD;
-		this.box = box;
+		if (box == null)
+			box = new EMBox3D();
+		this.box = new EMBox3D(box);
+		if (color == null)
+			if (defaultAtt != null)
+				color = defaultAtt.getColor();
+			else
+				color = Color.WHITE;
 		this.color = color;
 		colorCheck(color, "EMBlock");
 	}
@@ -189,25 +212,27 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 */
 	public EMBlockBase(Point3D position,
 			Point3D target,
-			Vector3D up) {
+			Vector3D up) {		// "UP", null - aligned with world's up
 		this.iD = EMBlock.nextId();
 		if (position ==  null) {
-			Vector3D size = getSize();
-			position = new Point3D(size.x(), size.y(), size.z());
+			position = new Point3D(0,0,0);
 		}
 		setPosition(position);
+		this.color = Color.WHITE;
 		if (target == null)
 			target = new Point3D(0,0,0);
-		if (up == null)
-			up = new Vector3D(0, 1, 0);
-		
-	
-		setPosition(position);
-		this.target = target;
-		this.up = up;
+		box.setPosition(position);
+		this.box.up = up;
 	}
 
 	
+	public EMBlockBase(Point3D center, float radius, Color color, Vector3D up) {
+		this.box = new EMBox3D(center, radius, up);
+		this.color = color;
+	}
+
+
+
 	/**
 	 * Copy
 	 * "Deep-enough" copy to protect against subsequent modifications
@@ -223,6 +248,9 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * Check if color is too dark
 	 */
 	public static Color colorCheck(Color color, String tag) {
+		if (color == null)
+			return color; 
+			
 		float cc[] = new float[4];
 		color.getColorComponents(cc);
 		if (cc[0] < .1f && cc[1] < .1f && cc[2] < .1f) {
@@ -237,8 +265,33 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	
 	/**
 	 * Create new block
+	 * using controls, present state
+	 * @throws EMBlockError 
 	 */
-	public static EMBlockBase newBlock(String blockType, AlignedBox3D box, Color color) {
+	public static EMBlockBase newBlock(String blockType, ControlsOfScene controls) throws EMBlockError {
+		EMBlockBase cb_new = null;
+		if (blockType.equals("box"))
+			cb_new = ColoredBox.newBlock(controls);
+		else if (blockType.equals("ball"))
+			cb_new = ColoredBall.newBlock(controls);
+		else if (blockType.equals("cone"))
+			cb_new = ColoredCone.newBlock(controls);
+		else if (blockType.equals("cylinder"))
+			cb_new = ColoredCylinder.newBlock(controls);
+		else if (blockType.equals("text"))
+			cb_new = ColoredText.newBlock(controls);
+		else {
+			SmTrace.lg(String.format("EMBlockBase.newBlock Unsupported block type %s",
+					blockType));
+		}
+		return cb_new;
+	}
+
+	
+	/**
+	 * Create new block
+	 */
+	public static EMBlockBase newBlock(String blockType, EMBox3D box, Color color) {
 		color = EMBlockBase.colorCheck(color, "newBlockBase");
 		EMBlockBase cb_new = null;
 		if (blockType.equals("box"))
@@ -252,10 +305,9 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		else if (blockType.equals("text"))
 			cb_new = new ColoredText(box, color);
 		else {
-			SmTrace.lg(String.format("Unsupported block type %s",
+			SmTrace.lg(String.format("EMBlockBase.newBlock Unsupported block type %s",
 					blockType));
 		}
-		
 		return cb_new;
 	}
 
@@ -312,16 +364,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	/**
 	 * @throws EMBlockError 
 	 */
-	public static EMBlockBase newBlock(String blockType) throws EMBlockError {
-		EMBlockBase cb = EMBlockBase.newBlock(blockType, defaultAtt.box, defaultAtt.color); 
-		return cb;
-	}
-
-
-	/**
-	 * @throws EMBlockError 
-	 */
-	public static EMBlockBase newBlock(String blockType, AlignedBox3D box) throws EMBlockError {
+	public static EMBlockBase newBlock(String blockType, EMBox3D box) throws EMBlockError {
 		EMBlockBase cb = EMBlockBase.newBlock(blockType, box, defaultAtt.color); 
 		return cb;
 	}
@@ -476,7 +519,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 			size = getSize();
 		if (color == null)
 			color = getColor();
-		AlignedBox3D box = getBox();
+		EMBox3D box = getBox();
 		
 		return newBlock(blockType, box, color);
 		
@@ -484,13 +527,18 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 
 	
 	/**
-	 * Get position - point of x,y,z min
+	 * Get position - center point of x,y,z
 	 */
 	public Point3D getPos() {
-		Point3D minp = box.getMin();
-		return minp;
+		return getCenter();
 	}
 
+	/**
+	 * Get effective radius
+	 */
+	public float getRadius() {
+		return box.getRadius();
+	}
 	
 	/**
 	 * Get size - vector of x,y,z extent
@@ -500,7 +548,8 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		Point3D minp = getMin();
 		Point3D maxp = getMax();
 		
-		Vector3D size = Point3D.diff(maxp, minp);
+		Vector3D diag = Point3D.diff(maxp, minp);
+		Vector3D size = new Vector3D(Math.abs(diag.x()), Math.abs(diag.y()), Math.abs(diag.z()));
 		return size;
 	}
 
@@ -532,8 +581,8 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	public void resize(
 		int indexOfCornerToResize, Vector3D translation
 	) {
-		AlignedBox3D oldBox = getBox();
-		box = new AlignedBox3D();
+		EMBox3D oldBox = getBox();
+		box = new EMBox3D();
 
 		// One corner of the new box will be the corner of the old
 		// box that is diagonally opposite the corner being resized ...
@@ -546,24 +595,24 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 
 	/**
 	 * 
-	 * @param new_size - new size with lower corner in place
+	 * @param new_size - new size with center in place
 	 */
 	public void resize(
 		Vector3D adj_size
 	) {
-		Point3D min = getMin();
-		Point3D max = getMax();
-		Point3D new_max = Point3D.sum(max, adj_size);
-		box = new AlignedBox3D(min, new_max);
+		Point3D center = box.getCenter();
+		float radius = box.getRadius();
+		float adj = adj_size.x();
+		if (adj_size.y() > adj)
+			adj = adj_size.y();
+		if (adj_size.z() > adj)
+			adj = adj_size.z();
+		box = new EMBox3D(center, radius+adj);
 	}
 
 	// Overridden when necessary
 	public void translate(Vector3D translation ) {
-		AlignedBox3D oldBox = getBox();
-		box = new AlignedBox3D(
-			Point3D.sum( oldBox.getMin(), translation ),
-			Point3D.sum( oldBox.getMax(), translation )
-		);
+		box.translate(translation);
 	}
 
 	
@@ -572,8 +621,17 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * @param point
 	 */
 	public Point3D getBasePoint() {
-		AlignedBox3D box = getBox();
+		EMBox3D box = getBox();
 		return box.getMin();
+	}
+	
+
+	/**
+	 * Move center to new point
+	 * @param point
+	 */
+	public void moveTo(Point3D point ) {
+		box.setPosition(point);
 	}
 	
 
@@ -581,8 +639,8 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * Move base corner to new point
 	 * @param point
 	 */
-	public void moveTo(Point3D point ) {
-		AlignedBox3D oldBox = getBox();
+	public void moveBaseTo(Point3D point ) {
+		EMBox3D oldBox = getBox();
 		Vector3D vm = Point3D.diff(point, oldBox.getMin());
 		translate(vm);
 	}
@@ -593,8 +651,19 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 
 
 	// Not a box so return a bounding box
-	public AlignedBox3D getBox() {
-		return boundingBox();
+	public EMBox3D getBox() {
+		return boundingSphere();
+	}
+
+
+	/**
+	 * Get oriented bounding box
+	 * @return
+	 */
+	// Overridden for not trivial blocks
+	public OrientedBox3D getOBox() {
+		SmTrace.lg("getOBox - not overridden");
+		return new OrientedBox3D(getCenter(), new Vector3D(0,0,0), EMBox3D.UP);
 	}
 	
 	public Point3D getCenter() {
@@ -610,14 +679,54 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	}
 	
 	public Vector3D getUp() {
-		return up;
+		return box.getUp();
+	}
+
+	public void setCenter(Point3D center) {
+		box.setCenter(center);
+	}
+
+	
+	/**
+	 * set/change radius
+	 */
+	public void setRadius(float radius) {
+		box.setRadius(radius);
+	}
+
+	public void setUp(Vector3D up) {
+		box.setUp(up);
 	}
 	
-	public AlignedBox3D boundingBox() {
+	
+	/**
+	 * Enlarge to contain box
+	 * @param box
+	 */
+	public void bound(EMBox3D box) {
+		this.box.bound(box);
+	}
+
+	/**
+	 * Enlarge to contain box
+	 * @param box
+	 */
+	public void bound(Point3D pt) {
+		this.box.bound(pt);
+	}
+	
+	public EMBox3D boundingBox() {
 		if (box == null) {
-			box = new AlignedBox3D();
+			box = new EMBox3D();
 		}
-		return box.boundingBox();
+		return box;
+	}
+	
+	public EMBox3D boundingSphere() {
+		if (box == null) {
+			box = new EMBox3D();
+		}
+		return box.boundingSphere();
 	}
 	
 						// Overridden by all nontrivial blocks
@@ -626,7 +735,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		Point3D intersection, // output
 		boolean allowIntersectionEvenIfRayOriginatesInsideSphere
 	) {
-		SmTrace.lg("intersects");
+		SmTrace.lg("??? intersects");
 		return false;		
 	}
 	
@@ -636,7 +745,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		Point3D intersection, // output
 		Vector3D normalAtIntersection // output
 	) {
-		SmTrace.lg("intersects(ray, intersection, normalAtIntersection)");
+		SmTrace.lg("??? intersects(ray, intersection, normalAtIntersection) %s NOT OVERIDING", blockType());
 		return false;		
 	}
 	
@@ -734,22 +843,70 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 
 	public Point3D getMin() {
 		if (box == null) {
-			box = new AlignedBox3D();
+			box = new EMBox3D();
 		}
 		return box.getMin();
 	}
 
+
+	public float getMinX() {
+		if (box == null) {
+			box = new EMBox3D();
+		}
+		return box.getMinX();
+	}
+
+
+	public float getMinY() {
+		if (box == null) {
+			box = new EMBox3D();
+		}
+		return box.getMinY();
+	}
+
+
+	public float getMinZ() {
+		if (box == null) {
+			box = new EMBox3D();
+		}
+		return box.getMinZ();
+	}
+
 	public Point3D getMax() {
 		if (box == null) {
-			box = new AlignedBox3D();
+			box = new EMBox3D();
 		}
 		return box.getMax();
+	}
+
+
+	public float getMaxX() {
+		if (box == null) {
+			box = new EMBox3D();
+		}
+		return box.getMaxX();
+	}
+
+
+	public float getMaxY() {
+		if (box == null) {
+			box = new EMBox3D();
+		}
+		return box.getMaxY();
+	}
+
+
+	public float getMaxZ() {
+		if (box == null) {
+			box = new EMBox3D();
+		}
+		return box.getMaxZ();
 	}
 	
 	// Overridden by all nontrivial blocks
 	public Vector3D getDiagonal() {
 		if (box == null) {
-			box = new AlignedBox3D();
+			box = new EMBox3D();
 		}
 		return box.getDiagonal();
 	}
@@ -761,5 +918,6 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	public void setViewerLevel(int viewerLevel) {
 		this.viewerLevel = viewerLevel;
 	}
+
 
 }

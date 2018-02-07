@@ -12,7 +12,10 @@ import smTrace.SmTrace;
  */
 public class EMBlock{
 	private static int blockId = 0;		// Unique block identifier, used as key
-	private static EMBlockGroup blocks;	// MUST be set BEFORE block  use
+	private static EMBlockGroup blocks;	// The group to which this block
+										// belongs, MUST be set BEFORE block  use
+	boolean isAggrigate = false;		// true -> iff this is an aggrigate.
+	boolean partOfAggrigate = false;	// true -> iff this is included in an aggrigate
 	private EMBlockBase baseBlock;	
 	
 	public int getViewerLevel() {
@@ -41,8 +44,7 @@ public class EMBlock{
 	
 	
 	public EMBlock(EMBlock cb) {
-		setBase(cb);
-		addBlock(cb);
+		this(cb.baseBlock);
 	}
 
 	/**
@@ -66,8 +68,42 @@ public class EMBlock{
 	 * NO change to iD
 	 * NO entry to blocks
 	 */
-	public EMBlock(EMBlockBase cb_base) {
-		this.baseBlock = cb_base;
+	public EMBlock(EMBlockBase base) {
+		this.baseBlock = base;
+	}
+	
+	public void EMBlock_OBSOLETE(EMBlockBase cb_base) {
+		String type = cb_base.blockType();
+		switch (type) {
+			default:
+				SmTrace.lg(String.format("EMBlock UNRECOGNIZED base: %s", type));
+				System.exit(1);
+				break;
+				
+			case "box":
+				this.baseBlock = new ColoredBox(cb_base);
+				break;
+				
+			case "ball":
+				this.baseBlock = new ColoredBall(cb_base);
+				break;
+				
+			case "cylinder":
+				this.baseBlock = new ColoredCylinder(cb_base);
+				break;
+				
+			case "cone":
+				this.baseBlock = new ColoredCone(cb_base);
+				break;
+				
+			case "eye":
+				this.baseBlock = new ColoredEye(cb_base);
+				break;
+				
+			case "text":
+				this.baseBlock = new ColoredText(cb_base);
+				break;
+		}
 	}
 	
 	
@@ -160,16 +196,17 @@ public class EMBlock{
 	/**
 	 * @throws EMBlockError 
 	 */
-	public static EMBlock newBlock(String blockType) throws EMBlockError {
-		EMBlockBase cb_base = EMBlockBase.newBlock(blockType); 
-		return addBlock(cb_base);
+	public static EMBlock newBlock(String blockType, ControlsOfScene controls) throws EMBlockError {
+		EMBlockBase cb_base = EMBlockBase.newBlock(blockType, controls);
+		EMBlock cb = new EMBlock(cb_base);
+		return addBlock(cb);
 	}
 
 
 	/**
 	 * @throws EMBlockError 
 	 */
-	public static EMBlock newBlock(String blockType, AlignedBox3D box) throws EMBlockError {
+	public static EMBlock newBlock(String blockType, EMBox3D box) throws EMBlockError {
 		EMBlockBase cb_base = EMBlockBase.newBlock(blockType, box); 
 		return addBlock(cb_base);
 	}
@@ -178,8 +215,11 @@ public class EMBlock{
 	/**
 	 * @throws EMBlockError 
 	 */
-	public static EMBlock newBlock(String blockType, AlignedBox3D box, Color color) {
+	public static EMBlock newBlock(String blockType, EMBox3D box, Color color) {
 		EMBlockBase cb_base = EMBlockBase.newBlock(blockType, box, color);
+		if (cb_base.blockType().contains("U")) {
+			SmTrace.lg(String.format("Suspicious blockType: %s", cb_base.blockType()));
+		}
 		return addBlock(cb_base);
 	}
 
@@ -286,7 +326,7 @@ public class EMBlock{
 			size = getSize();
 		if (color == null)
 			color = getColor();
-		AlignedBox3D box = getBox();
+		EMBox3D box = getBox();
 		
 		return newBlock(blockType, box, color);
 		
@@ -377,20 +417,24 @@ public class EMBlock{
 
 
 	// Not a box so return a bounding box
-	public AlignedBox3D getBox() {
+	public EMBox3D getBox() {
 		return baseBlock.getBox();
 	}
 	
 	public Point3D getCenter() {
 		return baseBlock.getCenter();
 	}
-	
-	public AlignedBox3D boundingBox() {
-		return baseBlock.boundingBox();
-	}
 
 	public Point3D getPosition() {
 		return baseBlock.getPosition();
+	}
+	
+	public EMBox3D boundingBox() {
+		return baseBlock.boundingBox();
+	}
+	
+	public EMBox3D boundingSphere() {
+		return baseBlock.boundingSphere();
 	}
 	
 	public Point3D getTarget() {
@@ -399,6 +443,10 @@ public class EMBlock{
 	
 	public Vector3D getUp() {
 		return baseBlock.getUp();
+	}
+	
+	public void setUp(Vector3D up) {
+		baseBlock.setUp(up);
 	}
 	
 						// Overridden by all nontrivial blocks
@@ -417,7 +465,15 @@ public class EMBlock{
 		Point3D intersection, // output
 		Vector3D normalAtIntersection // output
 	) {
-		return baseBlock.intersects(ray, intersection, normalAtIntersection);
+		boolean ret = baseBlock.intersects(ray, intersection, normalAtIntersection);
+		SmTrace.lg(String.format("EMBlock.intersects(ray:%s, intersection(%s), normalAtIntersection(%s)",
+				ray, intersection, normalAtIntersection), "intersection");
+		if (normalAtIntersection.lengthSquared() == 0) {		
+			normalAtIntersection = new Vector3D(1,0,0);		///TFD
+			SmTrace.lg(String.format("EMBlock.intersects FORCED (ray:%s, intersection(%s), normalAtIntersection(%s)",
+					ray, intersection, normalAtIntersection), "intersection");
+		}
+		return ret;
 	}
 	
 
@@ -471,7 +527,7 @@ public class EMBlock{
 	 * Setup for defaults
 	 * @throws EMBlockError 
 	 */
-	public static void setDefaults(String blockType, AlignedBox3D box, Color color) throws EMBlockError {
+	public static void setDefaults(String blockType, EMBox3D box, Color color) throws EMBlockError {
 		EMBlockBase.setDefaults(blockType, box, color);
 	}
 
@@ -506,8 +562,32 @@ public class EMBlock{
 		return baseBlock.getMin();
 	}
 
+	public float getMinX() {
+		return baseBlock.getMinX();
+	}
+
+	public float getMinY() {
+		return baseBlock.getMinY();
+	}
+
+	public float getMinZ() {
+		return baseBlock.getMinZ();
+	}
+
 	public Point3D getMax() {
 		return baseBlock.getMax();
+	}
+
+	public float getMaxX() {
+		return baseBlock.getMaxX();
+	}
+
+	public float getMaxY() {
+		return baseBlock.getMaxY();
+	}
+
+	public float getMaxZ() {
+		return baseBlock.getMaxZ();
 	}
 	
 	// Overridden by all nontrivial blocks
