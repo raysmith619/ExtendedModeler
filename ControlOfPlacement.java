@@ -109,17 +109,17 @@ public class ControlOfPlacement extends ControlOfScene {
 
 		JPanel moveto_panel = new JPanel();
 		posPanel.add(moveto_panel);
-
+		String ffmt = "%.3f";		// Field float format
 		traceSelected(11);
 		Point3D center = new Point3D(-2, -2, -2);
-		posXfield = new JTextField(String.format("%.2f", center.x()));
+		posXfield = new JTextField(String.format(ffmt, center.x()));
 		SmTrace.lg(String.format("setup posXfield"));
 		posXfield.setActionCommand("emc_ENTER");
 		posXfield.addActionListener(sceneControler);
-		posYfield = new JTextField(String.format("%.2f", center.y()));
+		posYfield = new JTextField(String.format(ffmt, center.y()));
 		posYfield.setActionCommand("emc_ENTER");
 		posYfield.addActionListener(sceneControler);
-		posZfield = new JTextField(String.format("%.2f", center.z()));
+		posZfield = new JTextField(String.format(ffmt, center.z()));
 		posZfield.setActionCommand("emc_ENTER");
 		posZfield.addActionListener(sceneControler);
 		posByBlockCkBox = new JCheckBox("ByBlock", true);
@@ -140,14 +140,14 @@ public class ControlOfPlacement extends ControlOfScene {
 		JPanel sizeto_panel = new JPanel();
 		posPanel.add(sizeto_panel);
 		float defdim = .5f;		// Default dimensions
-		sizeXfield = new JTextField(String.format("%.2f", defdim*2));
+		sizeXfield = new JTextField(String.format(ffmt, defdim*2));
 		SmTrace.lg(String.format("setup sizeXfield"));
 		sizeXfield.setActionCommand("emc_ENTER");
 		sizeXfield.addActionListener(sceneControler);
-		sizeYfield = new JTextField(String.format("%.2f", defdim*3));
+		sizeYfield = new JTextField(String.format(ffmt, defdim*3));
 		sizeYfield.setActionCommand("emc_ENTER");
 		sizeYfield.addActionListener(sceneControler);
-		sizeZfield = new JTextField(String.format("%.2f", defdim*1));
+		sizeZfield = new JTextField(String.format(ffmt, defdim*1));
 		sizeZfield.setActionCommand("emc_ENTER");
 		
 		sizeto_panel.add(Box.createVerticalStrut(15)); // a spacer
@@ -168,14 +168,14 @@ public class ControlOfPlacement extends ControlOfScene {
 		JPanel upto_panel = new JPanel();
 		posPanel.add(upto_panel);
 		upto_panel.add(Box.createVerticalStrut(15)); // a spacer
-		upXfield = new JTextField(String.format("%.2f", 0.));
+		upXfield = new JTextField(String.format(ffmt, 0.));
 		SmTrace.lg(String.format("setup upXfield"));
 		upXfield.setActionCommand("emc_ENTER");
 		upXfield.addActionListener(sceneControler);
-		upYfield = new JTextField(String.format("%.2f", 1.));
+		upYfield = new JTextField(String.format(ffmt, 1.));
 		upYfield.setActionCommand("emc_ENTER");
 		upYfield.addActionListener(sceneControler);
-		upZfield = new JTextField(String.format("%.2f", 0.));
+		upZfield = new JTextField(String.format(ffmt, 0.));
 		upZfield.setActionCommand("emc_ENTER");
 		
 		upto_panel.add(new JLabel("Up:"));
@@ -208,13 +208,13 @@ public class ControlOfPlacement extends ControlOfScene {
 		posPanel.add(adj_panel);
 		float adjamt = 1f; // Default adjustment
 		adj_panel.add(Box.createVerticalStrut(15)); // a spacer
-		adjXfield = new JTextField(String.format("%.2f", adjamt));
+		adjXfield = new JTextField(String.format(ffmt, adjamt));
 		adjXfield.setActionCommand("emc_adjENTER");
 		adjXfield.addActionListener(sceneControler);
-		adjYfield = new JTextField(String.format("%.2f", adjamt));
+		adjYfield = new JTextField(String.format(ffmt, adjamt));
 		adjYfield.setActionCommand("emc_adjENTER");
 		adjYfield.addActionListener(sceneControler);
-		adjZfield = new JTextField(String.format("%.2f", adjamt));
+		adjZfield = new JTextField(String.format(ffmt, adjamt));
 		adjZfield.setActionCommand("emc_adjENTER");
 		adjZfield.addActionListener(sceneControler);
 		adjByBlockCkBox = new JCheckBox("ByBlock", true);
@@ -320,7 +320,10 @@ public class ControlOfPlacement extends ControlOfScene {
 			throw new EMBlockError(String.format("UpZ %s not valid: %s", text, e.getMessage()));
 		}
 	}
-	
+
+	public Point3D getPos()throws EMBlockError { 
+		return new Point3D(getPosX(), getPosY(), getPosZ());
+	}
 	
 	public float getPosX() throws EMBlockError {
 		if (posXfield == null)
@@ -634,6 +637,20 @@ public class ControlOfPlacement extends ControlOfScene {
 		bcmd.setSelect(new_selected);
 	}
 
+	
+	/**
+	 * Adjust position
+	 * @throws EMBlockError 
+	 */
+	public void adjPos() throws EMBlockError {
+		Vector3D pos_adj = getAdj();
+		Point3D pos = getPos();
+		Point3D adj_pos = Point3D.sum(pos, pos_adj);
+		setPos(adj_pos);
+	}
+		
+	
+	
 	/**
 	 * Move selected block(s) to position according to control settings
 	 * 
@@ -906,15 +923,15 @@ public class ControlOfPlacement extends ControlOfScene {
 		String text;
 
 		val = cbPos.x();
-		text = String.format("%.2g", val);
+		text = String.format("%.3g", val);
 		posXfield.setText(text);
 
 		val = cbPos.y();
-		text = String.format("%.2g", val);
+		text = String.format("%.3g", val);
 		posYfield.setText(text);
 
 		val = cbPos.z();
-		text = String.format("%.2g", val);
+		text = String.format("%.3g", val);
 		posZfield.setText(text);
 	}
 

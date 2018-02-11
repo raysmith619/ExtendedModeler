@@ -268,7 +268,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 * using controls, present state
 	 * @throws EMBlockError 
 	 */
-	public static EMBlockBase newBlock(String blockType, ControlsOfScene controls) throws EMBlockError {
+	public static EMBlockBase newBlock(String blockType, ControlsOfScene controls, String name) throws EMBlockError {
 		EMBlockBase cb_new = null;
 		if (blockType.equals("box"))
 			cb_new = ColoredBox.newBlock(controls);
@@ -278,6 +278,8 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 			cb_new = ColoredCone.newBlock(controls);
 		else if (blockType.equals("cylinder"))
 			cb_new = ColoredCylinder.newBlock(controls);
+		else if (blockType.equals("image"))
+			cb_new = ColoredImage.newBlock(controls, name);
 		else if (blockType.equals("text"))
 			cb_new = ColoredText.newBlock(controls);
 		else {
@@ -902,7 +904,14 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		}
 		return box.getMaxZ();
 	}
+
 	
+
+	// Overridden for types with name, eg filename
+	public String getName() {
+		return "";
+	}
+
 	// Overridden by all nontrivial blocks
 	public Vector3D getDiagonal() {
 		if (box == null) {

@@ -196,8 +196,8 @@ public class EMBlock{
 	/**
 	 * @throws EMBlockError 
 	 */
-	public static EMBlock newBlock(String blockType, ControlsOfScene controls) throws EMBlockError {
-		EMBlockBase cb_base = EMBlockBase.newBlock(blockType, controls);
+	public static EMBlock newBlock(String blockType, ControlsOfScene controls, String name) throws EMBlockError {
+		EMBlockBase cb_base = EMBlockBase.newBlock(blockType, controls, name);
 		EMBlock cb = new EMBlock(cb_base);
 		return addBlock(cb);
 	}
@@ -595,6 +595,10 @@ public class EMBlock{
 		return baseBlock.getDiagonal();
 	}
 
+	// Overridden for types with name, eg filename
+	public String getName() {
+		return "";
+	}
 
 	/**
 	 * Adjust from text control

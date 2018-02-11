@@ -39,10 +39,10 @@ public class ExtendedModeler implements ActionListener {
 
 	static final String applicationName = "Extended Modeler";
 	public static SmTrace smTrace;
-
 	JFrame frame;
 	Container toolPanel;
 	SceneViewer[] sceneViewers;							// Array of scene viewers(observers)
+	int externalViewIdx = -1;							// Index of external viewer, if one
 	SceneControler sceneControler;						// Control of the scene
 	private Scene scene;								// One instance of our scene(model)
 	
@@ -52,7 +52,7 @@ public class ExtendedModeler implements ActionListener {
 	private static String[] mainArgs;						// Args array
 	private static int mainArgsLength;					// Number of args
 	private static String logName ="emt_";				// Default log prefix
-
+	private static boolean displayExternalControl = true;
 	public enum AutoAddType {	// Auto add block type
 		NONE,					// none added
 		PLACEMENT_COMPUTE,		// Block placement
@@ -105,6 +105,7 @@ public class ExtendedModeler implements ActionListener {
 	JButton traceSelectionButton;
 	JPanel traceSelectionCkBoxPanel;
 	JButton resetCameraButton;
+	JCheckBox displayExternalControlCheckBox;
 	JCheckBox displayAddControlCheckBox;
 	JCheckBox displayPlacementControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
@@ -215,6 +216,11 @@ public class ExtendedModeler implements ActionListener {
 		}
 		else if ( source == resetCameraButton ) {
 			sceneControler.currentViewerCamera().reset();
+			sceneControler.repaint();
+		}
+		else if ( source == displayExternalControlCheckBox ) {
+			displayExternalControl = !displayExternalControl;
+			sceneControler.displayExternalControl = ! sceneControler.displayExternalControl;
 			sceneControler.repaint();
 		}
 		else if ( source == displayAddControlCheckBox ) {
@@ -376,10 +382,10 @@ public class ExtendedModeler implements ActionListener {
 				SceneViewer sceneViewer = new SceneViewer(viewTitle, viewName, sceneControler);
 				sceneViewers[i] = sceneViewer;
 				sceneControler.addViewer(sceneViewer);
-				SceneViewer extv = sceneViewer.externalView(
-						"External View", null);
-				sceneControler.addViewer(extv);
-				sceneViewers[i+1] = extv;
+				if (displayExternalControl) {
+					int svidx = i +1;
+					modifyExternalView(svidx, sceneViewer, true);
+				}
 			} catch (EMBlockError e) {
 				SmTrace.lg(String.format("sceneControler %s error %s", viewName, e.getMessage()));
 				e.printStackTrace();
@@ -388,7 +394,25 @@ public class ExtendedModeler implements ActionListener {
 		}
 		
 	}
-	
+
+	/**
+	 * add / remove external view
+	 * @throws EMBlockError 
+	 */
+	public void modifyExternalView(int svidx, SceneViewer localViewer, boolean addView) throws EMBlockError {
+		if (addView) {
+			SceneViewer extv = localViewer.externalView(
+					"External View", null);
+			externalViewIdx = svidx;
+			sceneControler.addViewer(extv);
+			sceneViewers[svidx] = extv;
+			sceneControler.externalViewer = extv;
+		} else {
+			SceneViewer extv = sceneControler.removeViewer(externalViewIdx);
+			///TBD - cleanup add/remove
+		}
+	}
+
 	
 	/**
 	 * Get access to scene
@@ -587,7 +611,11 @@ public class ExtendedModeler implements ActionListener {
 							SmTrace.setLogStdTs(boolean_val);
 							break;
 					
-					
+						case "dextcontrol":
+						case "dec":
+							displayExternalControl = booleanArg(true);		// change external display value
+							break;
+							
 						case "help":
 						case "h":
 							if (npass < 2)		// Let logging options be processed
@@ -683,11 +711,11 @@ public class ExtendedModeler implements ActionListener {
 	 * @param def - default value
 	 */
 	private static boolean booleanArg(boolean def) {
-		if (mainArgIndex >= mainArgsLength)
-			return def;		// No more args
-		if (mainArgs[mainArgIndex].startsWith("--"))
-			return def;		// Next is an option name
-		String val_str = mainArgs[mainArgIndex++];
+		String argstr = nextArg();
+		if (argstr == null)
+			return def;
+		
+		String val_str = argstr;
 		boolean val = false;
 		if (val_str.equalsIgnoreCase("true")
 				|| val_str.equalsIgnoreCase("on")
@@ -724,6 +752,26 @@ public class ExtendedModeler implements ActionListener {
 		return val_int;
 	}
 
+	/**
+	 * next arg string
+	 * null if end of list or next starts with "--"
+	 * ignore "="
+	 */
+	private static String nextArg() {
+		if (mainArgIndex >= mainArgsLength)
+			return null;		// No more args
+		
+		if (mainArgs[mainArgIndex].equals("=")) {
+			mainArgIndex++;		// Skip = to support flag = value
+		}
+		if (mainArgIndex >= mainArgsLength)
+			return null;		// No more args
+		
+		if (mainArgs[mainArgIndex].startsWith("--"))
+			return null;		// Next is an option name
+		String val_str = mainArgs[mainArgIndex++];
+		return val_str;
+	}
 	
 	/**
 	 * Get next arg if exists, or default
@@ -825,6 +873,11 @@ public class ExtendedModeler implements ActionListener {
 		resetCameraButton.setAlignmentX( Component.LEFT_ALIGNMENT );
 		resetCameraButton.addActionListener(this);
 		toolPanel.add( resetCameraButton );
+
+		displayExternalControlCheckBox = new JCheckBox("Display External View", displayExternalControl);
+		displayExternalControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayExternalControlCheckBox.addActionListener(this);
+		toolPanel.add(displayExternalControlCheckBox);
 
 		displayAddControlCheckBox = new JCheckBox("Display Add Control");
 		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );

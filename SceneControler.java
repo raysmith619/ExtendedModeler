@@ -18,6 +18,7 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
@@ -88,6 +89,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	private static final int COMMAND_COLOR_BLUE = 4;
 	private static final int COMMAND_DELETE = 5;
 
+	public boolean displayExternalControl = true;
 	public boolean displayAddControl = true;
 	public boolean displayColorControl = true;
 	public boolean displayEyeAtControl = true;
@@ -99,7 +101,10 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	public boolean displayLocalView = true;
 	public boolean displayBoundingBox = false;
 	public boolean enableCompositing = false;
-
+	
+	public SceneViewer localViewer;
+	public SceneViewer externalViewer;
+	
 	int mouse_x, mouse_y, old_mouse_x, old_mouse_y;
 	
 	public SceneControler(ExtendedModeler modeler)
@@ -126,6 +131,15 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	 */
 	public void addViewer(SceneViewer viewer) {
 		sceneViewers.add(viewer);
+	}
+
+	
+	/**
+	 * Remove viewer from control
+	 */
+	public SceneViewer removeViewer(int idx) {
+		SceneViewer sv = sceneViewers.remove(idx);
+		return sv;
 	}
 
 	public EMBox3D getSphere( int index ) {
@@ -604,25 +618,25 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		EMBlock cbnew = cb.duplicate();
 		addBlock(bcmd, cbnew);
 	}
-
 	public int createNewBlock(EMBCommand bcmd, String blockType) throws EMBlockError  {
+		return createNewBlock(bcmd, blockType, null);
+	}
+
+	
+	public int createNewBlock(EMBCommand bcmd, String blockType, String name) throws EMBlockError  {
 		EMBlock cb_sel = getSelectedBlock();
 		if (cb_sel != null) {
 			cb_sel.setControls(controls);
+			ControlOfPlacement cop = (ControlOfPlacement) controls.getControl("placement");
+			cop.adjPos();
 		}
 		EMBlock cb = null;
 		try {
-			cb = EMBlock.newBlock(blockType, controls);
+			cb = EMBlock.newBlock(blockType, controls, name);
 		} catch (EMBlockError e) {
 			SmTrace.lg(String.format("createNewBlock %s error: %s",
 					blockType, e.getMessage()));
 			return -1;
-		}
-
-		if (cb_sel != null) {
-			ControlOfPlacement cop = (ControlOfPlacement) controls.getControl("placement");
-			Vector3D posadj = cop.getAdj();
-			cb.translate(posadj);
 		}
 		
 		///cb.adjustFromControls(controls, bcmd);
@@ -633,7 +647,7 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		
 	}
 
-	public void createNewBlock(EMBCommand bcmd, String blockType, Point3D at_point, Vector3D size) {
+	public void createNewBlock(EMBCommand bcmd, String blockType, Point3D at_point, Vector3D size) throws EMBlockError {
 		EMBlock cb = null;
 		if (anySelected()) {
 			cb = getSelectedBlock();
@@ -646,14 +660,21 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 			Color color = new Color(clamp(cb.getRed() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getGreen() + 0.5f * ((float) Math.random() - 0.5f), 0, 1),
 					clamp(cb.getBlue() + 0.5f * ((float) Math.random() - 0.5f), 0, 1), cb.getAlpha());
-
-			cb = EMBlock.newBlock(blockType, box, color);
+			if (blockType.equals("image")) {
+				cb = new EMBlock(ColoredImage.newBlock(controls));
+			} else {
+				cb = EMBlock.newBlock(blockType, box, color);
+			}
 		} else {
 			Point3D centerOfNewBox = currentViewerCamera().target;
 			EMBox3D box = new EMBox3D(centerOfNewBox, EMBox3D.defaultRadius());
 			Color color = new Color((float) Math.random(), (float) Math.random(), (float) Math.random(),
 					EMBlockBase.DEFAULT_ALPHA);
-			cb = EMBlock.newBlock(blockType, box, color);
+			if (blockType.equals("image")) {
+				cb = new EMBlock(ColoredImage.newBlock(controls));
+			} else {
+				cb = EMBlock.newBlock(blockType, box, color);
+			}
 			normalAtSelectedPoint = new Vector3D(1, 0, 0);
 		}
 		if (cb != null) {
@@ -711,7 +732,8 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	 */
 	public int duplicateBlock(EMBCommand bcmd, int id) throws EMBlockError {
 		String blockType = getCb(id).blockType();
-		int idnew = createNewBlock(bcmd, blockType);
+		String name = getCb(id).getName();
+		int idnew = createNewBlock(bcmd, blockType, name);
 		return idnew;
 	}
 
@@ -1337,11 +1359,15 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 			case "emc_addCylinderButton":
 				createNewBlock(bcmd, "cylinder");
 				break;
+								
+			case "emc_addImageButton":
+				createNewBlock(bcmd, "image");
+				break;
 				
 			case "emc_addTextButton":
 				createNewBlock(bcmd, "text");
 				break;
-				
+
 			default:
 				SmTrace.lg(String.format(
 						"Unrecognized addBlockButton: %s - ignored", action));
@@ -1501,6 +1527,9 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	 */
 	public SceneViewer getSceneViewer() {
 		EMBCommand cmd = commandManager.getCurrentCommand();
+		if (cmd == null)
+			return null;
+		
 		SceneViewer viewer = cmd.newViewer;
 		return viewer;
 	}

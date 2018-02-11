@@ -332,18 +332,18 @@ public class EMBox3D {
 		float ay = Vector3D.computeSignedAngle(v_from, v_to, yaxis ) * rad2deg; 
 		float az = Vector3D.computeSignedAngle(v_from, v_to, zaxis ) * rad2deg; 
 		SmTrace.lg(String.format("v_from(%s) angle ax=%.1f, ay=%.1f, az=%.1f v_to=%s",
-				v_from, ax, ay, az, v_to));
+				v_from, ax, ay, az, v_to), "rotate");
 		gl.glPushAttrib(GL2.GL_TRANSFORM_BIT);
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glPushMatrix();
+		/***
 		gl.glRotatef(ay, v_from.x(), v_from.y(), v_from.z());
 		gl.glRotatef(az, v_from.x(), v_from.y(), v_from.z());
 		gl.glRotatef(ax, v_from.x(), v_from.y(), v_from.z());
-		/***
+		***/
 		gl.glRotatef(ax, xaxis.x(), xaxis.y(), xaxis.z());
 		gl.glRotatef(ay, yaxis.x(), yaxis.y(), yaxis.z());
 		gl.glRotatef(az, zaxis.x(), zaxis.y(), zaxis.z());
-		***/
 	}
 	
 	

@@ -1,4 +1,5 @@
 package ExtendedModeler;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -31,6 +32,7 @@ import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 
 import com.jogamp.graph.font.Font;
+import com.jogamp.newt.event.WindowEvent;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
@@ -42,18 +44,11 @@ import com.jogamp.opengl.util.gl2.GLUT;
 
 import smTrace.SmTrace;
 
-class SceneViewer extends JFrame
-	implements MouseListener,
-			MouseMotionListener,
-			GLEventListener,
-			ActionListener
-			{
+class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, GLEventListener, ActionListener {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-
-
 
 	/**
 	 * Placement action types
@@ -63,41 +58,42 @@ class SceneViewer extends JFrame
 		NONE, // none added
 		PLACEMENT_MOVE, PLACEMENT_OK, PLACEMENT_CANCEL,
 	}
-	static int viewerLevelBase = 0;	// viewers increase in level
-	int viewerLevel;					// All blocks >= will be invisible
+
+	static int viewerLevelBase = 0; // viewers increase in level
+	int viewerLevel; // All blocks >= will be invisible
 	static int x0 = 0;
 	static int y0 = 0;
-	static int width = 400;				// Canvas size
+	static int width = 400; // Canvas size
 	static int height = width;
-	String title;					// Viewer title
-	String name;					// Viewer name - used in data keys
-	GLCanvas canvas;				// Our canvas
-	GLCapabilities caps;			// Main set of capabilities
-	SceneControler sceneControler;		// Main class - currently only for check button access
-	SceneDraw sceneDraw;			// Direct scene drawing control
-	ControlsOfView controls;		// Control boxes
-	ControlMap controlMap;			// Control Map window/frame
-	SceneViewer localView;			// Local view if non-null
-	EMBlock localViewEye;			// Local view "eye" object
-	SceneViewer externalView;		// External view if non-null
-	SmTrace smTrace; 				// Trace support
-	///ControlsOfView controls;	// Control boxes - use getControls - not ready at initialization
-	///GLAutoDrawable drawable; 		// USE canvas - inherits from 
-	///GLU glu; // Needed for scene2WorldCoord
-	///GLUT glut;
-	
+	String title; // Viewer title
+	String name; // Viewer name - used in data keys
+	GLCanvas canvas; // Our canvas
+	GLCapabilities caps; // Main set of capabilities
+	SceneControler sceneControler; // Main class - currently only for check button access
+	SceneDraw sceneDraw; // Direct scene drawing control
+	ControlsOfView controls; // Control boxes
+	ControlMap controlMap; // Control Map window/frame
+	SceneViewer localView; // Local view if non-null
+	EMBlock localViewEye; // Local view "eye" object
+	SceneViewer externalView; // External view if non-null
+	SmTrace smTrace; // Trace support
+	/// ControlsOfView controls; // Control boxes - use getControls - not ready at
+	/// initialization
+	/// GLAutoDrawable drawable; // USE canvas - inherits from
+	/// GLU glu; // Needed for scene2WorldCoord
+	/// GLUT glut;
+
 	// Updated each display() call
 	int viewport[] = new int[4];
 	double mvmatrix[] = new double[16];
 	double projmatrix[] = new double[16];
 
-	///public int indexOfSelectedBlock = -1; // -1 for none
-									/**
-									 * Only used to go to previously
-									 * select block(s) in case of delete
-									 */
-	private Stack<BlockSelect> selectStack = new Stack<BlockSelect>();			// Stack of recent selected
-	
+	/// public int indexOfSelectedBlock = -1; // -1 for none
+	/**
+	 * Only used to go to previously select block(s) in case of delete
+	 */
+	private Stack<BlockSelect> selectStack = new Stack<BlockSelect>(); // Stack of recent selected
+
 	private Point3D selectedPoint = new Point3D();
 	private Vector3D normalAtSelectedPoint = new Vector3D();
 	public int indexOfHilitedBox = -1; // -1 for none
@@ -106,9 +102,9 @@ class SceneViewer extends JFrame
 
 	Camera3D camera;
 	ExtendedModeler.AutoAddType autoAdd = ExtendedModeler.AutoAddType.NONE; // Add
-	boolean mousePressed;		// true iff mouse is selected																		// item
-																			// source
-																			// menu
+	boolean mousePressed; // true iff mouse is selected // item
+							// source
+							// menu
 
 	RadialMenuWidget radialMenu = new RadialMenuWidget();
 	private static final int COMMAND_CREATE_BOX = 10;
@@ -149,94 +145,77 @@ class SceneViewer extends JFrame
 	JCheckBox enableCompositingCheckBox;
 
 	int mouse_x, mouse_y, old_mouse_x, old_mouse_y;
-	
 
-/**
- * Default starting size, location
- * @param title
- * @param name
- * @param sceneControler
- */
-	public SceneViewer(
-			String title,
-			String name,
-			SceneControler sceneControler
-		)
-		throws EMBlockError {
+	/**
+	 * Default starting size, location
+	 * 
+	 * @param title
+	 * @param name
+	 * @param sceneControler
+	 */
+	public SceneViewer(String title, String name, SceneControler sceneControler) throws EMBlockError {
 		this(title, name, sceneControler, null, null, null, null, null);
 	}
-		
-	
+
 	/**
 	 * @param title
 	 * @param name
 	 * @param sceneControler
-	 * @param viewBox - viewing region,  null - default
+	 * @param viewBox
+	 *            - viewing region, null - default
 	 * @param eyePosition
 	 * @param eyeTarget
 	 * @param eyeUp
-	 * @param locationSize - location and size of window, null - default
+	 * @param locationSize
+	 *            - location and size of window, null - default
 	 * @throws EMBlockError
 	 */
-	public SceneViewer(
-			String title,
-			String name,
-			SceneControler sceneControler,
-			ColoredBox viewBox,
-			Point3D eyePosition,
-			Point3D eyeTarget,
-			Vector3D eyeUp,
-			Rectangle locationSize
-		)
-		throws EMBlockError {
-		
+	public SceneViewer(String title, String name, SceneControler sceneControler, ColoredBox viewBox,
+			Point3D eyePosition, Point3D eyeTarget, Vector3D eyeUp, Rectangle locationSize) throws EMBlockError {
+
 		this.title = title;
 		this.setTitle(title);
 		this.name = name;
 		this.sceneControler = sceneControler;
 		viewerLevelBase++;
 		this.viewerLevel = viewerLevelBase;
-		
+
 		if (viewBox == null) {
 			viewBox = new ColoredBox();
 		}
 		if (locationSize == null) {
 			locationSize = new Rectangle(x0, y0, width, height);
 		}
-		
+
 		this.setTitle(title);
 		setupMenu(this);
 		camera = new Camera3D(eyePosition, eyeTarget, eyeUp);
-		
-		SmTrace.lg(String.format("sceneView[%d] %s %s",
-				getViewerLevel(), name, title));
-		SmTrace.lg(String.format("sceneView: viewBox: %s",
-				getViewBox()));
-		SmTrace.lg(String.format("sceneView: eyePosition: %s",
-				getEyePosition(), getEyeTarget()));
-		SmTrace.lg(String.format("sceneView: eyeTarget: %s",
-				getEyeTarget()));
-		SmTrace.lg(String.format("sceneView: eyeUp: %s",
-				getEyeUp()));
+
+		SmTrace.lg(String.format("sceneView[%d] %s %s", getViewerLevel(), name, title));
+		SmTrace.lg(String.format("sceneView: viewBox: %s", getViewBox()));
+		SmTrace.lg(String.format("sceneView: eyePosition: %s", getEyePosition(), getEyeTarget()));
+		SmTrace.lg(String.format("sceneView: eyeTarget: %s", getEyeTarget()));
+		SmTrace.lg(String.format("sceneView: eyeUp: %s", getEyeUp()));
 		SmTrace.lg(String.format(" "));
-		
+
 		caps = new GLCapabilities(null);
 		caps.setDoubleBuffered(true);
 		caps.setHardwareAccelerated(true);
-		
+
 		canvas = new GLCanvas(caps);
 		this.controls = new ControlsOfView(this);
 
 		this.getContentPane().add(canvas);
-		
+
 		addComponentListener(new ComponentListener() {
 			@Override
 			public void componentResized(ComponentEvent e) {
 				System.out.println("SceneViewer resized");
 				updateSize(e);
-				
+
 			}
- 			@Override
+
+			@Override
 			public void componentMoved(ComponentEvent e) {
 				System.out.println("SceneViewer moved");
 				updateLocation(e);
@@ -245,42 +224,38 @@ class SceneViewer extends JFrame
 			@Override
 			public void componentShown(ComponentEvent e) {
 				// TODO Auto-generated method stub
-				
+
 			}
 
 			@Override
 			public void componentHidden(ComponentEvent e) {
 				// TODO Auto-generated method stub
-				
-			}
-	} );
 
-		
+			}
+		});
+
 		setLocationSize();
 		this.setVisible(true);
-		canvas.getContext().makeCurrent(); 	///Hack to avoid no GLContext
+		canvas.getContext().makeCurrent(); /// Hack to avoid no GLContext
 		this.sceneDraw = new SceneDraw(this);
-		
+
 		canvas.addGLEventListener(this);
 		canvas.addMouseListener(this);
 		canvas.addMouseMotionListener(this);
-		
-		///camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
-		///		sceneControler.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
+
+		/// camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
+		/// sceneControler.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
 		camera.reset();
 
 	}
 
-	
 	public int getViewerLevel() {
 		return viewerLevel;
 	}
 
-
 	public void setViewerLevel(int viewerLevel) {
 		this.viewerLevel = viewerLevel;
 	}
-
 
 	/**
 	 * Add viewer's menu
@@ -288,15 +263,16 @@ class SceneViewer extends JFrame
 	private void setupMenu(JFrame frame) {
 		JMenuBar menuBar = new JMenuBar();
 		frame.setJMenuBar(menuBar);
-		
+
 		JMenu menu = toolMenu();
 		menuBar.add(menu);
-	
+
 		frame.setJMenuBar(menuBar);
 	}
-	
+
 	/**
 	 * Create display menu drop down
+	 * 
 	 * @retun - display menu item
 	 */
 	private JMenu toolMenu() {
@@ -305,83 +281,79 @@ class SceneViewer extends JFrame
 
 		Container toolPane = toolFrame.getContentPane();
 		JPanel toolPanel = new JPanel();
-		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
-		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
-		///menu.add(pane);
+		toolPanel.setLayout(new BoxLayout(toolPanel, BoxLayout.Y_AXIS));
+		toolPanel.setLayout(new BoxLayout(toolPanel, BoxLayout.Y_AXIS));
+		/// menu.add(pane);
 		// We used to use a BoxLayout as the layout manager here,
 		// but it caused problems with resizing behavior due to
 		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
-		toolPane.setLayout( new BorderLayout() );
-		toolPane.add( toolPanel, BorderLayout.LINE_START );
-		///toolPane.add( sceneControler, BorderLayout.CENTER );
-		///toolPane.add(toolPanel);
+		toolPane.setLayout(new BorderLayout());
+		toolPane.add(toolPanel, BorderLayout.LINE_START);
+		/// toolPane.add( sceneControler, BorderLayout.CENTER );
+		/// toolPane.add(toolPanel);
 		menu.add(toolPane);
-		
+
 		eyeAtSelectionButton = new JButton("EyeAt Selection");
-		eyeAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		eyeAtSelectionButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		eyeAtSelectionButton.addActionListener(this);
-		toolPanel.add( eyeAtSelectionButton );
-		
+		toolPanel.add(eyeAtSelectionButton);
+
 		lookAtSelectionButton = new JButton("Look At Selection");
-		lookAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		lookAtSelectionButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		lookAtSelectionButton.addActionListener(this);
-		toolPanel.add( lookAtSelectionButton );
+		toolPanel.add(lookAtSelectionButton);
 
 		resetCameraButton = new JButton("Reset Camera");
-		resetCameraButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		resetCameraButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		resetCameraButton.addActionListener(this);
-		toolPanel.add( resetCameraButton );
+		toolPanel.add(resetCameraButton);
 
 		displayEyeAtControlCheckBox = new JCheckBox("Display EyeAt Control");
-		displayEyeAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayEyeAtControlCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 		displayEyeAtControlCheckBox.addActionListener(this);
 		toolPanel.add(displayEyeAtControlCheckBox);
 
 		displayLookAtControlCheckBox = new JCheckBox("Display LookAt Control");
-		displayLookAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayLookAtControlCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 		displayLookAtControlCheckBox.addActionListener(this);
 		toolPanel.add(displayLookAtControlCheckBox);
 
-		displayWorldAxesCheckBox = new JCheckBox("Display World Axes", sceneControler.displayWorldAxes );
-		displayWorldAxesCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayWorldAxesCheckBox = new JCheckBox("Display World Axes", sceneControler.displayWorldAxes);
+		displayWorldAxesCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 		displayWorldAxesCheckBox.addActionListener(this);
-		toolPanel.add( displayWorldAxesCheckBox );
+		toolPanel.add(displayWorldAxesCheckBox);
 
-		displayCameraTargetCheckBox = new JCheckBox("Display Camera Target", sceneControler.displayCameraTarget );
-		displayCameraTargetCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayCameraTargetCheckBox = new JCheckBox("Display Camera Target", sceneControler.displayCameraTarget);
+		displayCameraTargetCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 		displayCameraTargetCheckBox.addActionListener(this);
-		toolPanel.add( displayCameraTargetCheckBox );
+		toolPanel.add(displayCameraTargetCheckBox);
 
-		displayLocalViewCheckBox = new JCheckBox("Display Local View Bounds", sceneControler.displayBoundingBox );
-		displayLocalViewCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayLocalViewCheckBox = new JCheckBox("Display Local View Bounds", sceneControler.displayBoundingBox);
+		displayLocalViewCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 		displayLocalViewCheckBox.addActionListener(this);
-		toolPanel.add( displayLocalViewCheckBox );
+		toolPanel.add(displayLocalViewCheckBox);
 
-		displayBoundingBoxCheckBox = new JCheckBox("Display Bounding Box", sceneControler.displayBoundingBox );
-		displayBoundingBoxCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayBoundingBoxCheckBox = new JCheckBox("Display Bounding Box", sceneControler.displayBoundingBox);
+		displayBoundingBoxCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 		displayBoundingBoxCheckBox.addActionListener(this);
-		toolPanel.add( displayBoundingBoxCheckBox );
+		toolPanel.add(displayBoundingBoxCheckBox);
 
-		enableCompositingCheckBox = new JCheckBox("Enable Compositing", sceneControler.enableCompositing );
-		enableCompositingCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		enableCompositingCheckBox = new JCheckBox("Enable Compositing", sceneControler.enableCompositing);
+		enableCompositingCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 		enableCompositingCheckBox.addActionListener(this);
-		toolPanel.add( enableCompositingCheckBox );
+		toolPanel.add(enableCompositingCheckBox);
 
 		pack();
-		setVisible( true );
+		setVisible(true);
 
 		return menu;
 	}
 
-	
 	/**
 	 * Get current location and size
 	 */
 	public Rectangle getLocationSize() {
-		Rectangle locsize = new Rectangle(this.getX(),
-				this.getY(),
-				this.getWidth(),
-				this.getHeight());
+		Rectangle locsize = new Rectangle(this.getX(), this.getY(), this.getWidth(), this.getHeight());
 		return locsize;
 	}
 
@@ -391,59 +363,85 @@ class SceneViewer extends JFrame
 	public void setExternalView(SceneViewer externalView) {
 		this.externalView = externalView;
 	}
+
 	/**
 	 * Record local view
 	 */
 	public void setLocalView(SceneViewer localView) {
 		this.localView = localView;
-		ColoredEye eye = new ColoredEye(
-				localView.camera.position,
-				localView.camera.target,
-				localView.camera.up,
-				localView
-				);
+		ColoredEye eye = new ColoredEye(localView.camera.position, localView.camera.target, localView.camera.up,
+				localView);
 		EMBlock cb = new EMBlock(eye);
 		cb.setViewerLevel(getViewerLevel());
 		sceneControler.insertBlock(cb);
 		this.localViewEye = cb;
 		localView.setExternalView(this);
 	}
-	
-	private void setLocationSize() {
-	int x = getXFromProp();
-	int y = getYFromProp();
-	if (x < 0 || y < 0 ) {
-		x = x0;
-		y = y0;
-	}
-	x0 = x;					// Update location
-	y0 = y;
-	this.setLocation(x, y);
-	
-	int w = getWidthFromProp();
-	int h = getHeightFromProp();
-	if (x < 0 || y < 0 ) {
-		w = width;
-		h = height;
-	}
-	width = w;				// Update size
-	height =  h;
-	this.setSize(w, h);
+
+	/**
+	 * Remove external view
+	 */
+	public void removeExternalControl() {
+		externalView.dropFromLocalView();
+		externalView = null;
+		dispatchEvent(new WindowEvent((short) 0, this, WindowEvent.EVENT_WINDOW_DESTROY_NOTIFY));
 	}
 
+	private void dispatchEvent(WindowEvent windowEvent) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/**
+	 * Drop our connection
+	 */
+	public void dropFromLocalView() {
+		localView = null;
+	}
+
+	private void setLocationSize() {
+		int x = getXFromProp();
+		int y = getYFromProp();
+		if (x < 0 || y < 0) {
+			x = x0;
+			y = y0;
+		}
+		x0 = x; // Update location
+		y0 = y;
+		this.setLocation(x, y);
+
+		int w = getWidthFromProp();
+		int h = getHeightFromProp();
+		if (x < 0 || y < 0) {
+			w = width;
+			h = height;
+		}
+		width = w; // Update size
+		height = h;
+		this.setSize(w, h);
+	}
 
 	/**
 	 * Get blocks displayed by this viewer
 	 */
 	public int[] getDisplayedIds() {
-		int [] ids = sceneControler.scene.getDisplayedIds();
+		int[] ids = sceneControler.scene.getDisplayedIds();
 		EMBlockGroup displayed = new EMBlockGroup();
 		for (int id : ids) {
 			EMBlock cb = sceneControler.getCb(id);
-			if(cb.getViewerLevel() <= getViewerLevel())
-				displayed.putBlock(cb);		// display all with less level
+			if (cb.getViewerLevel() <= getViewerLevel())
+				displayed.putBlock(cb); // display all with less level
 		}
 		return displayed.getIds();
+	}
+
+	
+	/**
+	 * Check if point is in view port
+	 * @param gl
+	 */
+	public boolean isInViewPort(Point3D pt) {
+		return camera.isInViewPort(pt);
 	}
 
 	/**
@@ -466,11 +464,11 @@ class SceneViewer extends JFrame
 	public Vector3D getEyeUp() {
 		return camera.up;
 	}
-	
+
 	public Dimension getPreferredSize() {
 		return new Dimension(512, 512);
 	}
-	
+
 	/**
 	 * enable / disable mouse add block
 	 * 
@@ -481,20 +479,16 @@ class SceneViewer extends JFrame
 		autoAdd = type;
 	}
 
-	
 	/**
-	 * Set debug/diagnostic trace settings
-	 * Sets absolutely, clearing all flags first
+	 * Set debug/diagnostic trace settings Sets absolutely, clearing all flags first
 	 */
 	public void traceSet(String trace_string) {
 		SmTrace.clearFlags();
 		SmTrace.setFlags(trace_string);
 	}
 
-	
 	/**
-	 * Set debug/diagnostic trace settings
-	 * Sets from traceSelection group
+	 * Set debug/diagnostic trace settings Sets from traceSelection group
 	 */
 	public void traceSelection() {
 		SmTrace.clearFlags();
@@ -509,17 +503,14 @@ class SceneViewer extends JFrame
 		return selectStack.isEmpty();
 	}
 
-	
 	public BlockSelect selectPop() {
 		return selectStack.pop();
 	}
-	
-	
+
 	public void selectPush(BlockSelect select) {
 		selectStack.push(select);
 	}
 
-	
 	/**
 	 * Text representation
 	 */
@@ -532,11 +523,10 @@ class SceneViewer extends JFrame
 		}
 		return str;
 	}
-	
+
 	/**
-	 * Update selection display
-	 * For now we just unselect all previous and select all new
-	 * Add to selectStack if new_select is populated
+	 * Update selection display For now we just unselect all previous and select all
+	 * new Add to selectStack if new_select is populated
 	 */
 	public boolean displayUpdate(BlockSelect new_select, BlockSelect prev_select) {
 		for (int id : prev_select.getIds()) {
@@ -552,7 +542,7 @@ class SceneViewer extends JFrame
 		repaint();
 		return true;
 	}
-	
+
 	/**
 	 * Get newest block index
 	 */
@@ -566,12 +556,11 @@ class SceneViewer extends JFrame
 	public ControlsOfView getControls() {
 		return controls;
 	}
-	
-	
+
 	public ColoredBox getBoundingBoxOfScene() {
 		return sceneControler.getBoundingBoxOfScene();
 	}
-	
+
 	/**
 	 * Get block, given index
 	 */
@@ -579,19 +568,16 @@ class SceneViewer extends JFrame
 		return sceneControler.getCb(id);
 	}
 
-	
 	/**
-	 * Get generated block, given index
-	 * null, if none
+	 * Get generated block, given index null, if none
 	 */
 	public EMBlock cbGen(int id) {
 		return sceneControler.cbGen(id);
 	}
 
-	
 	/**
-	 * Set camera(target) at a point
-	 * Updates visible controls
+	 * Set camera(target) at a point Updates visible controls
+	 * 
 	 * @param pt
 	 */
 	public void eyeAt(Point3D pt) {
@@ -608,11 +594,10 @@ class SceneViewer extends JFrame
 			localViewEye.setPosition(pt);
 		}
 	}
-	
-	
+
 	/**
-	 * Set camera to look at a point
-	 * Updates visible controls
+	 * Set camera to look at a point Updates visible controls
+	 * 
 	 * @param pt
 	 */
 	public void lookAt(Point3D pt) {
@@ -634,8 +619,7 @@ class SceneViewer extends JFrame
 	public void repaint() {
 		canvas.repaint();
 	}
-	
-	
+
 	/**
 	 * Reset graphics
 	 */
@@ -649,15 +633,14 @@ class SceneViewer extends JFrame
 	public boolean isMousePressed() {
 		return mousePressed;
 	}
-	
+
 	/**
 	 * Set our mouse pressed state
 	 */
 	public void setMousePressed(boolean setting) {
 		mousePressed = setting;
 	}
-	
-	
+
 	public void resetCamera() {
 		camera.setSceneRadius((float) Math.max(5 * EMBlockBase.DEFAULT_SIZE,
 				sceneControler.getBoundingBoxOfScene().getDiagonal().length() * 0.5f));
@@ -665,43 +648,38 @@ class SceneViewer extends JFrame
 		ColoredText.reset();
 	}
 
-	
-
 	/**
-	 * Insert block to scene display
-	 * No other processing is done here
-	 * Display update is done elsewhere
+	 * Insert block to scene display No other processing is done here Display update
+	 * is done elsewhere
 	 */
 	public void insertBlock(int id) {
 		sceneControler.insertBlock(id);
 	}
-	
+
 	/**
-	 * Insert blocks to display
-	 * No additional processing is done here.
-	 * Display update is done elsewhere.
+	 * Insert blocks to display No additional processing is done here. Display
+	 * update is done elsewhere.
 	 */
 	public void insertBlocks(int[] ids) {
 		for (int id : ids) {
 			insertBlock(id);
 		}
 	}
-	
+
 	/**
-	 * Insert blocks to display
-	 * No additional processing is done here.
-	 * Display update is done elsewhere.
+	 * Insert blocks to display No additional processing is done here. Display
+	 * update is done elsewhere.
 	 */
 	public void insertBlocks(EMBlockGroup blocks) {
 		sceneControler.insertBlocks(blocks);
 	}
 
 	public void init(GLAutoDrawable drawable) {
-		///this.drawable = drawable; // Save for later
+		/// this.drawable = drawable; // Save for later
 		GL2 gl = (GL2) canvas.getGL();
 		gl.glClearColor(0, 0, 0, 0);
-		///glu = new GLU();
-		///glut = new GLUT();
+		/// glu = new GLU();
+		/// glut = new GLUT();
 	}
 
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
@@ -780,9 +758,9 @@ class SceneViewer extends JFrame
 		}
 
 		gl.glGetIntegerv(GL2.GL_VIEWPORT, viewport, 0);
-		SmTrace.lg(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1],
-				viewport[2], viewport[3]), "projection");
-		
+		SmTrace.lg(String.format("display():    viewport: %d %d %d %d", viewport[0], viewport[1], viewport[2],
+				viewport[3]), "projection");
+
 		setControl("eyeat", displayEyeAtControl);
 		setControl("lookat", displayLookAtControl);
 		setControl("placement", displayPlacementControl);
@@ -805,8 +783,8 @@ class SceneViewer extends JFrame
 			tx = 1;
 			ty = 0;
 			tz = 0;
-		    tr3.draw("X", tx, ty, tz);
-			
+			tr3.draw("X", tx, ty, tz);
+
 			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(0, 1, 0);
 			gl.glVertex3f(0, 0, 0);
@@ -815,8 +793,8 @@ class SceneViewer extends JFrame
 			tx = 0;
 			ty = 1;
 			tz = 0;
-		    tr3.draw("Y", tx, ty, tz);
-			
+			tr3.draw("Y", tx, ty, tz);
+
 			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(0, 0, 1);
 			gl.glVertex3f(0, 0, 0);
@@ -825,7 +803,7 @@ class SceneViewer extends JFrame
 			tx = 0;
 			ty = 0;
 			tz = 1;
-		    tr3.draw("Z", tx, ty, tz);
+			tr3.draw("Z", tx, ty, tz);
 		}
 		if (displayCameraTarget) {
 			gl.glBegin(GL.GL_LINES);
@@ -859,12 +837,11 @@ class SceneViewer extends JFrame
 		return canvas;
 	}
 
-
 	public void setCanvas(GLCanvas canvas) {
 		this.canvas = canvas;
 	}
 
-	public Scene getScene( ) {
+	public Scene getScene() {
 		return sceneControler.scene;
 	}
 
@@ -872,31 +849,33 @@ class SceneViewer extends JFrame
 		Ray3D ray = camera.computeRay(mouse_x, mouse_y);
 		Point3D newIntersectionPoint = new Point3D();
 		Vector3D newNormalAtIntersection = new Vector3D();
-		int newIndexOfHilitedBox = sceneControler.getIndexOfIntersectedBox(ray, newIntersectionPoint, newNormalAtIntersection);
+		int newIndexOfHilitedBox = sceneControler.getIndexOfIntersectedBox(ray, newIntersectionPoint,
+				newNormalAtIntersection);
 		hilitedPoint.copy(newIntersectionPoint);
 		normalAtHilitedPoint.copy(newNormalAtIntersection);
 		if (newIndexOfHilitedBox != indexOfHilitedBox) {
-			SmTrace.lg(String.format("SceneViewer.updateHiliting: indexOfHiliteBox(%d - was %d)", newIndexOfHilitedBox, indexOfHilitedBox));
+			SmTrace.lg(String.format("SceneViewer.updateHiliting: indexOfHiliteBox(%d - was %d)", newIndexOfHilitedBox,
+					indexOfHilitedBox));
 			indexOfHilitedBox = newIndexOfHilitedBox;
-			
+
 			repaint();
 		}
 	}
 
-	
-	/** our control locations
+	/**
+	 * our control locations
 	 * 
 	 */
 	private String getPosKeyX() {
 		String key = "control." + name + ".pos.x";
 		return key;
 	}
+
 	private String getPosKeyY() {
 		String key = "control." + name + ".pos.y";
 		return key;
 	}
-	
-	
+
 	/**
 	 * Return position, -1 if none
 	 */
@@ -904,20 +883,18 @@ class SceneViewer extends JFrame
 		String posstr = SmTrace.getProperty(getPosKeyX());
 		if (posstr.equals(""))
 			return -1;
-		
+
 		return Integer.valueOf(posstr);
 	}
 
-	
 	public int getYFromProp() {
 		String posstr = SmTrace.getProperty(getPosKeyY());
 		if (posstr.equals(""))
 			return -1;
-		
+
 		return Integer.valueOf(posstr);
 	}
 
-	
 	/**
 	 * Record current location
 	 */
@@ -928,7 +905,6 @@ class SceneViewer extends JFrame
 		SmTrace.setProperty(pos_key_y, String.valueOf(y));
 	}
 
-	
 	/**
 	 * Record current size
 	 */
@@ -938,66 +914,54 @@ class SceneViewer extends JFrame
 		String size_key_height = getSizeKeyHeight();
 		SmTrace.setProperty(size_key_height, String.valueOf(height));
 	}
-	
-	
+
 	/**
-	 * Update location
-	 * Generally called after move
+	 * Update location Generally called after move
 	 */
 	public void updateLocation(ComponentEvent e) {
 		Point pt = e.getComponent().getLocation();
 		recordLocation(pt.x, pt.y);
-		SmTrace.lg(String.format(String.format("updateLocation(%s: %d, %d)"
-				,  name, pt.x, pt.y)));
-		
+		SmTrace.lg(String.format(String.format("updateLocation(%s: %d, %d)", name, pt.x, pt.y)));
+
 	}
-	
-	
+
 	/**
-	 * Update size
-	 * Generally called after resize
+	 * Update size Generally called after resize
 	 */
 	public void updateSize(ComponentEvent e) {
 		Dimension dim = e.getComponent().getSize();
 		recordSize(dim.width, dim.height);
-		SmTrace.lg(String.format(String.format("updateSize(%s: width=%d, height=%d)"
-				,  name, dim.width, dim.height)));
-		
+		SmTrace.lg(String.format(String.format("updateSize(%s: width=%d, height=%d)", name, dim.width, dim.height)));
+
 	}
 
-
 	/**
-	 * Create external view
-	 * Which includes and displays the target and the eye(camera)
-	 * with default viewing box and screen location and size
-	 * @throws EMBlockError 
+	 * Create external view Which includes and displays the target and the
+	 * eye(camera) with default viewing box and screen location and size
+	 * 
+	 * @throws EMBlockError
 	 */
-	public SceneViewer externalView(String title, String name
-			) throws EMBlockError {
+	public SceneViewer externalView(String title, String name) throws EMBlockError {
 		return externalView(title, name, null, null, null, null, null);
 	}
 
-	
 	/**
-	 * Create external view
-	 * Which includes and displays the target and the eye(camera)
-	 * @throws EMBlockError 
+	 * Create external view Which includes and displays the target and the
+	 * eye(camera)
+	 * 
+	 * @throws EMBlockError
 	 */
-	public SceneViewer externalView(String title, String name,
-			ColoredBox viewBox,
-			Point3D eyePosition,
-			Point3D eyeTarget,
-			Vector3D eyeUp,
-			Rectangle locationSize) throws EMBlockError {
+	public SceneViewer externalView(String title, String name, ColoredBox viewBox, Point3D eyePosition,
+			Point3D eyeTarget, Vector3D eyeUp, Rectangle locationSize) throws EMBlockError {
 		if (name == null)
 			name = "External_View";
 		if (title == null)
 			title = "External " + this.name;
-		
+
 		if (viewBox == null) {
 			/**
-			 * Expand viewing region to show based viewing region plus
-			 * viewing target (lookAt) and camera position (origin)
+			 * Expand viewing region to show based viewing region plus viewing target
+			 * (lookAt) and camera position (origin)
 			 */
 			ColoredBox lvbox = getViewBox();
 			ColoredBox evbox = new ColoredBox(lvbox);
@@ -1008,31 +972,28 @@ class SceneViewer extends JFrame
 			viewBox = evbox;
 		}
 		if (eyePosition == null) {
-			eyePosition = viewBox.getMax();	// Place at viewing box upper left corner
+			eyePosition = viewBox.getMax(); // Place at viewing box upper left corner
 		}
 		if (eyeTarget == null) {
-			eyeTarget = this.camera.target;		// Use same target
+			eyeTarget = this.camera.target; // Use same target
 			eyeTarget = Point3D.average(this.camera.position, this.camera.target);
 		}
 		if (eyeUp == null) {
-			eyeUp = this.camera.up;				// Use same orientation
+			eyeUp = this.camera.up; // Use same orientation
 		}
 		if (locationSize == null) {
 			/**
 			 * Place the new view to the right of the current view
 			 */
 			Rectangle locsize = getLocationSize();
-			Rectangle new_locsize = new Rectangle(
-					locsize.x + locsize.width + 2,
-					locsize.y,
-					locsize.width,
+			Rectangle new_locsize = new Rectangle(locsize.x + locsize.width + 2, locsize.y, locsize.width,
 					locsize.height);
 			locationSize = new_locsize;
 		}
-				
-		SceneViewer ev = new SceneViewer(title, name,
-				sceneControler, viewBox, eyePosition, eyeTarget, eyeUp, locationSize);
-		ev.setLocalView(this);			// Record local viewer for display/manipulation
+
+		SceneViewer ev = new SceneViewer(title, name, sceneControler, viewBox, eyePosition, eyeTarget, eyeUp,
+				locationSize);
+		ev.setLocalView(this); // Record local viewer for display/manipulation
 		return ev;
 	}
 
@@ -1043,20 +1004,20 @@ class SceneViewer extends JFrame
 		return sceneControler.getSelectedBlockIndex();
 	}
 
-	
-	/** our view size
+	/**
+	 * our view size
 	 * 
 	 */
 	private String getSizeKeyWidth() {
 		String key = "viewer." + name + ".size.width";
 		return key;
 	}
+
 	private String getSizeKeyHeight() {
 		String key = "viewer." + name + ".size.height";
 		return key;
 	}
-	
-	
+
 	/**
 	 * Return position, -1 if none
 	 */
@@ -1064,24 +1025,24 @@ class SceneViewer extends JFrame
 		String sizestr = SmTrace.getProperty(getSizeKeyWidth());
 		if (sizestr.equals(""))
 			return -1;
-		
+
 		return Integer.valueOf(sizestr);
 	}
 
 	/**
 	 * Get Viewing box, viewed by camera
+	 * 
 	 * @return
 	 */
 	public ColoredBox getViewBox() {
 		return camera.getViewBox();
 	}
-	
-	
+
 	public int getHeightFromProp() {
 		String sizestr = SmTrace.getProperty(getSizeKeyHeight());
 		if (sizestr.equals(""))
 			return -1;
-		
+
 		return Integer.valueOf(sizestr);
 	}
 
@@ -1102,7 +1063,7 @@ class SceneViewer extends JFrame
 				if (sceneControler.isSelected(indexOfHilitedBox)) {
 					bcmd.removeSelect(indexOfHilitedBox);
 				} else {
-					sceneControler.selectAdd(bcmd, indexOfHilitedBox, true);		// keep with selected
+					sceneControler.selectAdd(bcmd, indexOfHilitedBox, true); // keep with selected
 				}
 				bcmd.doCmd();
 			} else {
@@ -1165,7 +1126,7 @@ class SceneViewer extends JFrame
 						return;
 					}
 					break;
-	
+
 				case BOX:
 					try {
 						bcmd = new BlkCmdAdd("emc_duplicate");
@@ -1176,7 +1137,7 @@ class SceneViewer extends JFrame
 					}
 					sceneControler.createNewBlock(bcmd, "box");
 					break;
-	
+
 				case BALL:
 					try {
 						bcmd = new BlkCmdAdd("ball");
@@ -1187,7 +1148,7 @@ class SceneViewer extends JFrame
 					}
 					sceneControler.createNewBlock(bcmd, "ball");
 					break;
-	
+
 				case CONE:
 					try {
 						bcmd = new BlkCmdAdd("emc_cone");
@@ -1197,7 +1158,7 @@ class SceneViewer extends JFrame
 					}
 					sceneControler.createNewBlock(bcmd, "cone");
 					break;
-	
+
 				case CYLINDER:
 					try {
 						bcmd = new BlkCmdAdd("emc_cylinder");
@@ -1208,7 +1169,7 @@ class SceneViewer extends JFrame
 					}
 					sceneControler.createNewBlock(bcmd, "cylinder");
 					break;
-	
+
 				case TEXT:
 					try {
 						bcmd = new BlkCmdAdd("emc_text");
@@ -1219,7 +1180,7 @@ class SceneViewer extends JFrame
 					}
 					sceneControler.createNewBlock(bcmd, "text");
 					break;
-					
+
 				default:
 					SmTrace.lg("Unrecognized AutoAdd value - ignored");
 				}
@@ -1235,7 +1196,7 @@ class SceneViewer extends JFrame
 				if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
 					return;
 			}
-	
+
 			updateHiliting();
 		} catch (EMBlockError eb) {
 			SmTrace.lg(String.format("mousePressed error %s", eb.getMessage()));
@@ -1243,7 +1204,6 @@ class SceneViewer extends JFrame
 		}
 	}
 
-		
 	public void mouseReleased(MouseEvent e) {
 		setMousePressed(false);
 		old_mouse_x = mouse_x;
@@ -1252,10 +1212,10 @@ class SceneViewer extends JFrame
 		mouse_y = e.getY();
 		try {
 			SmTrace.lg(String.format("mouseReleased(%d,%d)", mouse_x, mouse_y), "mouse");
-	
+
 			if (radialMenu.isVisible()) {
 				int returnValue = radialMenu.releaseEvent(mouse_x, mouse_y);
-	
+
 				int itemID = radialMenu.getItemID(radialMenu.getSelection());
 				SmTrace.lg(String.format("itemID=%d returnValue=%d", itemID, returnValue), "select");
 				EMBCommand bcmd = null;
@@ -1367,9 +1327,9 @@ class SceneViewer extends JFrame
 					sceneControler.deleteSelection(bcmd);
 					break;
 				}
-	
+
 				repaint();
-	
+
 				if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
 					return;
 				if (bcmd != null) {
@@ -1423,9 +1383,7 @@ class SceneViewer extends JFrame
 				camera.translateSceneRightAndUp((float) (delta_x), (float) (delta_y));
 			}
 			repaint();
-		} else if (SwingUtilities.isLeftMouseButton(e)
-					&& !e.isControlDown()
-					&& sceneControler.anySelected()) {
+		} else if (SwingUtilities.isLeftMouseButton(e) && !e.isControlDown() && sceneControler.anySelected()) {
 			if (!e.isShiftDown()) {
 				EMBlock[] cbs = sceneControler.getSelectedBlocks();
 				if (cbs.length == 0)
@@ -1477,7 +1435,7 @@ class SceneViewer extends JFrame
 						e2.printStackTrace();
 						return;
 					}
-					
+
 					Vector3D translation = Point3D.diff(intersection2, intersection1);
 					SmTrace.lg(String.format("resize translation: %s", translation));
 
@@ -1500,14 +1458,14 @@ class SceneViewer extends JFrame
 	 * OpenGl to screen coordinate translation
 	 * 
 	 * The first thing you should remember once and for all regarding screen
-	 * coordinates - the upper left corner of the screen is (0,0) and lower
-	 * right is (width, height) - no arguing! Now, lets say we got a 3D point in
-	 * world coordinate space at (x, y, z) - this is not relative to the camera,
-	 * but absolute (so the camera can have coordinates (cx, cy, cz)). The
-	 * camera defines the viewMatrix, and I suppose you also have defined a
-	 * projectionMatrix (you better have!). The last thing you need is the width
-	 * and height of the are you are rendering on (not the whole screen!). If
-	 * you have all these things, then it's pretty easy:
+	 * coordinates - the upper left corner of the screen is (0,0) and lower right is
+	 * (width, height) - no arguing! Now, lets say we got a 3D point in world
+	 * coordinate space at (x, y, z) - this is not relative to the camera, but
+	 * absolute (so the camera can have coordinates (cx, cy, cz)). The camera
+	 * defines the viewMatrix, and I suppose you also have defined a
+	 * projectionMatrix (you better have!). The last thing you need is the width and
+	 * height of the are you are rendering on (not the whole screen!). If you have
+	 * all these things, then it's pretty easy:
 	 * 
 	 * 
 	 * function point2D get2dPoint(Point3D point3D, Matrix viewMatrix, Matrix
@@ -1516,10 +1474,9 @@ class SceneViewer extends JFrame
 	 * Matrix4 viewProjectionMatrix = projectionMatrix * viewMatrix; //transform
 	 * world to clipping coordinates point3D =
 	 * viewProjectionMatrix.multiply(point3D); int winX = (int) Math.round(((
-	 * point3D.getX() + 1 ) / 2.0) * width ); //we calculate -point3D.getY()
-	 * because the screen Y axis is //oriented top->down int winY = (int)
-	 * Math.round((( 1 - point3D.getY() ) / 2.0) * height ); return new
-	 * Point2D(winX, winY); }
+	 * point3D.getX() + 1 ) / 2.0) * width ); //we calculate -point3D.getY() because
+	 * the screen Y axis is //oriented top->down int winY = (int) Math.round((( 1 -
+	 * point3D.getY() ) / 2.0) * height ); return new Point2D(winX, winY); }
 	 * 
 	 **/
 
@@ -1534,12 +1491,12 @@ class SceneViewer extends JFrame
 	 * @return
 	 */
 	/**
-	 * TBD public Point3D get3dPoint(Point2D point2D, int width, int height,
-	 * Matrix viewMatrix, Matrix projectionMatrix) {
+	 * TBD public Point3D get3dPoint(Point2D point2D, int width, int height, Matrix
+	 * viewMatrix, Matrix projectionMatrix) {
 	 * 
 	 * double x = 2.0 * winX / clientWidth - 1; double y = - 2.0 * winY /
-	 * clientHeight + 1; Matrix4 viewProjectionInverse =
-	 * inverse(projectionMatrix * viewMatrix);
+	 * clientHeight + 1; Matrix4 viewProjectionInverse = inverse(projectionMatrix *
+	 * viewMatrix);
 	 * 
 	 * Point3D point3D = new Point3D(x, y, 0F); return
 	 * viewProjectionInverse.multiply(point3D); }
@@ -1550,8 +1507,6 @@ class SceneViewer extends JFrame
 		// TODO Auto-generated method stub
 
 	}
-
-
 
 	/**
 	 * Print displayed blocks
@@ -1567,7 +1522,7 @@ class SceneViewer extends JFrame
 		}
 
 		String str = "";
-		
+
 		for (int id : block_ids) {
 			if (str != "") {
 				str += ", ";
@@ -1576,77 +1531,62 @@ class SceneViewer extends JFrame
 		}
 		SmTrace.lg(String.format("%s displayed:%s", tag, str), trace);
 	}
-	
-	
+
 	@Override
 	public void actionPerformed(ActionEvent ae) {
-							// Check on menu commands
+		// Check on menu commands
 		Object source = ae.getSource();
-		if ( source == eyeAtSelectionButton ) {
+		if (source == eyeAtSelectionButton) {
 			this.eyeAtSelection();
 			this.repaint();
-		}
-		else if ( source == lookAtSelectionButton ) {
+		} else if (source == lookAtSelectionButton) {
 			this.lookAtSelection();
 			this.repaint();
-		}
-		else if ( source == resetCameraButton ) {
+		} else if (source == resetCameraButton) {
 			this.resetCamera();
 			this.repaint();
-		}
-		else if ( source == displayEyeAtControlCheckBox ) {
-			this.displayEyeAtControl = ! this.displayEyeAtControl;
+		} else if (source == displayEyeAtControlCheckBox) {
+			this.displayEyeAtControl = !this.displayEyeAtControl;
 			this.setControl("eyeAt", this.displayEyeAtControl);
 			this.repaint();
-		}
-		else if ( source == displayLookAtControlCheckBox ) {
-			this.displayLookAtControl = ! this.displayLookAtControl;
+		} else if (source == displayLookAtControlCheckBox) {
+			this.displayLookAtControl = !this.displayLookAtControl;
 			this.setControl("lookat", this.displayLookAtControl);
 			this.repaint();
-		}
-		else if ( source == displayPlacementControlCheckBox ) {
-			this.displayPlacementControl = ! this.displayPlacementControl;
+		} else if (source == displayPlacementControlCheckBox) {
+			this.displayPlacementControl = !this.displayPlacementControl;
 			this.setControl("placement", this.displayPlacementControl);
 			this.repaint();
-		}
-		else if ( source == displayColorControlCheckBox ) {
-			this.displayColorControl = ! this.displayColorControl;
+		} else if (source == displayColorControlCheckBox) {
+			this.displayColorControl = !this.displayColorControl;
 			this.setControl("color", this.displayColorControl);
 			this.repaint();
-		}
-		else if ( source == displayTextControlCheckBox ) {
-			this.displayTextControl = ! this.displayTextControl;
+		} else if (source == displayTextControlCheckBox) {
+			this.displayTextControl = !this.displayTextControl;
 			this.setControl("text", this.displayTextControl);
 			this.repaint();
-		}
-		else if ( source == displayWorldAxesCheckBox ) {
-			this.displayWorldAxes = ! this.displayWorldAxes;
+		} else if (source == displayWorldAxesCheckBox) {
+			this.displayWorldAxes = !this.displayWorldAxes;
+			this.repaint();
+		} else if (source == displayCameraTargetCheckBox) {
+			this.displayCameraTarget = !this.displayCameraTarget;
+			this.repaint();
+		} else if (source == displayBoundingBoxCheckBox) {
+			this.displayBoundingBox = !this.displayBoundingBox;
+			this.repaint();
+		} else if (source == enableCompositingCheckBox) {
+			this.enableCompositing = !this.enableCompositing;
 			this.repaint();
 		}
-		else if ( source == displayCameraTargetCheckBox ) {
-			this.displayCameraTarget = ! this.displayCameraTarget;
-			this.repaint();
-		}
-		else if ( source == displayBoundingBoxCheckBox ) {
-			this.displayBoundingBox = ! this.displayBoundingBox;
-			this.repaint();
-		}
-		else if ( source == enableCompositingCheckBox ) {
-			this.enableCompositing = ! this.enableCompositing;
-			this.repaint();
-		}
-	
-		
-							// Check on commands
+
+		// Check on commands
 		String action = ae.getActionCommand();
 		SmTrace.lg(String.format("action: %s", action));
 		try {
 			if (getControls().ckDoAction(action))
 				return;
 		} catch (EMBlockError e) {
-			SmTrace.lg(String.format(
-					"getControls().ckDoaction(%s): %s",
-					action, e.getMessage()));
+			SmTrace.lg(String.format("getControls().ckDoaction(%s): %s", action, e.getMessage()));
 			e.printStackTrace();
 			return;
 		}
@@ -1656,14 +1596,13 @@ class SceneViewer extends JFrame
 		sceneControler.eyeAtSelection();
 	}
 
-	
 	/**
-	 * Set camera to look at a point
-	 * Updates visible controls
+	 * Set camera to look at a point Updates visible controls
+	 * 
 	 * @param pt
 	 */
 	public void lookAt_OBSOLETE(Point3D pt) {
-		///currentViewerCamera().lookAt(pt);
+		/// currentViewerCamera().lookAt(pt);
 		ControlOfLookAt lac = (ControlOfLookAt) controls.getControl("lookat");
 		if (lac != null)
 			try {
@@ -1678,36 +1617,32 @@ class SceneViewer extends JFrame
 		sceneControler.lookAtSelection();
 	}
 
-	
 	/**
 	 * Add component control
-	 * @throws EMBlockError 
+	 * 
+	 * @throws EMBlockError
 	 */
 	public void addBlockButton(EMBCommand bcmd, String action) throws EMBlockError {
 		sceneControler.selectPrint(String.format("addBlockButton(%s) select", action), "action");
 		try {
 			if (bcmd == null) {
-				SmTrace.lg(String.format(
-						"addBlockButton(%s) with no cmd - ignored",
-						action));
+				SmTrace.lg(String.format("addBlockButton(%s) with no cmd - ignored", action));
 				return;
 			}
-			
+
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return;
 		}
-		switch(action) {
-				
-			default:
-				SmTrace.lg(String.format(
-						"Unrecognized addBlockButton: %s - ignored", action));
-				return;
+		switch (action) {
+
+		default:
+			SmTrace.lg(String.format("Unrecognized addBlockButton: %s - ignored", action));
+			return;
 		}
 	}
 
-	
 	/**
 	 * Add/Remove Control/Display
 	 */
@@ -1715,12 +1650,9 @@ class SceneViewer extends JFrame
 		getControls().setControl(controlName, on);
 	}
 
-	
-
 	public void setCheckBox(String name, boolean checked) {
 		sceneControler.setCheckBox(name, checked);
 	}
-
 
 	public EMDisplay getDisplay() {
 		EMDisplay disp = new EMDisplay("SceneViewer");
@@ -1728,17 +1660,14 @@ class SceneViewer extends JFrame
 		return disp;
 	}
 
-
 	private EMBlockGroup getDisplayedBlocks() {
 		return sceneControler.getDisplayedBlocks();
 	}
 
-
 	@Override
 	public void display(GLAutoDrawable drawable) {
 		display();
-		
+
 	}
 
-	
 }
