@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -88,7 +89,7 @@ class ControlMap extends GLCanvas implements MouseListener, MouseMotionListener,
 	 *            double[16]
 	 */
 	public void printMatrix(String heading, double vals[]) {
-		System.out.println("\n" + heading);
+		SmTrace.lg("\n" + heading);
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
 				int idx = i + 4 * j;
@@ -100,7 +101,7 @@ class ControlMap extends GLCanvas implements MouseListener, MouseMotionListener,
 
 	public void displayChanged(GLAutoDrawable drawable, boolean modeChanged, boolean deviceChanged) {
 		// leave this empty
-		System.out.println("displayChanged");
+		SmTrace.lg("displayChanged");
 	}
 
 	public void display(GLAutoDrawable drawable) {
@@ -123,8 +124,7 @@ class ControlMap extends GLCanvas implements MouseListener, MouseMotionListener,
 		old_mouse_y = mouse_y;
 		mouse_x = e.getX();
 		mouse_y = e.getY();
-		if (SmTrace.tr("mouse"))
-			System.out.println(String.format("mousePressed(%d,%d)", mouse_x, mouse_y));
+		SmTrace.lg(String.format("mousePressed(%d,%d)", mouse_x, mouse_y), "mouse");
 
 
 	}
@@ -134,8 +134,7 @@ class ControlMap extends GLCanvas implements MouseListener, MouseMotionListener,
 		old_mouse_y = mouse_y;
 		mouse_x = e.getX();
 		mouse_y = e.getY();
-		if (SmTrace.tr("mouse"))
-			System.out.println(String.format("mouseReleased(%d,%d)", mouse_x, mouse_y));
+		SmTrace.lg(String.format("mouseReleased(%d,%d)", mouse_x, mouse_y), "mouse");
 	}
 
 	public void mouseMoved(MouseEvent e) {
@@ -165,7 +164,7 @@ class ControlMap extends GLCanvas implements MouseListener, MouseMotionListener,
 	@Override
 	public void actionPerformed(ActionEvent ae) {
 		String action = ae.getActionCommand();
-		System.out.println(String.format("action: %s", action));
+		SmTrace.lg(String.format("action: %s", action));
 	}
 
 

@@ -65,13 +65,11 @@ public class ControlOfScene extends JDialog implements java.awt.event.WindowList
 
 			@Override
 			public void componentResized(ComponentEvent e) {
-				System.out.println("ControlOfView resized");
-				// TODO Auto-generated method stub
-				
+				SmTrace.lg(String.format("ControlOfView %s resized", name), "resize");
 			}
  			@Override
 			public void componentMoved(ComponentEvent e) {
-				System.out.println("ControlOfView moved");
+				SmTrace.lg(String.format("ControlOfView %s moved", name), "resize");
 				updateLocation(e);
 			}
 

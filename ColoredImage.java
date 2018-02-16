@@ -52,7 +52,7 @@ public class ColoredImage extends EMBlockBase {
 	 * Base object
 	 */
 	public ColoredImage(Point3D center, Vector3D size, String imageFileName, Vector3D up) {
-		super(center, size2radius(size), null, up);
+		super(center, size2radius(size), Color.WHITE, up);
 		this.drawable = drawable;
 		if (size == null)
 			size = new Vector3D(0,0,0);

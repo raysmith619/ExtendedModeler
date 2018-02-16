@@ -1,3 +1,4 @@
+package ExtendedModeler;
 import smTrace.SmTrace;
 
 public class EMTFail extends Exception {

@@ -1,3 +1,4 @@
+package ExtendedModeler;
 ////package net.gamedev.nehe;
 
 import java.awt.*;

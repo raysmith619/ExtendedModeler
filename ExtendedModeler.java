@@ -5,8 +5,10 @@ package ExtendedModeler;
  */
 
 import java.awt.Container;
+import java.awt.List;
 import java.awt.Component;
 import java.awt.event.ActionListener;
+import java.util.Arrays;
 import java.awt.event.ActionEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -19,6 +21,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -41,6 +44,7 @@ public class ExtendedModeler implements ActionListener {
 	public static SmTrace smTrace;
 	JFrame frame;
 	Container toolPanel;
+	JDialog traceControl;
 	SceneViewer[] sceneViewers;							// Array of scene viewers(observers)
 	int externalViewIdx = -1;							// Index of external viewer, if one
 	SceneControler sceneControler;						// Control of the scene
@@ -69,10 +73,12 @@ public class ExtendedModeler implements ActionListener {
 	
 	JMenuItem deleteAllMenuItem, quitMenuItem, aboutMenuItem;
 	
+	JMenuItem traceMenuItem;		// Command trace
 	JMenuItem undoMenuItem;			// Command undo
 	JMenuItem redoMenuItem;			// Command redo
 	JMenuItem repeatMenuItem;		// Command repeat
 	JMenuItem resetMenuItem;		// Command reset
+	JButton traceButton;			// Trace control
 	JButton undoButton;				// Command undo
 	JButton redoButton;				// Command redo
 	JButton repeatButton;			// Command repeat
@@ -118,7 +124,10 @@ public class ExtendedModeler implements ActionListener {
 
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
-		if (source == undoButton || source == undoMenuItem) {
+		if (source == traceButton || source == traceMenuItem) {
+			traceControl = new TraceControl(frame);
+		}
+		else if (source == undoButton || source == undoMenuItem) {
 			sceneControler.cmdUndo();
 			return;
 		}
@@ -328,6 +337,11 @@ public class ExtendedModeler implements ActionListener {
 		resetButton.addActionListener(this);
 		menuBar.add(resetButton);
 		frame.setJMenuBar(menuBar);
+		
+		menuBar.add(new JSeparator());
+		traceButton = new JButton("Trace");
+		traceButton.addActionListener(this);
+		menuBar.add(traceButton);
 
 		/***
 		Container pane = frame.getContentPane();
@@ -469,19 +483,10 @@ public class ExtendedModeler implements ActionListener {
 		traceSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
 		traceSelectionButton.addActionListener(this);
 		tracePanel.add( traceSelectionButton );
-		traceSelectionCkBoxPanel = traceCkBoxPanel();
-		tracePanel.add(traceSelectionCkBoxPanel);
 		frame.pack();
 		frame.setVisible( true );
 
 		return menu;
-	}
-
-	/**
-	 * Create trace flag check box panel using SmTrace flags
-	 */
-	public JPanel traceCkBoxPanel() {
-		return new JPanel();	/// TBD
 	}
 
 	/**
@@ -557,6 +562,7 @@ public class ExtendedModeler implements ActionListener {
 				+ "Options:\n"
 				+ "    help(he)  - print this message and quit\n"
 				+ "    trace [str(value)] - values e.g. \"select\" ]\n"
+				+ "    imask comma-separated list of image file masks] - values e.g. \".png,.jif\"\n"
 				+ "    test [str(test-tag)] - test to perform\n"
 				+ "    testafterSetup(tas) [float(delay)] - delay(seconds) after setup\n"
 				+ "    testrun(tr) [int(nrun)] - number of times to run test\n"
@@ -614,6 +620,11 @@ public class ExtendedModeler implements ActionListener {
 						case "dextcontrol":
 						case "dec":
 							displayExternalControl = booleanArg(true);		// change external display value
+							break;
+							
+						case "imask":
+						case "im":
+							makeImageMasks(strArg(":NONE:"));
 							break;
 							
 						case "help":
@@ -786,6 +797,17 @@ public class ExtendedModeler implements ActionListener {
 		return val_str;
 	}
 
+	
+	/**
+	 * Setup image masks
+	 * for component control
+	 */
+	static void makeImageMasks(String masksStr) {
+		java.util.List<String> items = Arrays.asList(masksStr.split("\\s*,\\s*"));
+		String[] stockArr = new String[items.size()];
+		stockArr = items.toArray(stockArr);
+		ControlOfComponent.setImageMasks(stockArr);
+	}
 	
 	/**
 	 * Used to allow testing

@@ -1,8 +1,11 @@
+package ExtendedModeler;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.awt.GLCanvas;
+
+import smTrace.SmTrace;
 
 import java.awt.Frame;
 import java.awt.event.WindowAdapter;
@@ -40,7 +43,7 @@ public class OneTriangleAWT {
             @Override
             public void display( GLAutoDrawable glautodrawable ) {
             	count++;
-            	System.out.print(String.format("display:%d\r", count));
+            	SmTrace.lg(String.format("display:%d\r", count));
             	OneTriangle.render( glautodrawable.getGL().getGL2(), glautodrawable.getSurfaceWidth(), glautodrawable.getSurfaceHeight() );
             }
         });

@@ -1,5 +1,6 @@
 package ExtendedModeler;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -7,6 +8,8 @@ import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.io.File;
 
 import javax.swing.AbstractAction;
@@ -15,9 +18,12 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 import smTrace.SmTrace;
 
@@ -29,7 +35,15 @@ public class ControlOfComponent extends ControlOfScene {
 	private static final long serialVersionUID = 1L;
 	JTextField imageFileStringTxFld;
 	JComboBox imageCBox;
-
+	String[] imageNames;
+	JScrollPane imageScrollPane;
+	int nicon_wide = 5;				// Number of icons wide
+	int nicon_high = 4;				// Number of icons high
+	static String[] imageMasks;		// If non-null
+									//    array of strings
+									//    one of which is required string in image path
+							
+	
 	ControlOfComponent(SceneControler sceneControler, String name) {
 		super(sceneControler, name);
 	}
@@ -51,7 +65,7 @@ public class ControlOfComponent extends ControlOfScene {
 		if (setup)
 		return;					// Already setup
 		
-		int ctl_w = 600;
+		int ctl_w = 800;
 		int ctl_h = 400;
 		setPreferredSize(new Dimension(ctl_w, ctl_h));
 		setTitle("Block - Select / Add / Modify");
@@ -138,12 +152,12 @@ public class ControlOfComponent extends ControlOfScene {
 		File folder = new File(imageDirName);
 		File[] listOfFiles = folder.listFiles();
 
-		String[] image_names = new String[listOfFiles.length];
+		imageNames = new String[listOfFiles.length];
 	    for (int i = 0; i < listOfFiles.length; i++) {
-	        image_names[i] = listOfFiles[i].getName();
+	        imageNames[i] = listOfFiles[i].getName();
 	    }
 	    int image_index = 0;
-		imageCBox = new JComboBox(image_names);
+		imageCBox = new JComboBox(imageNames);
 		imageCBox.setSelectedIndex(image_index);
 		imagePanel.add(imageCBox);
 		String image_name = (String) imageCBox.getSelectedItem();
@@ -169,20 +183,69 @@ public class ControlOfComponent extends ControlOfScene {
 		addImageButton.setActionCommand("emc_addImageButton");
 		addImageButton.addActionListener(sceneControler);
 		imagePanel.add(addImageButton);
+		setupImagePanel(blockPanel, ctl_w, ctl_h);
+		
+		pack();
+		setup = true;
+	}
 
-		int nicon_wide = 5;		// Number of icons wide
+	
+	/**
+	 * Setup image mask array
+	 * Mostly to limit image memory usage
+	 * @return 
+	 */
+	public static void setImageMasks(String[] masks) {
+		imageMasks = masks;
+	}
+	
+	/**
+	 * Setup image panel
+	 */
+	private void setupImagePanel(JPanel blockPanel, int ctl_w, int ctl_h) {
+		int ib_w = ctl_w/nicon_wide - 20;
+		int ib_h = 100;
+		int isp_w = ctl_w;
+		int isp_h = nicon_high*ib_h;
 		JPanel imageIconPanel = new JPanel(new GridLayout(0, nicon_wide));		// Icons in 5 columns
-		blockPanel.add(imageIconPanel);
-		for (String iname : image_names) {
+		//imageIconPanel.setPreferredSize(null);
+        imageScrollPane = new JScrollPane(imageIconPanel);
+        imageScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        imageScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        //imageScrollPane.setBounds(3, 3, isp_w, isp_h/2);
+        //JPanel contentPane = new JPanel(null);
+        //imageScrollPane.setPreferredSize(null);
+		blockPanel.add(imageScrollPane);
+		
+		for (String iname : imageNames) {
 			String ifile = ColoredImage.fullFileName(iname);
+			if (imageMasks != null) {
+				String ifile_lc = ifile.toLowerCase();
+				boolean found = false;	// Set true, iff a mask found
+				for (String mask : imageMasks) {
+					if (ifile_lc.contains(mask.toLowerCase()) ) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					String mask_str = "";
+					for (String mask : imageMasks) {
+						if (mask_str.length() > 0)
+							mask_str += ",";
+						mask_str += mask;
+					}
+					SmTrace.lg(String.format("Rejecting %s - does not contain any of %s",
+							ifile_lc, mask_str));
+					continue;
+				}
+			}
 			String icon_name = ColoredImage.iconFileName(ifile);
 			File file = new File(ifile);
 			
 			String basename = file.getName();
 			ImageIcon icon = new ImageIcon(icon_name);
 			JButton ibutton = new JButton(iname, icon);
-			int ib_w = ctl_w/nicon_wide - 4;
-			int ib_h = 100;
 			ibutton.setPreferredSize(new Dimension(ib_w, ib_h));
 			ibutton.setBounds(0, 0, ib_w, ib_h);
 			// Set image to size of JButton...
@@ -208,16 +271,60 @@ public class ControlOfComponent extends ControlOfScene {
 	        	}
 	        });
 		}
-		
-		
-		pack();
-		setup = true;
+        imageScrollPane.setPreferredSize(null);
+        addComponentListener(new ComponentListener() {
+
+			@Override
+			public void componentResized(ComponentEvent e) {
+				System.out.println("ControlOfComponent resized");
+				ControlOfComponent component = (ControlOfComponent) e.getSource();
+		        Dimension windowSize = component.getContentPane().getSize();
+		        int ctl_w = windowSize.width;
+				int ctl_h = windowSize.height;
+				int isp_w = ctl_w;
+				int isp_h = ctl_h;
+		        resizeIconsPanel(isp_w, isp_h);
+				
+			}
+ 			@Override
+			public void componentMoved(ComponentEvent e) {
+				System.out.println("ControlOfComponent moved");
+			}
+
+			@Override
+			public void componentShown(ComponentEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void componentHidden(ComponentEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+	} );
+        resizeIconsPanel(isp_w, isp_h);
+
 	}
+
+	/**
+	 * @param icon
+	 * @param resizedWidth
+	 * @param resizedHeight
+	 * @return
+	 */
+	
 	private static Icon resizeIcon(ImageIcon icon, int resizedWidth, int resizedHeight) {
 	    Image img = icon.getImage();  
 	    Image resizedImage = img.getScaledInstance(resizedWidth, resizedHeight,  java.awt.Image.SCALE_SMOOTH);  
 	    return new ImageIcon(resizedImage);
 	}
+
+	
+	private void resizeIconsPanel(int isp_w, int isp_h) {
+		imageScrollPane.setSize(new Dimension(isp_w, isp_h));
+	}
+	
 	
 	/**
 	 * Add new image from panel

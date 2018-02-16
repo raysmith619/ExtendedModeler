@@ -1,3 +1,4 @@
+package ExtendedModeler;
 
 /**
  *   Simple test of the TextRenderer3D class.

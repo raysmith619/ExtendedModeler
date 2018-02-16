@@ -148,6 +148,19 @@ public class Camera3D {
 		
 		return vbox;
 	}
+
+	
+	/**
+	 * Check if point is in view port
+	 * @param gl
+	 */
+	public boolean isInViewPort(Point3D pt) {
+		ColoredBox vbox = getViewBox();
+		OrientedBox3D obox = vbox.getOBox();
+		if (obox.contains(pt))
+			return true;
+		return false;
+	}
 	
 	
 	public void transform( GL2 gl ) {
