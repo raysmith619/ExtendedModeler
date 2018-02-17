@@ -276,7 +276,7 @@ public class ControlOfComponent extends ControlOfScene {
 
 			@Override
 			public void componentResized(ComponentEvent e) {
-				System.out.println("ControlOfComponent resized");
+				SmTrace.lg("ControlOfComponent resized", "component");
 				ControlOfComponent component = (ControlOfComponent) e.getSource();
 		        Dimension windowSize = component.getContentPane().getSize();
 		        int ctl_w = windowSize.width;
@@ -288,7 +288,7 @@ public class ControlOfComponent extends ControlOfScene {
 			}
  			@Override
 			public void componentMoved(ComponentEvent e) {
-				System.out.println("ControlOfComponent moved");
+				SmTrace.lg("ControlOfComponent moved", "component");
 			}
 
 			@Override

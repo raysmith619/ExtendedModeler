@@ -217,7 +217,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 
 			@Override
 			public void componentMoved(ComponentEvent e) {
-				System.out.println("SceneViewer moved");
+				SmTrace.lg("SceneViewer moved", "move");
 				updateLocation(e);
 			}
 
@@ -855,7 +855,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		normalAtHilitedPoint.copy(newNormalAtIntersection);
 		if (newIndexOfHilitedBox != indexOfHilitedBox) {
 			SmTrace.lg(String.format("SceneViewer.updateHiliting: indexOfHiliteBox(%d - was %d)", newIndexOfHilitedBox,
-					indexOfHilitedBox));
+					indexOfHilitedBox), "hilite");
 			indexOfHilitedBox = newIndexOfHilitedBox;
 
 			repaint();
@@ -921,7 +921,8 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	public void updateLocation(ComponentEvent e) {
 		Point pt = e.getComponent().getLocation();
 		recordLocation(pt.x, pt.y);
-		SmTrace.lg(String.format(String.format("updateLocation(%s: %d, %d)", name, pt.x, pt.y)));
+		SmTrace.lg(String.format("updateLocation(%s: %d, %d)", name, pt.x, pt.y),
+				"location");
 
 	}
 
@@ -1394,6 +1395,12 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				Ray3D ray2 = camera.computeRay(mouse_x, mouse_y);
 				Point3D intersection1 = new Point3D();
 				Point3D intersection2 = new Point3D();
+				if (SmTrace.trace("drag")) {
+					SmTrace.lg(String.format("drag: %d %s normalAtSelectedPoint: %s selectedPoint: %s",
+							cbs[0].iD(), cbs[0].blockType(),
+							normalAtSelectedPoint, selectedPoint));
+				}
+		
 				Plane plane = new Plane(normalAtSelectedPoint, selectedPoint);
 				if (plane.intersects(ray1, intersection1, true) && plane.intersects(ray2, intersection2, true)) {
 					EMBCommand bcmd;
@@ -1404,7 +1411,34 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 						e2.printStackTrace();
 						return;
 					}
+					if (SmTrace.trace("dragInterSect")) {
+						SmTrace.lg(String.format("drag:  %d %s  intersection1 %s intersection2: %s",
+								cbs[0].iD(), cbs[0].blockType(),
+								intersection1, intersection2));
+					}
 					Vector3D translation = Point3D.diff(intersection2, intersection1);
+					if (SmTrace.trace("dragInterSect")) {
+						float ts = 10;
+						if (cbs[0].blockType().equals("box")) {
+							SmTrace.lg(String.format("Scaling translation by %f", ts));
+							translation = translation.mult(translation, ts);
+						}
+						SmTrace.lg(String.format("drag: translation: %s",
+								translation));
+					}
+					if (SmTrace.trace("dragILarge")) {
+						if (translation.length() > .1) {
+							SmTrace.lg(String.format("dragILarge:  %d %s translation: %s",
+									cbs[0].iD(), cbs[0].blockType(),
+									translation));
+							SmTrace.lg(String.format("dragILarge:  %d %s  intersection1 %s intersection2: %s",
+									cbs[0].iD(), cbs[0].blockType(),
+									intersection1, intersection2));
+						}
+					}
+					if (SmTrace.trace("settranslation")) {
+						translation = new Vector3D(1,1,1);
+					}
 					for (int i = 0; i < cbs.length; i++) {
 						EMBlock cb = cbs[i];
 						bcmd.addPrevBlock(cb);

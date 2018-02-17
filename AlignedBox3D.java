@@ -40,8 +40,8 @@ public class AlignedBox3D {
 	 * Box from size and center
 	 */
 	public AlignedBox3D(Point3D center, Vector3D size) {
-		this.p0 = Point3D.diff(center, new Vector3D(size.x()/2, size.y()/2, size.z()/2));
-		this.p1 = Point3D.sum(center, new Vector3D(size.x()/2, size.y()/2, size.z()/2));
+		this.p0 = new Point3D(center.x()-size.x()/2, center.y()-size.y()/2, center.z()-size.z()/2);
+		this.p1 = new Point3D(center.x()+size.x()/2, center.y()+size.y()/2, center.z()+size.z()/2);
 	}
 	
 	public AlignedBox3D( Point3D min, Point3D max ) {
@@ -338,9 +338,17 @@ public class AlignedBox3D {
 	public void resize(Vector3D size) {
 		Point3D center = getCenter();
 		p0 = new Point3D(center.x()-size.x()/2, center.y()-size.y()/2, center.z()-size.z()/2);
-		p0 = new Point3D(center.x()+size.x()/2, center.y()+size.y()/2, center.z()+size.z()/2);
+		p1 = new Point3D(center.x()+size.x()/2, center.y()+size.y()/2, center.z()+size.z()/2);
 	}
+
 	
+	/**
+	 * translate in world's x,y,z
+	 */
+	public void translate(Vector3D translate) {
+		p0 = Point3D.sum(p0, translate);
+		p1 = Point3D.sum(p1, translate);
+	}
 	
 	public String toString() {
 		return String.format("p0: %s  p1: %s", p0, p1);

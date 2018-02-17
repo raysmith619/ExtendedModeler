@@ -159,12 +159,12 @@ class Scene {
 				///TFD - second try to facilitate tracking
 				if (candidateNormal.lengthSquared() == 0) {
 					SmTrace.lg(String.format("Scene.getIndexOfIntersectedBox: Zero length normal(%s) at intersection:%s ray:%s",
-							candidateNormal, candidatePoint, ray), "intersection");
+							candidateNormal, candidatePoint, ray), "intersect");
 					Point3D candidatePoint2 = new Point3D();
 					Vector3D candidateNormal2 = new Vector3D();
 					block.intersects(ray,candidatePoint2,candidateNormal2);
 					candidateNormal = new Vector3D(0,0,1);
-					SmTrace.lg(String.format("Scene.getIndexOfIntersectedBox: FORCED candidateNormal(%s)", candidateNormal), "intersection");
+					SmTrace.lg(String.format("Scene.getIndexOfIntersectedBox: FORCED candidateNormal(%s)", candidateNormal), "intersect");
 				}
 				candidateDistance = Point3D.diff(
 					ray.origin, candidatePoint
@@ -184,7 +184,7 @@ class Scene {
 			}
 		}
 		if (indexOfIntersectedBox > 0)
-			SmTrace.lg(String.format("Scene.getIndexOfIntersectedBox: %d", indexOfIntersectedBox));
+			SmTrace.lg(String.format("Scene.getIndexOfIntersectedBox: %d", indexOfIntersectedBox), "intersect");
 		return indexOfIntersectedBox;
 	}
 

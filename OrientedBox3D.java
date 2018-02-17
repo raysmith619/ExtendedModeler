@@ -277,6 +277,15 @@ public class OrientedBox3D {
 		Point3D intersection, // output
 		Vector3D normalAtIntersection // output
 	) {
+		/**
+		 * Workaround - use aligned box
+		 * 
+		 */
+		AlignedBox3D abox = getAlignedBox();
+		if (abox.intersects(ray, intersection, normalAtIntersection)) {
+			return abox.intersects(ray, intersection, normalAtIntersection);
+		}
+			
 		// We compute a bounding sphere for the box.
 		// If the ray intersects the bounding sphere,
 		// it *may* intersect the box.
@@ -414,6 +423,10 @@ public class OrientedBox3D {
 		Point3D p0 = abox.getMin();		/// better?
 		Point3D p1 = abox.getMax();
 		return String.format("p0: %s  p1: %s", p0, p1, up);
+	}
+
+	public void translate(Vector3D translation) {
+		abox.translate(translation);
 	}
 }
 

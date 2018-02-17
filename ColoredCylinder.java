@@ -105,7 +105,7 @@ public class ColoredCylinder extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		SmTrace.lg("drawCylinder");
+		SmTrace.lg("drawCylinder", "draw");
 		GL2 gl = (GL2) drawable.getGL();
 		OrientedBox3D obox = new OrientedBox3D(r, h, r, ebox.getCenter(), ebox.up);
 		AlignedBox3D abox = obox.getAlignedBox();

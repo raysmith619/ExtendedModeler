@@ -58,7 +58,7 @@ public class ColoredCone extends EMBlockBase {
 		ControlOfPlacement cop = (ControlOfPlacement)ctl;
 		Point3D center = cop.getPosition();
 		float height = cop.getSizeY();
-		float rBase = cop.getSizeX()/2;
+		float rBase = Math.max(cop.getSizeX()/2, cop.getSizeZ()/2);
 		Vector3D up =  cop.getUp();
 		return new ColoredCone(center, height, rBase, color, up);
 	}
@@ -111,7 +111,7 @@ public class ColoredCone extends EMBlockBase {
 	) {
 		float h = obox.getHeight();
 		float r = obox.getWidth();
-		SmTrace.lg("drawCone");
+		SmTrace.lg("drawCone", "draw");
 		GL2 gl = (GL2) drawable.getGL();
 		glp = gl;				// For tracking gl.operations
 		if ( expand ) {
@@ -162,7 +162,7 @@ public class ColoredCone extends EMBlockBase {
 			EMBox3D.rotate2vRet(drawable);
 		}
 		else {
-			SmTrace.lg("drawCone body");
+			SmTrace.lg("drawCone body", "draw");
 			int nLongitudes = 20;
 			int nLatitudes = nLongitudes;
 			Point3D center = obox.getCenter();

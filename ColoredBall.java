@@ -67,8 +67,8 @@ public class ColoredBall extends EMBlockBase {
 		ControlOfPlacement cop = (ControlOfPlacement)ctl;
 		Point3D center = cop.getPosition();
 		Vector3D size = cop.getSizeXYZ();
-		float diameter = java.lang.Math.min(size.x(), size.y());				// Inside the box
-		diameter = java.lang.Math.min(diameter, size.z());
+		float diameter = java.lang.Math.max(size.x(), size.y());				// Inside the box
+		diameter = java.lang.Math.max(diameter, size.z());
 		float radius = diameter/2;
 		Vector3D up =  cop.getUp();
 		return new ColoredBall(center, radius, color, up);
@@ -98,6 +98,10 @@ public class ColoredBall extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
+		if (SmTrace.trace("drawloc")) {
+			SmTrace.lg(String.format("drawLoc %d %s center: %s corner0: %s",
+				-1, "ball", box.getCenter(), box.getCorner(0)));	
+		}
 		///drawable.getContext().makeCurrent(); 	///Hack to avoid no GLContext
 		GL2 gl = (GL2) drawable.getGL();
 		drawAsWireframe = true;			/// Force frame

@@ -757,6 +757,16 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	}
 
 	public boolean setSelected(boolean state) {
+		if (SmTrace.trace("selectOn")) {
+			if (state)
+				SmTrace.lg(String.format("selectOn: %d %s", iD(), blockType()));
+		}
+		if (SmTrace.trace("selectOff")) {
+			if (!state)
+				SmTrace.lg(String.format("selectOff: %d %s", iD(), blockType()));
+		}
+			
+
 		isSelected = state;
 		return state;
 	}

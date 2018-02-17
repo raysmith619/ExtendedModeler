@@ -165,7 +165,7 @@ public class ColoredBox extends EMBlockBase {
 	) {
 		GL2 gl = (GL2) drawable.getGL();
 		glp = gl;					// For tracking
-		OrientedBox3D obox = cbox.orientedBox3D();
+		OrientedBox3D obox = cbox.getOBox();
 		if ( expand ) {
 			float adj = (float) 1.1;
 			obox.adjSize(adj, adj, adj);
@@ -219,6 +219,10 @@ public class ColoredBox extends EMBlockBase {
 			}
 		}
 		else {
+			if (SmTrace.trace("drawloc")) {
+				SmTrace.lg(String.format("drawLoc %d %s center: %s corner0: %s",
+					cbox.iD(), cbox.blockType(), cbox.getCenter(), cbox.getCorner(0)));	
+			}
 			gl.glBegin( GL2.GL_QUAD_STRIP );
 				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
 				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
@@ -299,10 +303,9 @@ public class ColoredBox extends EMBlockBase {
 	 * Return copy of inner box
 	 * 
 	 */
-	public OrientedBox3D orientedBox3D() {
+	public OrientedBox3D getOBox() {
 		return new OrientedBox3D(obox);
 	}
-
 
 	/**
 	 * Enlarge to contain box
@@ -351,7 +354,9 @@ public class ColoredBox extends EMBlockBase {
 
 	// Overridden when necessary
 	public void translate(Vector3D translation ) {
-		box.translate(translation);
+		SmTrace.lg(String.format("ColoredBox.translation(%s)", translation), "boxdebug");
+		obox.translate(translation);
+		
 	}
 
 	
@@ -383,6 +388,17 @@ public class ColoredBox extends EMBlockBase {
 		Vector3D vm = Point3D.diff(point, oldBox.getMin());
 		translate(vm);
 	}
-	
+
+	/**
+	 * In progress
+	 */
+	public boolean intersects(
+		Ray3D ray, // input
+		Point3D intersection, // output
+		Vector3D normalAtIntersection // output
+	) {
+		OrientedBox3D obox = this.getOBox();
+		return obox.intersects(ray, intersection, normalAtIntersection);
+	}
 	
 }
