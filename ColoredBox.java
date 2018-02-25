@@ -1,9 +1,20 @@
 package ExtendedModeler;
 import java.awt.Color;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.File;
+
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JPanel;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLProfile;
+import com.jogamp.opengl.awt.GLJPanel;
+import com.jogamp.opengl.util.awt.AWTGLReadBufferUtil;
 
 import smTrace.SmTrace;
 
@@ -152,20 +163,9 @@ public class ColoredBox extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		drawBox(drawable, this, expand, drawAsWireframe, cornersOnly);
-	}
-
-
-	static public void drawBox(
-		GLAutoDrawable drawable,
-		ColoredBox cbox,
-		boolean expand,
-		boolean drawAsWireframe,
-		boolean cornersOnly
-	) {
 		GL2 gl = (GL2) drawable.getGL();
 		glp = gl;					// For tracking
-		OrientedBox3D obox = cbox.getOBox();
+		OrientedBox3D obox = getOBox();
 		if ( expand ) {
 			float adj = (float) 1.1;
 			obox.adjSize(adj, adj, adj);
@@ -173,6 +173,7 @@ public class ColoredBox extends EMBlockBase {
 		AlignedBox3D abox = obox.getAlignedBox();
 		EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 		if ( drawAsWireframe ) {
+			setEmphasis(gl);
 			if ( cornersOnly ) {
 				gl_glBegin( GL.GL_LINES, "drawAsWireframe cornersOnly GL.GL_LINES" );
 				for ( int dim = 0; dim < 3; ++dim ) {
@@ -217,12 +218,15 @@ public class ColoredBox extends EMBlockBase {
 					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
 				gl_glEnd();
 			}
+			clearEmphasis();
+
 		}
 		else {
 			if (SmTrace.trace("drawloc")) {
 				SmTrace.lg(String.format("drawLoc %d %s center: %s corner0: %s",
-					cbox.iD(), cbox.blockType(), cbox.getCenter(), cbox.getCorner(0)));	
+					iD(), blockType(), getCenter(), getCorner(0)));	
 			}
+			ColoredBox.setMaterial(gl, getColor());
 			gl.glBegin( GL2.GL_QUAD_STRIP );
 				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
 				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
@@ -250,6 +254,19 @@ public class ColoredBox extends EMBlockBase {
 		}
 		EMBox3D.rotate2vRet(drawable);
 	}
+
+	
+
+static public void drawBox(
+	GLAutoDrawable drawable,
+	ColoredBox cbox,
+	boolean expand,
+	boolean drawAsWireframe,
+	boolean cornersOnly
+	) {
+	cbox.draw(drawable, expand, drawAsWireframe, cornersOnly);
+}
+
 
 	/**
 	 * Tracking / Debugging 
@@ -287,6 +304,25 @@ public class ColoredBox extends EMBlockBase {
 	private static void gl_glEnd() {
 		String desc = traceDesc;
 		gl_glEnd(desc);
+	}
+
+	
+
+	/**
+	 * Generate an image icon for create button
+	 * @param gl
+	 * @param width
+	 * @param height
+	 * @return
+	 */
+	static public ImageIcon imageIcon(int width, int height) {
+		String icon_name = ControlOfComponent.iconFileName("box.png");
+		File file = new File(icon_name);
+		
+		String basename = file.getName();
+		Icon icon = new ImageIcon(icon_name);
+		icon = ControlOfComponent.resizeIcon((ImageIcon)icon, width, height);
+		return (ImageIcon) icon;
 	}
 	
 

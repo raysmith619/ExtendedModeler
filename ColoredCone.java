@@ -1,10 +1,18 @@
 package ExtendedModeler;
 import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.File;
+
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.glu.GLUquadric;
+import com.jogamp.opengl.util.awt.AWTGLReadBufferUtil;
+import com.jogamp.opengl.util.gl2.GLUT;
 
 import smTrace.SmTrace;
 
@@ -89,35 +97,48 @@ public class ColoredCone extends EMBlockBase {
 		OrientedBox3D obox = new OrientedBox3D(width, height, depth, getCenter(), getUp());
 		return obox;
 	}
+	
+	public float getHeight() {
+		return height;
+	}
+	
+	public float getWidth() {
+		return rBase*2;
+	}
 
+	/**
+	 * Adjust dimensions in local orientation
+	 */
+	public void adjSize(float adjX, float adjY, float adjZ) {
+		Vector3D size = getSize();
+		float sizex = size.x() * adjX;
+		float sizey = size.y() * adjY;
+		float sizez = size.z() * adjZ;
+		resize(new Vector3D(sizex, sizey, sizez));
+	}
+	
+	
 	public void draw(
 		GLAutoDrawable drawable,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		OrientedBox3D obox = getOBox();
-		drawCone(drawable, obox, expand, drawAsWireframe, cornersOnly);
-	}
-
-
-
-	static public void drawCone(
-		GLAutoDrawable drawable,
-		OrientedBox3D obox,
-		boolean expand,
-		boolean drawAsWireframe,
-		boolean cornersOnly
-	) {
-		float h = obox.getHeight();
-		float r = obox.getWidth();
+		float h = getHeight();
+		float r = getWidth();
 		SmTrace.lg("drawCone", "draw");
+		if (SmTrace.trace("drawloc")) {
+			SmTrace.lg(String.format("drawLoc %d %s center: %s corner0: %s",
+				-1, "cone", box.getCenter(), box.getCorner(0)));	
+		}
 		GL2 gl = (GL2) drawable.getGL();
 		glp = gl;				// For tracking gl.operations
+		OrientedBox3D obox = getOBox();
 		if ( expand ) {
 			obox.adjSize(1.1f, 1.1f, 1.1f);
 		}
 		if ( drawAsWireframe ) {
+			setEmphasis(gl);
 			AlignedBox3D abox = obox.getAlignedBox();
 			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 			if ( cornersOnly ) {
@@ -159,12 +180,11 @@ public class ColoredCone extends EMBlockBase {
 					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
 				gl_glEnd("GL.GL_LINES, \"drawAsWireframe\"");
 			}
+			clearEmphasis();
 			EMBox3D.rotate2vRet(drawable);
 		}
 		else {
 			SmTrace.lg("drawCone body", "draw");
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
 			Point3D center = obox.getCenter();
 
 			float bx = center.x();
@@ -173,12 +193,12 @@ public class ColoredCone extends EMBlockBase {
 			gl.glTranslatef(bx, by, bz);
 			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 			gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
-			///***
+			ColoredCone.setMaterial(gl, getColor());
 			GLU glu = new GLU();
 			GLUquadric cylinder = glu.gluNewQuadric();
 			glu.gluCylinder(cylinder, r, 0, h, nLongitudes, nLatitudes);
-			///***/
-			///***
+
+			/***
 			gl_glBegin(GL.GL_LINES, "cone single line in z-axis");
 			gl.glColor3d(1,1,1);
 			gl_glVertex3fv(new Point3D(0,0,0).get(), 0);
@@ -189,13 +209,49 @@ public class ColoredCone extends EMBlockBase {
 			gl_glVertex3fv(new Point3D(.5f,0.0f,.0f).get(), 0);
 			gl_glEnd("cone single line in z-axis");
 			gl.glPopAttrib();
-			///***/
+			***/
+			gl.glPopAttrib();
 			EMBox3D.rotate2vRet(drawable);
 			gl.glTranslatef(-bx, -by, -bz);
-///			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
 		}
 	}
 
+
+
+
+
+static public void drawCone(
+	GLAutoDrawable drawable,
+	ColoredCone ccone,
+	boolean expand,
+	boolean drawAsWireframe,
+	boolean cornersOnly
+) {
+	drawCone(drawable, ccone, expand, drawAsWireframe, cornersOnly);
+}
+	
+
+	/**
+	 * Generate an image icon for create button
+	 * @param gl
+	 * @param width
+	 * @param height
+	 * @return
+	 */
+	static public ImageIcon imageIcon(
+		int width,
+		int height
+	) {
+		String icon_name = ControlOfComponent.iconFileName("cone.jpg");
+		File file = new File(icon_name);
+		
+		String basename = file.getName();
+		Icon icon = new ImageIcon(icon_name);
+		icon = ControlOfComponent.resizeIcon((ImageIcon)icon, width, height);
+		return (ImageIcon) icon;
+	}
+	
+	
 	/**
 	 * Tracking / Debugging 
 	 * @param v

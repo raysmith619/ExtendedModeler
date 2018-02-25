@@ -1,6 +1,7 @@
 package ExtendedModeler;
 import java.util.ArrayList;
 
+import smTrace.SmMem;
 import smTrace.SmTrace;
 
 /**
@@ -81,6 +82,7 @@ public abstract class EMBCommand {
 	 * without storing it for redo
 	 */
 	public boolean execute() {
+		SmMem.ck("execute", SmMem.Type.Begin);
 		commandManager.currentCmd = this;
 		if (newViewer != prevViewer || newLookAt != prevLookAt) {
 			if (newViewer != null && newLookAt != null)
@@ -99,6 +101,7 @@ public abstract class EMBCommand {
 		commandManager.displayPrint(String.format("execute(%s) AFTER", this.action), "execute");
 		commandManager.selectPrint(String.format("execute(%s) AFTER", this.action), "execute");
 		commandManager.cmdStackPrint(String.format("execute(%s) AFTER", this.action), "execute");
+		SmMem.ck("execute", SmMem.Type.End);
 		return true;
 	}
 

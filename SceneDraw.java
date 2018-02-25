@@ -34,13 +34,42 @@ class SceneDraw {
 		block.draw(drawable, expand, drawAsWireframe, cornersOnly);
 	}
 
+	    /*
+	     * Initialize z-buffer, projection matrix, light source, and lighting model.
+	     * Do not specify a material property here.
+	     * From material init
+	     */
+	public void setLighting(GLAutoDrawable drawable) {
+        GL2 gl = drawable.getGL().getGL2();
+        //
+        float ambient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        float diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        float specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        float position[] = { 0.0f, 3.0f, 2.0f, 0.0f };
+        float lmodel_ambient[] = { 0.4f, 0.4f, 0.4f, 1.0f };
+        float local_view[] = { 0.0f };
+
+        gl.glEnable(GL.GL_DEPTH_TEST);
+        gl.glDepthFunc(GL.GL_LESS);
+
+        gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, ambient, 0);
+        gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, diffuse, 0);
+        gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, position, 0);
+        gl.glLightModelfv(GL2.GL_LIGHT_MODEL_AMBIENT, lmodel_ambient, 0);
+        gl.glLightModelfv(GL2.GL_LIGHT_MODEL_LOCAL_VIEWER, local_view, 0);
+
+        gl.glEnable(GL2.GL_LIGHTING);
+        gl.glEnable(GL2.GL_LIGHT0);
+
+        gl.glClearColor(0.0f, 0.1f, 0.1f, 0.0f);
+	}
 
 	public void drawScene(
 		int indexOfHilitedBox, // -1 for none
 		boolean useAlphaBlending
 	) {
 		GLAutoDrawable drawable = sceneViewer.getCanvas();
-		
+		setLighting(drawable);
 		GL2 gl = (GL2) drawable.getGL();
 		if ( useAlphaBlending ) {
 			gl.glDisable(GL.GL_DEPTH_TEST);
@@ -103,7 +132,7 @@ class SceneDraw {
 	}
 
 	public void drawLocalView(GLAutoDrawable drawable) {
-		ColoredBox box = sceneViewer.localView.getViewBox();
+		ColoredBox box = sceneViewer.localViewer.getViewBox();
 		if ( box != null )
 			ColoredBox.drawBox(drawable, box, false, true, false );
 	}

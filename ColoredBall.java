@@ -1,9 +1,16 @@
 package ExtendedModeler;
 import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.File;
+
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLProfile;
+import com.jogamp.opengl.util.awt.AWTGLReadBufferUtil;
 import com.jogamp.opengl.util.gl2.GLUT;
 
 import smTrace.SmTrace;
@@ -74,6 +81,10 @@ public class ColoredBall extends EMBlockBase {
 		return new ColoredBall(center, radius, color, up);
 	}
 
+	public String blockType() {
+		return "ball";
+	}
+
 
 	public void draw(
 		GLAutoDrawable drawable,
@@ -82,29 +93,13 @@ public class ColoredBall extends EMBlockBase {
 		boolean cornersOnly
 	) {
 		EMBox3D box = getBox();
-		drawBall(drawable, box, expand, drawAsWireframe, cornersOnly);
-	}
-
-	public String blockType() {
-		return "ball";
-	}
-
-
-
-	public static void drawBall(
-		GLAutoDrawable drawable,
-		EMBox3D box,
-		boolean expand,
-		boolean drawAsWireframe,
-		boolean cornersOnly
-	) {
 		if (SmTrace.trace("drawloc")) {
 			SmTrace.lg(String.format("drawLoc %d %s center: %s corner0: %s",
 				-1, "ball", box.getCenter(), box.getCorner(0)));	
 		}
 		///drawable.getContext().makeCurrent(); 	///Hack to avoid no GLContext
 		GL2 gl = (GL2) drawable.getGL();
-		drawAsWireframe = true;			/// Force frame
+		///drawAsWireframe = true;			/// Force frame
 		///drawAsWireframe = false;		/// Force not frame
 		///cornersOnly = false;			/// Force no corners
 		///cornersOnly = true;				/// Force corners
@@ -115,8 +110,8 @@ public class ColoredBall extends EMBlockBase {
 			box = new EMBox3D(box.getCenter(), box.getRadius() + diagonal);
 		}
 		if ( drawAsWireframe ) {
-			///***
 			if ( cornersOnly ) {
+				setEmphasis(gl);
 				gl.glBegin( GL.GL_LINES );
 				for ( int dim = 0; dim < 3; ++dim ) {
 					Vector3D v = Vector3D.mult( Point3D.diff(box.getCorner(1<<dim),box.getCorner(0)), 0.1f );
@@ -132,35 +127,11 @@ public class ColoredBall extends EMBlockBase {
 					}
 				}
 				gl.glEnd();
+				clearEmphasis();
 			}
-			/***else {
-				gl.glBegin( GL.GL_LINE_STRIP );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-				gl.glEnd();
-				gl.glBegin( GL.GL_LINES );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-				gl.glEnd();
-			}***/
-			///***/
 			float r = box.getRadius();
 			Point3D center = box.getCenter();
 			GLUT glut = new GLUT();
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
 			gl.glTranslatef(center.x(), center.y(), center.z());
 			EMBox3D.rotate2v(drawable, EMBox3D.UP, box.getUp());
 			glut.glutWireSphere(r, nLongitudes, nLatitudes);
@@ -168,8 +139,6 @@ public class ColoredBall extends EMBlockBase {
 			gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 		else {
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
 			Vector3D diagonal = box.getDiagonal();
 			float xlen = Math.abs(diagonal.x());
 			float ylen = Math.abs(diagonal.y());
@@ -181,112 +150,49 @@ public class ColoredBall extends EMBlockBase {
 			GLUT glut = new GLUT();
 			
 			gl.glTranslatef(center.x(), center.y(), center.z());
+			ColoredBall.setMaterial(gl, getColor());
 			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
 			EMBox3D.rotate2vRet(drawable);
 			gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 	}
 
+	
 
-/**
- * drawBall, using gl directly
- * @param gl
- * @param box
- * @param expand
- * @param drawAsWireframe
- * @param cornersOnly
- */
-	static public void drawBallGl(
-		GL2 gl,
+
+	public static void drawBall(
+		GLAutoDrawable drawable,
 		EMBox3D box,
+		Color color,
 		boolean expand,
 		boolean drawAsWireframe,
-		boolean cornersOnly
+		boolean cornersOnly) {
+		ColoredBall cball = new ColoredBall(box, color);
+		cball.draw(drawable, expand, drawAsWireframe, cornersOnly);
+	}
+	
+	
+
+	
+
+	/**
+	 * Generate an image icon for create button
+	 * @param gl
+	 * @param width
+	 * @param height
+	 * @return
+	 */
+	static public ImageIcon imageIcon(
+		int width,
+		int height
 	) {
-		///drawable.getContext().makeCurrent(); 	///Hack to avoid no GLContext
-		drawAsWireframe = true;			/// Force frame
-		///drawAsWireframe = false;		/// Force not frame
-		///cornersOnly = false;			/// Force no corners
-		///cornersOnly = true;				/// Force corners
-		if ( expand ) {
-			float diagonal = box.getDiagonal().length();
-			diagonal /= 20;
-			box = new EMBox3D(box.getCenter(), box.getRadius() + diagonal);
-		}
-		if ( drawAsWireframe ) {
-			///***
-			if ( cornersOnly ) {
-				gl.glBegin( GL.GL_LINES );
-				for ( int dim = 0; dim < 3; ++dim ) {
-					Vector3D v = Vector3D.mult( Point3D.diff(box.getCorner(1<<dim),box.getCorner(0)), 0.1f );
-					for ( int a = 0; a < 2; ++a ) {
-						for ( int b = 0; b < 2; ++b ) {
-							int i = (a << ((dim+1)%3)) | (b << ((dim+2)%3));
-							gl.glVertex3fv( box.getCorner(i).get(), 0 );
-							gl.glVertex3fv( Point3D.sum( box.getCorner(i), v ).get(), 0 );
-							i |= 1 << dim;
-							gl.glVertex3fv( box.getCorner(i).get(), 0 );
-							gl.glVertex3fv( Point3D.diff( box.getCorner(i), v ).get(), 0 );
-						}
-					}
-				}
-				gl.glEnd();
-			}
-			/***else {
-				gl.glBegin( GL.GL_LINE_STRIP );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-				gl.glEnd();
-				gl.glBegin( GL.GL_LINES );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-				gl.glEnd();
-			}***/
-			///***/
-			Vector3D diagonal = box.getDiagonal();
-			float xlen = Math.abs(diagonal.x());
-			float ylen = Math.abs(diagonal.y());
-			float zlen = Math.abs(diagonal.z());
-			float minlen = Math.min(xlen, ylen);
-			minlen = Math.min(minlen, zlen);
-			float r = minlen/2;
-			Point3D center = box.getCenter();
-			GLUT glut = new GLUT();
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
-			gl.glTranslatef(center.x(), center.y(), center.z());
-			glut.glutWireSphere(r, nLongitudes, nLatitudes);
-			gl.glTranslatef(-center.x(), -center.y(), -center.z());
-		}
-		else {
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
-			Vector3D diagonal = box.getDiagonal();
-			float xlen = Math.abs(diagonal.x());
-			float ylen = Math.abs(diagonal.y());
-			float zlen = Math.abs(diagonal.z());
-			float minlen = Math.min(xlen, ylen);
-			minlen = Math.min(minlen, zlen);
-			float r = minlen/2;
-			Point3D center = box.getCenter();
-			GLUT glut = new GLUT();
-			
-			gl.glTranslatef(center.x(), center.y(), center.z());
-			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
-			gl.glTranslatef(-center.x(), -center.y(), -center.z());
-		}
+		String icon_name = ControlOfComponent.iconFileName("ball.jpg");
+		File file = new File(icon_name);
+		
+		String basename = file.getName();
+		Icon icon = new ImageIcon(icon_name);
+		icon = ControlOfComponent.resizeIcon((ImageIcon)icon, width, height);
+		return (ImageIcon) icon;
 	}
 
 	public Point3D getMin() {

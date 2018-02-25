@@ -67,15 +67,17 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	static int height = width;
 	String title; // Viewer title
 	String name; // Viewer name - used in data keys
+	boolean isStub = false;			// true -> no controls, not visible
 	GLCanvas canvas; // Our canvas
-	GLCapabilities caps; // Main set of capabilities
-	SceneControler sceneControler; // Main class - currently only for check button access
-	SceneDraw sceneDraw; // Direct scene drawing control
-	ControlsOfView controls; // Control boxes
-	ControlMap controlMap; // Control Map window/frame
-	SceneViewer localView; // Local view if non-null
-	EMBlock localViewEye; // Local view "eye" object
-	SceneViewer externalView; // External view if non-null
+	GLCapabilities caps; 				// Main set of capabilities
+	SceneControler sceneControler; 		// Main class - currently only for check button access
+	SceneDraw sceneDraw; 				// Direct scene drawing control
+	ControlsOfView controls; 			// Control boxes
+	ControlMap controlMap; 				// Control Map window/frame
+
+	EMBlock localViewEye; 				// Local view "eye" object
+	SceneViewer externalViewer = null; 	// External view if non-null
+	SceneViewer localViewer; 			// Local view if non-null
 	SmTrace smTrace; // Trace support
 	/// ControlsOfView controls; // Control boxes - use getControls - not ready at
 	/// initialization
@@ -94,8 +96,8 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	 */
 	private Stack<BlockSelect> selectStack = new Stack<BlockSelect>(); // Stack of recent selected
 
-	private Point3D selectedPoint = new Point3D();
-	private Vector3D normalAtSelectedPoint = new Vector3D();
+	private Point3D selectedPoint_ = new Point3D();
+	private Vector3D normalAtSelectedPoint_ = new Vector3D();
 	public int indexOfHilitedBox = -1; // -1 for none
 	private Point3D hilitedPoint = new Point3D();
 	private Vector3D normalAtHilitedPoint = new Vector3D();
@@ -154,7 +156,19 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	 * @param sceneControler
 	 */
 	public SceneViewer(String title, String name, SceneControler sceneControler) throws EMBlockError {
-		this(title, name, sceneControler, null, null, null, null, null);
+		this(title, name, sceneControler, false);
+	}
+
+	/**
+	 * SceneViewer - with no controls / view
+	 * 
+	 * @param title
+	 * @param name
+	 * @param sceneControler
+	 * @param isStub - has no controls, is not visible
+	 */
+	public SceneViewer(String title, String name, SceneControler sceneControler, boolean isStub) throws EMBlockError {
+		this(title, name, sceneControler, null, null, null, null, null, isStub);
 	}
 
 	/**
@@ -168,10 +182,12 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	 * @param eyeUp
 	 * @param locationSize
 	 *            - location and size of window, null - default
+	 * @param isStub - true - no controls, not visible
 	 * @throws EMBlockError
 	 */
 	public SceneViewer(String title, String name, SceneControler sceneControler, ColoredBox viewBox,
-			Point3D eyePosition, Point3D eyeTarget, Vector3D eyeUp, Rectangle locationSize) throws EMBlockError {
+			Point3D eyePosition, Point3D eyeTarget, Vector3D eyeUp, Rectangle locationSize,
+			boolean isStub) throws EMBlockError {
 
 		this.title = title;
 		this.setTitle(title);
@@ -179,7 +195,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		this.sceneControler = sceneControler;
 		viewerLevelBase++;
 		this.viewerLevel = viewerLevelBase;
-
+		this.isStub = isStub;
 		if (viewBox == null) {
 			viewBox = new ColoredBox();
 		}
@@ -203,10 +219,12 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		caps.setHardwareAccelerated(true);
 
 		canvas = new GLCanvas(caps);
-		this.controls = new ControlsOfView(this);
-
 		this.getContentPane().add(canvas);
 
+		this.controls = new ControlsOfView(this);
+
+		
+		
 		addComponentListener(new ComponentListener() {
 			@Override
 			public void componentResized(ComponentEvent e) {
@@ -358,33 +376,44 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	}
 
 	/**
+	 * Get viewer name
+	 * Note: getName() is already used by component
+	 */
+	public String getSceneName() {
+		return name;
+	}
+	
+	
+	/**
 	 * Record external view
 	 */
-	public void setExternalView(SceneViewer externalView) {
-		this.externalView = externalView;
+	public void setExternalViewer(SceneViewer externalViewer) {
+		this.externalViewer = externalViewer;
 	}
 
 	/**
 	 * Record local view
 	 */
-	public void setLocalView(SceneViewer localView) {
-		this.localView = localView;
+	public void setLocalViewer(SceneViewer localView) {
+		this.localViewer = localView;
 		ColoredEye eye = new ColoredEye(localView.camera.position, localView.camera.target, localView.camera.up,
 				localView);
-		EMBlock cb = new EMBlock(eye);
-		cb.setViewerLevel(getViewerLevel());
-		sceneControler.insertBlock(cb);
-		this.localViewEye = cb;
-		localView.setExternalView(this);
+		EMBlock cbEye = new EMBlock(eye);
+		cbEye.setViewerLevel(getViewerLevel());
+		sceneControler.insertBlock(cbEye);
+		this.localViewEye = cbEye;
+		localView.setExternalViewer(this);
 	}
 
 	/**
-	 * Remove external view
+	 * Clear local viewer
 	 */
-	public void removeExternalControl() {
-		externalView.dropFromLocalView();
-		externalView = null;
-		dispatchEvent(new WindowEvent((short) 0, this, WindowEvent.EVENT_WINDOW_DESTROY_NOTIFY));
+	public void clearLocalViewer() {
+		if (localViewEye != null) {
+			sceneControler.removeBlock(localViewEye.iD());
+			externalViewer.dispatchEvent(new WindowEvent((short) 0, this, WindowEvent.EVENT_WINDOW_DESTROY_NOTIFY));
+		}
+		localViewer = null;
 	}
 
 	private void dispatchEvent(WindowEvent windowEvent) {
@@ -395,8 +424,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	/**
 	 * Drop our connection
 	 */
-	public void dropFromLocalView() {
-		localView = null;
+	public void dropViewer() {
+		///dispatchEvent(new WindowEvent((short) 0, this, WindowEvent.EVENT_WINDOW_DESTROY_NOTIFY));
+		///display();
+		dispose();
 	}
 
 	private void setLocationSize() {
@@ -412,7 +443,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 
 		int w = getWidthFromProp();
 		int h = getHeightFromProp();
-		if (x < 0 || y < 0) {
+		if (w < 100 || h < 100) {
 			w = width;
 			h = height;
 		}
@@ -732,12 +763,28 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	}
 
 	public void display() {
+		sceneControler.setDisplayedViewer(this);
+		if (SmTrace.trace("displayviewer")) {
+			SmTrace.lg(String.format("display: viewer=%s", name));
+			if (EMBlockBase.isExternalViewer())
+				SmTrace.lg("display: tests external");
+			if (EMBlockBase.isLocalViewer())
+				SmTrace.lg("display: tests local");
+		}
+		if (SmTrace.trace("skipimage")) {
+			if (EMBlockBase.isExternalViewer()) {
+				SmTrace.lg(String.format("viewer %s display skipping in External Viewer", getSceneName()));
+				return;
+			}
+		}
+		
 		GL2 gl = (GL2) canvas.getGL();
 		gl.glMatrixMode(GL2.GL_PROJECTION);
 		gl.glLoadIdentity();
 		camera.transform(gl);
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glLoadIdentity();
+		setLighting(gl);
 
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 
@@ -747,7 +794,6 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		gl.glFrontFace(GL.GL_CCW);
 		gl.glDisable(GL2.GL_LIGHTING);
 		gl.glShadeModel(GL2.GL_FLAT);
-
 		sceneDraw.drawScene(indexOfHilitedBox, enableCompositing);
 		gl.glGetIntegerv(GL2.GL_VIEWPORT, viewport, 0);
 		gl.glGetDoublev(GL2.GL_MODELVIEW_MATRIX, mvmatrix, 0);
@@ -774,7 +820,8 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			float tx = 1;
 			float ty = 0;
 			float tz = 0;
-
+			
+			setEmphasis(gl, new Color(1,0,0));
 			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(1, 0, 0);
 			gl.glVertex3f(0, 0, 0);
@@ -784,9 +831,11 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			ty = 0;
 			tz = 0;
 			tr3.draw("X", tx, ty, tz);
-
+			clearEmphasis();
+			
+			setEmphasis(gl, new Color(0,1,0));
 			gl.glBegin(GL.GL_LINES);
-			gl.glColor3f(0, 1, 0);
+			gl.glColor3f(0, 1, 0);			// Need this to see lines, letters
 			gl.glVertex3f(0, 0, 0);
 			gl.glVertex3f(0, 1, 0);
 			gl.glEnd();
@@ -794,7 +843,9 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			ty = 1;
 			tz = 0;
 			tr3.draw("Y", tx, ty, tz);
+			clearEmphasis();
 
+			setEmphasis(gl, new Color(0,0,1));
 			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(0, 0, 1);
 			gl.glVertex3f(0, 0, 0);
@@ -804,8 +855,11 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			ty = 0;
 			tz = 1;
 			tr3.draw("Z", tx, ty, tz);
+			clearEmphasis();
+			
 		}
 		if (displayCameraTarget) {
+			setEmphasis(gl, new Color(0,0,1));
 			gl.glBegin(GL.GL_LINES);
 			gl.glColor3f(1, 1, 1);
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(-0.5f, 0, 0)).get(), 0);
@@ -815,8 +869,9 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, 0, -0.5f)).get(), 0);
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, 0, 0.5f)).get(), 0);
 			gl.glEnd();
+			clearEmphasis();
 		}
-		if (displayLocalView && localView != null) {
+		if (displayLocalView && localViewer != null) {
 			gl.glColor3f(0f, 0f, 1f);
 			sceneDraw.drawLocalView(canvas);
 		}
@@ -830,9 +885,61 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			radialMenu.draw(gl, glut, getWidth(), getHeight());
 		}
 
-		// gl.glFlush(); // I don't think this is necessary
+		repaint();
 	}
 
+	public void setLighting(GL2 gl) {
+		float light_ambient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		float light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float light_position[] = { 1.0f, 1.0f, 1.0f, 0.0f };
+
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_AMBIENT, light_ambient, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, light_diffuse, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, light_specular, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, light_position, 0);
+
+		gl.glEnable(GL2.GL_LIGHTING);
+		gl.glEnable(GL2.GL_LIGHT0);
+		gl.glDepthFunc(GL.GL_LESS);
+		gl.glEnable(GL.GL_DEPTH_TEST);		
+	}
+
+	/**
+	 * Set for lighting emphasis
+	 * disable lighting set color
+	 * Needs matching clearEmphasis
+	 * @param gl
+	 * @param color
+	 */
+	private Color emphasisColor = Color.WHITE;
+	private GL2 glEmphasis = null;
+	public void setEmphasis(GL2 gl, Color color) {
+		glEmphasis = gl;
+		if (color == null) {
+			color = emphasisColor;
+		}
+		gl.glDisable(GL2.GL_LIGHTING);
+		float cv[] = new float[4];
+		float colors[] = color.getColorComponents(cv);
+		gl.glColor4f(colors[0], colors[1], colors[2], colors[3]);
+		
+	}
+	
+	public void setEmphasis(GL2 gl) {
+		setEmphasis(gl, null);
+	}
+	
+	
+	public void clearEmphasis() {
+		if (glEmphasis == null) {
+			SmTrace.lg("clearEmphasis - lacks matching setEmphasis");
+		}
+		glEmphasis.glEnable(GL2.GL_LIGHTING);
+		glEmphasis = null;
+	}
+	
+	
 	public GLCanvas getCanvas() {
 		return canvas;
 	}
@@ -957,7 +1064,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		if (name == null)
 			name = "External_View";
 		if (title == null)
-			title = "External " + this.name;
+			title = "External " + name;
 
 		if (viewBox == null) {
 			/**
@@ -992,10 +1099,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			locationSize = new_locsize;
 		}
 
-		SceneViewer ev = new SceneViewer(title, name, sceneControler, viewBox, eyePosition, eyeTarget, eyeUp,
-				locationSize);
-		ev.setLocalView(this); // Record local viewer for display/manipulation
-		return ev;
+		localViewer = new SceneViewer(title, name, sceneControler, viewBox, eyePosition, eyeTarget, eyeUp,
+				locationSize, isStub);
+		localViewer.setLocalViewer(this); // Record local viewer for display/manipulation
+		return localViewer;
 	}
 
 	/**
@@ -1030,6 +1137,15 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		return Integer.valueOf(sizestr);
 	}
 
+	
+	/**
+	 * Get viewer's up
+	 */
+	public Vector3D getUp() {
+		return camera.up;
+	}
+	
+	
 	/**
 	 * Get Viewing box, viewed by camera
 	 * 
@@ -1080,8 +1196,8 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				bcmd.doCmd();
 			}
 		}
-		selectedPoint.copy(hilitedPoint);
-		normalAtSelectedPoint.copy(normalAtHilitedPoint);
+		selectedPoint(hilitedPoint());
+		normalAtSelectedPoint(normalAtHilitedPoint());
 		repaint();
 	}
 
@@ -1398,10 +1514,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				if (SmTrace.trace("drag")) {
 					SmTrace.lg(String.format("drag: %d %s normalAtSelectedPoint: %s selectedPoint: %s",
 							cbs[0].iD(), cbs[0].blockType(),
-							normalAtSelectedPoint, selectedPoint));
+							normalAtSelectedPoint(), selectedPoint()));
 				}
 		
-				Plane plane = new Plane(normalAtSelectedPoint, selectedPoint);
+				Plane plane = new Plane(normalAtSelectedPoint(), selectedPoint());
 				if (plane.intersects(ray1, intersection1, true) && plane.intersects(ray2, intersection2, true)) {
 					EMBCommand bcmd;
 					String action = "mouseDragBlock";
@@ -1419,7 +1535,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 					Vector3D translation = Point3D.diff(intersection2, intersection1);
 					if (SmTrace.trace("dragInterSect")) {
 						float ts = 10;
-						if (cbs[0].blockType().equals("box")) {
+						if (cbs[0].blockType().equals("xxxScale")) {
 							SmTrace.lg(String.format("Scaling translation by %f", ts));
 							translation = translation.mult(translation, ts);
 						}
@@ -1457,9 +1573,9 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				Ray3D ray2 = camera.computeRay(mouse_x, mouse_y);
 				Point3D intersection1 = new Point3D();
 				Point3D intersection2 = new Point3D();
-				Vector3D v1 = Vector3D.cross(normalAtSelectedPoint, ray1.direction);
-				Vector3D v2 = Vector3D.cross(normalAtSelectedPoint, v1);
-				Plane plane = new Plane(v2, selectedPoint);
+				Vector3D v1 = Vector3D.cross(normalAtSelectedPoint(), ray1.direction);
+				Vector3D v2 = Vector3D.cross(normalAtSelectedPoint(), v1);
+				Plane plane = new Plane(v2, selectedPoint());
 				if (plane.intersects(ray1, intersection1, true) && plane.intersects(ray2, intersection2, true)) {
 					EMBCommand bcmd;
 					String action = "mouseSizeBlock";
@@ -1475,8 +1591,8 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 
 					// project the translation onto the normal, so that it is
 					// only along one axis
-					translation = Vector3D.mult(normalAtSelectedPoint,
-							Vector3D.dot(normalAtSelectedPoint, translation));
+					translation = Vector3D.mult(normalAtSelectedPoint(),
+							Vector3D.dot(normalAtSelectedPoint(), translation));
 					for (int i = 0; i < cbs.length; i++) {
 						EMBlock cb = cbs[i];
 						bcmd.addPrevBlock(cb);
@@ -1677,6 +1793,59 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		}
 	}
 
+	/**
+	 * Control / Access to highlighted
+	 */
+	public Point3D hilitedPoint(Point3D point) {
+		if (point != null) {
+			this.hilitedPoint = new Point3D(point);
+		}
+		return this.hilitedPoint;
+	}
+	public Point3D hilitedPoint() {
+		return this.hilitedPoint;
+	}
+
+	
+	public Vector3D normalAtHilitedPoint(Vector3D normal) {
+		if (normal != null) {
+			this.normalAtHilitedPoint = new Vector3D(normal);
+		}
+		return this.normalAtHilitedPoint;
+	}
+	public Vector3D normalAtHilitedPoint() {
+		return this.normalAtHilitedPoint;
+	}
+
+	/**
+	 * Control / Access to selected
+	 */
+	public Point3D selectedPoint(Point3D point) {
+		if (point != null) {
+			this.selectedPoint_ = new Point3D(point);
+		}
+		return this.selectedPoint_;
+	}
+	public Point3D selectedPoint() {
+		return this.selectedPoint_;
+	}
+
+	
+	public Vector3D normalAtSelectedPoint(Vector3D normal) {
+		if (normal != null) {
+			this.normalAtSelectedPoint_ = new Vector3D(normal);
+		}
+		return normalAtSelectedPoint();
+	}
+	public Vector3D normalAtSelectedPoint() {
+		if (normalAtSelectedPoint_.length() == 0) {
+			SmTrace.lg("normalAtSelectedPoint==0");
+			normalAtSelectedPoint_ = getUp();
+		}
+		return normalAtSelectedPoint_;
+	}
+
+	
 	/**
 	 * Add/Remove Control/Display
 	 */

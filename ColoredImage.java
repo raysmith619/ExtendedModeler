@@ -30,7 +30,7 @@ public class ColoredImage extends EMBlockBase {
 	Texture imageTexture;
 	int imageTextureI;
 	GLAutoDrawable drawable;
-	
+
 	/**
 	 * Generic object
 	 */
@@ -68,6 +68,10 @@ public class ColoredImage extends EMBlockBase {
 		imageFile = new File(imageFileName);
 		try {
 			imageTexture = TextureIO.newTexture(imageFile, true);
+			if (imageTexture == null) {
+				SmTrace.lg("File new imageTexture is null");
+				return;
+			}
 		} catch (GLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -191,7 +195,7 @@ public class ColoredImage extends EMBlockBase {
 
 	@Override
 	public String blockType() {
-		return "box";
+		return "image";
 	}
 	
 
@@ -234,29 +238,32 @@ public class ColoredImage extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		drawImage(drawable, this, expand, drawAsWireframe, cornersOnly);
-	}
-
-
-	static public void drawImage(
-		GLAutoDrawable drawable,
-		ColoredImage cbox,
-		boolean expand,
-		boolean drawAsWireframe,
-		boolean cornersOnly
-	) {
 		GL2 gl = (GL2) drawable.getGL();
 		glp = gl;					// For tracking
-		OrientedBox3D obox = cbox.orientedBox3D();
+		OrientedBox3D obox = getOBox();
 		if ( expand ) {
 			float adj = (float) 1.1;
 			obox.adjSize(adj, adj, adj);
 		}
-		gl.glPushMatrix();
-		gl.glTranslatef(obox.getCenter().x(), obox.getCenter().y(), obox.getCenter().z());
+		if (SmTrace.trace("drawimage")) {
+			if (isExternalViewer()) {
+				SmTrace.lg(String.format("draw %s in External Viewer", blockType()));
+			}
+			if (isLocalViewer()) {
+				SmTrace.lg(String.format("draw %s in Local Viewer", blockType()));
+			}
+		}
+		if (SmTrace.trace("skipimage")) {
+			if (isExternalViewer()) {
+				SmTrace.lg(String.format("draw %s skipping in External Viewer", blockType()));
+				return;
+			}
+		}
 		AlignedBox3D abox = obox.getAlignedBox();
+
 		EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 		if ( drawAsWireframe ) {
+			setEmphasis(gl);
 			if ( cornersOnly ) {
 				gl_glBegin( GL.GL_LINES, "drawAsWireframe cornersOnly GL.GL_LINES" );
 				for ( int dim = 0; dim < 3; ++dim ) {
@@ -300,20 +307,28 @@ public class ColoredImage extends EMBlockBase {
 					gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
 					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
 				gl_glEnd();
+				clearEmphasis();
 			}
 		}
 		else {
-			float minx = -cbox.size.x()/2;
-			float maxx = cbox.size.x()/2;
-			float miny = -cbox.size.y()/2;
-			float maxy = cbox.size.y()/2;
-			float minz = -cbox.size.z()/2;
-			float maxz = cbox.size.z()/2;
-			if (cbox.imageTexture == null) {
-				SmTrace.lg("File imageTexture is null");
+			gl.glPushMatrix();
+			gl.glTranslatef(obox.getCenter().x(), obox.getCenter().y(), obox.getCenter().z());
+			float minx = -size.x()/2;
+			float maxx = size.x()/2;
+			float miny = -size.y()/2;
+			float maxy = size.y()/2;
+			float minz = -size.z()/2;
+			float maxz = size.z()/2;
+			if (imageTexture == null) {
+				SmTrace.lg("adding imageTexture is null");
 				return;
 			}
-		int imageTextureI = cbox.imageTexture.getTextureObject(gl);
+		SmTrace.lg(String.format("draw: %s body", blockType()), "drawimage");
+		int imageTextureI = imageTexture.getTextureObject(gl);
+		///ColoredBox.setMaterial(gl);
+		imageTexture.enable(gl);
+		gl.glDisable(GL2.GL_LIGHTING);
+		gl.glColor3f(1, 1, 1);		// Force white background
 		gl.glEnable(GL2.GL_TEXTURE_2D);
 		gl.glBindTexture(GL2.GL_TEXTURE_2D, imageTextureI);
 		gl.glBegin(GL2.GL_QUADS);
@@ -354,11 +369,22 @@ public class ColoredImage extends EMBlockBase {
 		  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(minx, maxy, maxz);
 		  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(minx, maxy, minz);
 		  gl.glEnd();
-		  cbox.imageTexture.disable(gl);
+		  imageTexture.disable(gl);
 		  gl.glFlush();
 		}
 		EMBox3D.rotate2vRet(drawable);
-		gl.glPushMatrix();					// Undo translate
+		gl.glPopMatrix();					// Undo translate
+	}
+
+
+	static public void drawImage(
+		GLAutoDrawable drawable,
+		ColoredImage cimage,
+		boolean expand,
+		boolean drawAsWireframe,
+		boolean cornersOnly
+			) {
+		cimage.draw(drawable, expand, drawAsWireframe, cornersOnly);
 	}
 
 	/**
@@ -412,6 +438,27 @@ public class ColoredImage extends EMBlockBase {
 	// Overridden for types with name, eg filename
 	public String getName() {
 		return imageFileName;
+	}
+	
+	
+	/**
+	 * Return copy of inner box
+	 * 
+	 */
+	public OrientedBox3D getOBox() {
+		return new OrientedBox3D(obox);
+	}
+
+	/**
+	 * In progress
+	 */
+	public boolean intersects(
+		Ray3D ray, // input
+		Point3D intersection, // output
+		Vector3D normalAtIntersection // output
+	) {
+		OrientedBox3D obox = this.getOBox();
+		return obox.intersects(ray, intersection, normalAtIntersection);
 	}
 	
 	

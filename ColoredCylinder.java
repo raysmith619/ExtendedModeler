@@ -1,5 +1,9 @@
 package ExtendedModeler;
 import java.awt.Color;
+import java.io.File;
+
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -90,24 +94,10 @@ public class ColoredCylinder extends EMBlockBase {
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		EMBox3D box = getBox();
-		drawCylinder(drawable, box, height, rBase, expand, drawAsWireframe, cornersOnly);
-	}
 
-
-
-	static public void drawCylinder(
-		GLAutoDrawable drawable,
-		EMBox3D ebox,
-		float h,
-		float r,
-		boolean expand,
-		boolean drawAsWireframe,
-		boolean cornersOnly
-	) {
 		SmTrace.lg("drawCylinder", "draw");
 		GL2 gl = (GL2) drawable.getGL();
-		OrientedBox3D obox = new OrientedBox3D(r, h, r, ebox.getCenter(), ebox.up);
+		OrientedBox3D obox = getOBox();
 		AlignedBox3D abox = obox.getAlignedBox();
 		if ( expand ) {
 			float adj = (float) 1.1;
@@ -115,6 +105,7 @@ public class ColoredCylinder extends EMBlockBase {
 		}
 		if ( drawAsWireframe ) {
 			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
+			setEmphasis(gl);
 			if ( cornersOnly ) {
 				gl.glBegin( GL.GL_LINES );
 				for ( int dim = 0; dim < 3; ++dim ) {
@@ -154,11 +145,10 @@ public class ColoredCylinder extends EMBlockBase {
 					gl.glVertex3fv( abox.getCorner( 6 ).get(), 0 );
 				gl.glEnd();
 			}
+			clearEmphasis();
 			EMBox3D.rotate2vRet(drawable);
 		}
 		else {
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
 			Point3D center = abox.getCenter();
 			GLU glu = new GLU();
 
@@ -168,10 +158,44 @@ public class ColoredCylinder extends EMBlockBase {
 			float bz = center.z();
 			gl.glTranslatef(bx, by, bz);
 			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
-			glu.gluCylinder(cylinder, r, r, h, nLongitudes, nLatitudes);
+			ColoredBox.setMaterial(gl, getColor());
+			glu.gluCylinder(cylinder, rBase, rBase, height, nLongitudes, nLatitudes);
 			EMBox3D.rotate2vRet(drawable);
 			gl.glTranslatef(-bx, -by, -bz);
 		}
+	}
+
+
+
+static public void drawCylinder(
+	GLAutoDrawable drawable,
+	ColoredCylinder ccylinder,
+	boolean expand,
+	boolean drawAsWireframe,
+	boolean cornersOnly
+) {
+	ccylinder.draw(drawable, expand, drawAsWireframe, cornersOnly);
+}
+	
+
+	/**
+	 * Generate an image icon for create button
+	 * @param gl
+	 * @param width
+	 * @param height
+	 * @return
+	 */
+	static public ImageIcon imageIcon(
+		int width,
+		int height
+	) {
+		String icon_name = ControlOfComponent.iconFileName("cylinder.jpg");
+		File file = new File(icon_name);
+		
+		String basename = file.getName();
+		Icon icon = new ImageIcon(icon_name);
+		icon = ControlOfComponent.resizeIcon((ImageIcon)icon, width, height);
+		return (ImageIcon) icon;
 	}
 	
 	
@@ -200,6 +224,18 @@ public class ColoredCylinder extends EMBlockBase {
 		return new Point3D(xmax, ymax, zmax);
 	}
 
+	/**
+	 * Get oriented bounding box
+	 * @return
+	 */
+	@Override
+	public OrientedBox3D getOBox() {
+		float x = rBase*2;
+		float y = rBase*2;
+		
+		OrientedBox3D obox = new OrientedBox3D(x, y, height, getCenter(), getUp());
+		return obox;
+	}
 
 
 	/**

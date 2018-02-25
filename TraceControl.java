@@ -25,7 +25,6 @@ public class TraceControl extends JDialog implements ActionListener {
 	JButton traceAllButton;
 	JButton traceNoneButton;
 	private static final long serialVersionUID = 1L;
-
 	
 	TraceControl(JFrame frame) {
 		super();
@@ -76,6 +75,7 @@ public class TraceControl extends JDialog implements ActionListener {
 	 */
 	private void setupTraceCkBoxPanel(JPanel blockPanel) {
 		int nckbox_wide = 1;
+		blockPanel.setPreferredSize(new Dimension(100, 400));
 		JPanel traceCkBoxPanel = new JPanel(new GridLayout(0, nckbox_wide));		// n cols
 		//imageIconPanel.setPreferredSize(null);
         ckBoxScrollPane = new JScrollPane(traceCkBoxPanel);

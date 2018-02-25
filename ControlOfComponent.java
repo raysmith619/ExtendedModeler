@@ -13,6 +13,7 @@ import java.awt.event.ComponentListener;
 import java.io.File;
 
 import javax.swing.AbstractAction;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -25,6 +26,10 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
+
+import smTrace.SmMem;
 import smTrace.SmTrace;
 
 public class ControlOfComponent extends ControlOfScene {
@@ -39,6 +44,8 @@ public class ControlOfComponent extends ControlOfScene {
 	JScrollPane imageScrollPane;
 	int nicon_wide = 5;				// Number of icons wide
 	int nicon_high = 4;				// Number of icons high
+	public static String defaultImageFileDirName = "C:\\Users\\raysm\\workspace\\ExtendedModeler\\icons";
+	public static String defaultImageFileName = defaultImageFileDirName + "\\" + "general_block.png";
 	static String[] imageMasks;		// If non-null
 									//    array of strings
 									//    one of which is required string in image path
@@ -66,33 +73,27 @@ public class ControlOfComponent extends ControlOfScene {
 		return;					// Already setup
 		
 		int ctl_w = 800;
-		int ctl_h = 400;
+		int ctl_h = 500;
 		setPreferredSize(new Dimension(ctl_w, ctl_h));
 		setTitle("Block - Select / Add / Modify");
 		JPanel blockPanel = new JPanel();
-		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.PAGE_AXIS));
 		add(blockPanel);
-		int button_w = 40;
-		int button_h = 20;
+		blockPanel.setLayout(new BoxLayout(blockPanel, BoxLayout.Y_AXIS));
+		int button_w = 80;
+		int button_h = 40;
 
-		JPanel selectPanel = new JPanel();
-		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.PAGE_AXIS));
+		JPanel selectPanel = new JPanel();		// Select
+		blockPanel.add(selectPanel);
 		JButton addSelectAllButton = new JButton("Select All");
 		addSelectAllButton.setActionCommand("emc_selectAllButton");
 		addSelectAllButton.addActionListener(sceneControler);
 		selectPanel.add(addSelectAllButton);
-		/***
-		JButton addToggleSelectButton = new JButton("Toggle Select");
-		addToggleSelectButton.setActionCommand("emc_toggleSelectButton");
-		addToggleSelectButton.addActionListener(sceneControler);
-		selectPanel.add(addToggleSelectButton);
-		***/
-		blockPanel.add(selectPanel);
 		
 		
-		JPanel modPanel = new JPanel();		// Modifiers
-		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.PAGE_AXIS));
+		JPanel modPanel = new JPanel();		// Dup, Delete, Delete All
+		///modPanel.setLayout(new BoxLayout(blockPanel, BoxLayout.Y_AXIS));
 		blockPanel.add(modPanel);
+		///getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.PAGE_AXIS));
 		JButton addDuplicateButton = new JButton("Duplicate");
 		addDuplicateButton.setPreferredSize(new Dimension(button_w, button_h));
 		addDuplicateButton.setActionCommand("emc_duplicateBlockButton");
@@ -111,41 +112,56 @@ public class ControlOfComponent extends ControlOfScene {
 		modPanel.add(addDeleteAllButton);
 		blockPanel.add(modPanel);
 
-		blockPanel.setLayout(new FlowLayout(FlowLayout.LEFT));	// Components - next row
-		JPanel compPanel = new JPanel();		
-		blockPanel.add(compPanel, BorderLayout.NORTH);
-		JButton addBoxButton = new JButton("Box");
+		///blockPanel.setLayout(new FlowLayout(FlowLayout.LEFT));	// Components - next row
+		JPanel compPanel = new JPanel();		// Box, Ball, Cone, Cylinder, ...		
+		blockPanel.add(compPanel);
+		ImageIcon box_icon = ColoredBox.imageIcon(button_w, button_h);
+		JButton addBoxButton = new JButton("Box", box_icon);
+		addBoxButton.setHorizontalTextPosition(JButton.CENTER);
+		addBoxButton.setVerticalTextPosition(JButton.TOP);
 		addBoxButton.setActionCommand("emc_addBoxButton");
 		addBoxButton.addActionListener(sceneControler);
 		compPanel.add(addBoxButton);
 
-		JButton addBallButton = new JButton("Ball");
+		ImageIcon ball_icon = ColoredBall.imageIcon(button_w, button_h);
+		JButton addBallButton = new JButton("Ball", ball_icon);
+		addBallButton.setHorizontalTextPosition(JButton.CENTER);
+		addBallButton.setVerticalTextPosition(JButton.TOP);
 		addBallButton.setActionCommand("emc_addBallButton");
 		addBallButton.addActionListener(sceneControler);
 		compPanel.add(addBallButton, BorderLayout.SOUTH);
 
-		JButton addConeButton = new JButton("Cone");
+		ImageIcon cone_icon = ColoredCone.imageIcon(button_w, button_h);
+		JButton addConeButton = new JButton("Cone", cone_icon);
+		addConeButton.setHorizontalTextPosition(JButton.CENTER);
+		addConeButton.setVerticalTextPosition(JButton.TOP);
 		addConeButton.setActionCommand("emc_addConeButton");
 		addConeButton.addActionListener(sceneControler);
 		compPanel.add(addConeButton);
 
-		JButton addCylinderButton = new JButton("Cylinder");
+		ImageIcon cylinder_icon = ColoredCylinder.imageIcon(button_w, button_h);
+		JButton addCylinderButton = new JButton("Cylinder", cylinder_icon);
 		addCylinderButton.setActionCommand("emc_addCylinderButton");
+		addCylinderButton.setHorizontalTextPosition(JButton.CENTER);
+		addCylinderButton.setVerticalTextPosition(JButton.TOP);
 		addCylinderButton.addActionListener(sceneControler);
 		compPanel.add(addCylinderButton);
-		blockPanel.add(compPanel);
 
-		JButton addTextButton = new JButton("Text");
+		ImageIcon text_icon = ColoredText.imageIcon(button_w, button_h);
+		JButton addTextButton = new JButton("Text", text_icon);
+		addTextButton.setHorizontalTextPosition(JButton.CENTER);
+		addTextButton.setVerticalTextPosition(JButton.TOP);
 		addTextButton.setActionCommand("emc_addTextButton");
 		addTextButton.addActionListener(sceneControler);
 		compPanel.add(addTextButton);
 		blockPanel.add(compPanel);
+		
 		JButton addEyeButton = new JButton("Eye");
 		addEyeButton.setActionCommand("emc_addEyeButton");
 		addEyeButton.addActionListener(sceneControler);
 		compPanel.add(addEyeButton);
 
-		JPanel imagePanel = new JPanel();
+		JPanel imagePanel = new JPanel();		// Image File, AddImage
 		blockPanel.add(imagePanel);
 		imagePanel.add(new JLabel("Image File"));
 		String imageDirName = ColoredImage.defaultImageFileDirName;
@@ -183,7 +199,11 @@ public class ControlOfComponent extends ControlOfScene {
 		addImageButton.setActionCommand("emc_addImageButton");
 		addImageButton.addActionListener(sceneControler);
 		imagePanel.add(addImageButton);
-		setupImagePanel(blockPanel, ctl_w, ctl_h);
+		
+		
+		JPanel imageArrayPanel = new JPanel();		// Array of Image files		
+		blockPanel.add(imageArrayPanel, Box.TOP_ALIGNMENT);
+		setupImageArray(imageArrayPanel, ctl_w, ctl_h);
 		
 		pack();
 		setup = true;
@@ -202,20 +222,25 @@ public class ControlOfComponent extends ControlOfScene {
 	/**
 	 * Setup image panel
 	 */
-	private void setupImagePanel(JPanel blockPanel, int ctl_w, int ctl_h) {
+	private void setupImageArray(JPanel arrayPanel, int ctl_w, int ctl_h) {
 		int ib_w = ctl_w/nicon_wide - 20;
 		int ib_h = 100;
 		int isp_w = ctl_w;
 		int isp_h = nicon_high*ib_h;
+		arrayPanel.setPreferredSize(new Dimension(100, 600));
 		JPanel imageIconPanel = new JPanel(new GridLayout(0, nicon_wide));		// Icons in 5 columns
+		imageIconPanel.setBounds(3, 3, isp_w, isp_h/2);
+		arrayPanel.add(imageIconPanel, Box.TOP_ALIGNMENT);
+		///imageIconPanel.setPreferredSize(new Dimension(100, 400));
 		//imageIconPanel.setPreferredSize(null);
         imageScrollPane = new JScrollPane(imageIconPanel);
         imageScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        imageScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        //imageScrollPane.setBounds(3, 3, isp_w, isp_h/2);
+        imageScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        imageScrollPane.setPreferredSize(new Dimension(ctl_w, ctl_h));
+        imageScrollPane.setBounds(3, 3, isp_w, isp_h/2);
         //JPanel contentPane = new JPanel(null);
         //imageScrollPane.setPreferredSize(null);
-		blockPanel.add(imageScrollPane);
+        arrayPanel.add(imageScrollPane);
 		
 		for (String iname : imageNames) {
 			String ifile = ColoredImage.fullFileName(iname);
@@ -283,7 +308,7 @@ public class ControlOfComponent extends ControlOfScene {
 				int ctl_h = windowSize.height;
 				int isp_w = ctl_w;
 				int isp_h = ctl_h;
-		        resizeIconsPanel(isp_w, isp_h);
+		        ///resizeIconsPanel(isp_w, isp_h);
 				
 			}
  			@Override
@@ -314,7 +339,7 @@ public class ControlOfComponent extends ControlOfScene {
 	 * @return
 	 */
 	
-	private static Icon resizeIcon(ImageIcon icon, int resizedWidth, int resizedHeight) {
+	public static Icon resizeIcon(ImageIcon icon, int resizedWidth, int resizedHeight) {
 	    Image img = icon.getImage();  
 	    Image resizedImage = img.getScaledInstance(resizedWidth, resizedHeight,  java.awt.Image.SCALE_SMOOTH);  
 	    return new ImageIcon(resizedImage);
@@ -334,6 +359,7 @@ public class ControlOfComponent extends ControlOfScene {
 		sceneControler.selectPrint(String.format("newColoredImage(%s)", ifile), "component");
 		String action = "emc_newColoredImage";
 		EMBCommand bcmd;
+		SmMem.ck("newColoredImage", SmMem.Type.Begin);
 		try {
 			bcmd = new BlkCmdAdd(action);
 		} catch (Exception e) {
@@ -364,6 +390,7 @@ public class ControlOfComponent extends ControlOfScene {
 		///bcmd.selectBlock(id);		// Select new block
 		boolean res = bcmd.doCmd();
 		sceneControler.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
+		SmMem.ck("newColoredImage", SmMem.Type.End);
 		return;
 	}
 	
@@ -390,6 +417,7 @@ public class ControlOfComponent extends ControlOfScene {
 			e.printStackTrace();
 			return false;
 		}
+		SmMem.ck("action");
 		switch (action) {
 			case "emc_selectAllButton":
 			case "emc_toggleSelectButton":
@@ -434,6 +462,44 @@ public class ControlOfComponent extends ControlOfScene {
 		return false;			// Event not processed by us - possibly by someone else
 	}
 
+
+	/**
+	 * Convert partial file name to full file name
+	 * @param fileName
+	 * @return
+	 */
+	public static String fullFileName(String fileName) {
+		if (fileName == null || fileName.equals("")) {
+			fileName = defaultImageFileName;
+		}
+		if (!new File(fileName).isAbsolute()) {
+			fileName = defaultImageFileDirName + File.separator + fileName;
+		}
+		return fileName;
+	}
+
+	/**
+	 * Convert partial file name to icon file name
+	 * @param fileName
+	 * @return
+	 */
+	public static String iconFileName(String fileName) {
+		String full_file_name = fullFileName(fileName);
+		File dir = new File(full_file_name);
+		String icon_file_name = full_file_name;		// Default
+		if (dir.isDirectory()) {
+			String files[] = dir.list();
+			for (String name : files) {
+				if (name.startsWith("__ICON")) {
+					icon_file_name = icon_file_name + File.separator + name;
+					break;
+				}
+			}
+		}
+		return icon_file_name;
+	}
+	
+	
 	/**
 	 * fields
 	 */

@@ -1,7 +1,9 @@
 package ExtendedModeler;
 import java.awt.Color;
-import com.jogamp.opengl.GLAutoDrawable;
 
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
 import smTrace.SmTrace;
 
 /*
@@ -16,6 +18,9 @@ public class EMBlockBase {
 						// Universal object traits
 	public EMBox3D box = new EMBox3D();	// Bounding box (sphere), with orientation
 	protected Color color;		// Object color
+	int nLongitudes = 50;			// Granularity for sphere, cylinder, cone
+	int nLatitudes = nLongitudes;
+
 	///public Point3D position;	// Position:  CALCULATED
 	public Point3D target = box.getCenter();		// target
 	private boolean isSelected = false;
@@ -23,7 +28,47 @@ public class EMBlockBase {
 
 	public boolean isOk = false;		// Set OK upon successful construction
 	private int viewerLevel;			// Visible if viewer level > visible
+	static SceneControler sceneControler = null;		// Recording for debugging
+
+	public static void setSceneControler(SceneControler sceneControler) {
+		EMBlockBase.sceneControler = sceneControler;
+	}
+
+	/**
+	 * Check if is a currently executing viewer it is a "Local Viewer"
+	 * @return
+	 */
+	public static boolean isLocalViewer() {
+		if (sceneControler == null)
+			return false;			// No controller known
+		SceneViewer viewer = sceneControler.getSceneViewer();
+		if (viewer == null)
+			return false;			// No viewer displayed
+		String name = viewer.getSceneName();
+		if (name.equals(ExtendedModeler.ExternalViewerName))
+			return false;			// Is external viewer
 		
+		return true;
+	}
+
+	/**
+	 * Check if currently executing viewer is "External Viewer"
+	 * @return
+	 */
+	public static boolean isExternalViewer() {
+		if (sceneControler == null)
+			return false;			// No controller known
+		SceneViewer viewer = sceneControler.getDisplayedViewer();
+		if (viewer == null)
+			return false;
+		String name = viewer.getSceneName();
+		if (name.equals(ExtendedModeler.ExternalViewerName))
+			return true;
+		
+		return false;
+	}
+		
+
 	/**
 	 * Setup for defaults
 	 * @throws EMBlockError 
@@ -40,6 +85,72 @@ public class EMBlockBase {
 		this.isOk = cb.isOk();
 	}
 
+	/**
+	 * Setup material properties
+	 */
+	public static void setMaterial(GL2 gl, Color color) {
+		if (color == null) {
+			color = ControlOfView.nextColor();
+		}
+		gl.glEnable(GL2.GL_LIGHTING);		// Force it
+		float[] colors = color.getComponents(new float[4]);
+        float no_mat[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        float mat_ambient[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+        float mat_ambient_color[] = { 0.8f, 0.8f, 0.2f, 1.0f };
+        mat_ambient_color = colors;
+        float mat_diffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f };
+        mat_diffuse = colors;
+        float mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        mat_specular = colors;
+        float no_shininess[] = { 0.0f };
+        float low_shininess[] = { 5.0f };
+        float high_shininess[] = { 100.0f };
+        float mat_emission[] = { 0.3f, 0.2f, 0.2f, 0.0f };
+        mat_emission = colors;
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat_ambient_color, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, mat_diffuse, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat_specular, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SHININESS, high_shininess, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_EMISSION, no_mat, 0);
+	}
+
+	
+	public static void setMaterial(GL2 gl) {
+		setMaterial(gl, null);
+	}
+
+	/**
+	 * Set for lighting emphasis
+	 * disable lighting set color
+	 * Needs matching clearEmphasis
+	 * @param gl
+	 * @param color
+	 */
+	private GL2 glEmphasis = null;
+	public void setEmphasis(GL2 gl, Color color) {
+		glEmphasis = gl;
+		if (color == null) {
+			color = this.color;
+		}
+		gl.glDisable(GL2.GL_LIGHTING);
+		float cv[] = new float[4];
+		float colors[] = color.getColorComponents(cv);
+		gl.glColor4f(colors[0], colors[1], colors[2], colors[3]);
+		
+	}
+	
+	public void setEmphasis(GL2 gl) {
+		setEmphasis(gl, null);
+	}
+	
+	
+	public void clearEmphasis() {
+		if (glEmphasis == null) {
+			SmTrace.lg("clearEmphasis - lacks matching setEmphasis");
+		}
+		glEmphasis.glEnable(GL2.GL_LIGHTING);
+		glEmphasis = null;
+	}
 	
 	/**
 	 * Adjust from control settings based on command

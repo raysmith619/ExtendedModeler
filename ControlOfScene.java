@@ -55,6 +55,10 @@ public class ControlOfScene extends JDialog implements java.awt.event.WindowList
 	 * @throws EMBlockError 
 	 */
 	public void setup(String name)  {
+		SceneViewer scv = sceneControler.sceneViewers.get(0);
+		if ( scv == null || scv.isStub)
+			return;
+		
 		if (setup)
 			return;			// Already setup
 		

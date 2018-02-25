@@ -3,6 +3,10 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
+import java.io.File;
+
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -203,32 +207,16 @@ public class ColoredText extends EMBlockBase {
 		nt = 0;
 	}
 
+	public String blockType() {
+		return "text";
+	}
+
 	public void draw(
 		GLAutoDrawable drawable,
 		boolean expand,
 		boolean drawAsWireframe,
 		boolean cornersOnly
 	) {
-		drawText(drawable, this, expand,
-				drawAsWireframe, cornersOnly);
-	}
-
-	public String blockType() {
-		return "text";
-	}
-
-
-
-	static public void drawText(
-		GLAutoDrawable drawable,
-		ColoredText ctext,
-		boolean expand,
-		boolean drawAsWireframe,
-		boolean cornersOnly) {
-		String text = ctext.text;
-		Font font = ctext.font;
-		Color color = ctext.color;
-
 		GL2 gl = (GL2) drawable.getGL();
 		/*** test lighting
 		float[] 		LightDiffuse =	 { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -238,12 +226,13 @@ public class ColoredText extends EMBlockBase {
 		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, LightDiffuse, 0);
 		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, LightPosition, 0);
 		***/
-		OrientedBox3D obox = ctext.getOBox();
+		OrientedBox3D obox = getOBox();
 		if ( expand ) {
 			obox.adjSize(1.1f, 1.1f, 1.1f);
 		}
 		
 		if ( drawAsWireframe ) {
+			setEmphasis(gl);
 			AlignedBox3D abox = obox.getAlignedBox();
 			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 			if ( cornersOnly ) {
@@ -274,12 +263,7 @@ public class ColoredText extends EMBlockBase {
 			minlen = Math.min(minlen, zlen);
 			float r = minlen/2;
 			Point3D center = abox.getCenter();
-			GLUT glut = new GLUT();
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
-			gl.glTranslatef(center.x(), center.y(), center.z());
-			// text
-			gl.glTranslatef(-center.x(), -center.y(), -center.z());
+			clearEmphasis();
 		}
 		else {
 			AlignedBox3D abox = obox.getAlignedBox();
@@ -296,16 +280,65 @@ public class ColoredText extends EMBlockBase {
 		    float depth = 5f;
 			
 			TextRenderer3D tr3 = new TextRenderer3D(font, tscale);
-
-			float[] colors = new float[4];
-			color.getComponents(colors);
-		    gl.glColor4f(colors[0], colors[1], colors[2], colors[3]);
+			Color color = getColor();
+			//ColoredText.setMaterial(gl, color);
+			float[] colors = color.getComponents(new float[4]);
+			gl.glDisable(GL2.GL_LIGHTING);		// Hack because text does not light well
+			gl.glColor4f(colors[0], colors[1], colors[2], colors[3]);	// make color
 		    tr3.setDepth(depth);
 		    tr3.draw(text,tx, ty, tz, tscale);
+			gl.glEnable(GL2.GL_LIGHTING);		// Hack because text does not light well
 		    SmTrace.lg(String.format("tr3.draw(%s, tx=%.3g, ty=%.3g, tz=%.3g, tscale=%.3g)",
 		    		text, tx, ty, tz, tscale), "textdraw");
 		    EMBox3D.rotate2vRet(drawable);
 		}
+	}
+	
+
+	/**
+	 * Setup material properties
+	 */
+
+	public static void setMaterial(GL2 gl, Color color) {
+		if (color == null) {
+			color = ControlOfView.nextColor();
+		}
+		float[] colors = color.getComponents(new float[4]);
+        float no_mat[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        float mat_ambient[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+        float mat_ambient_color[] = { 0.8f, 0.8f, 0.2f, 1.0f };
+        //mat_ambient_color = colors;
+        float mat_diffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f };
+        //mat_diffuse = colors;
+        float mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+       //mat_specular = colors;
+        float no_shininess[] = { 0.0f };
+        float low_shininess[] = { 5.0f };
+        float high_shininess[] = { 100.0f };
+        float mat_emission[] = { 0.3f, 0.2f, 0.2f, 0.0f };
+        //mat_emission = colors;
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat_ambient_color, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, mat_diffuse, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat_specular, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SHININESS, high_shininess, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_EMISSION, no_mat, 0);
+	}
+
+	/**
+	 * Generate an image icon for create button
+	 * @param gl
+	 * @param width
+	 * @param height
+	 * @return
+	 */
+	static public ImageIcon imageIcon(int width, int height) {
+		String icon_name = ControlOfComponent.iconFileName("text.jpg");
+		File file = new File(icon_name);
+		
+		String basename = file.getName();
+		Icon icon = new ImageIcon(icon_name);
+		icon = ControlOfComponent.resizeIcon((ImageIcon)icon, width, height);
+		return (ImageIcon) icon;
 	}
 
 	/**
@@ -332,6 +365,21 @@ public class ColoredText extends EMBlockBase {
 		charZSize = cot.getCharZSize();
 		charSizeByBlock = cot.getCharSizeByBlock();
 	}
+
+
+
+	static public void drawText(
+		GLAutoDrawable drawable,
+		ColoredText ctext,
+		boolean expand,
+		boolean drawAsWireframe,
+		boolean cornersOnly) {
+		String text = ctext.text;
+		Font font = ctext.font;
+		Color color = ctext.color;
+		ctext.draw(drawable, expand, drawAsWireframe, cornersOnly);
+	}
+
 
 	
 	/**

@@ -6,6 +6,7 @@ package ExtendedModeler;
 
 import java.awt.Container;
 import java.awt.List;
+import java.awt.Panel;
 import java.awt.Component;
 import java.awt.event.ActionListener;
 import java.util.Arrays;
@@ -27,7 +28,14 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.BoxLayout;
 
+import com.jogamp.nativewindow.util.Dimension;
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLProfile;
+import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.awt.GLJPanel;
 
 import smTrace.SmTrace;		// Execution Trace support
 
@@ -41,11 +49,15 @@ import smTrace.SmTrace;		// Execution Trace support
 public class ExtendedModeler implements ActionListener {
 
 	static final String applicationName = "Extended Modeler";
+	public static final String ExternalViewerName = "ExternalViewer";		// Only one allowed
 	public static SmTrace smTrace;
 	JFrame frame;
 	Container toolPanel;
 	JDialog traceControl;
-	SceneViewer[] sceneViewers;							// Array of scene viewers(observers)
+	private static SceneViewer imageSV;					// image construction
+	SceneViewer localViewer;							// Currently only one
+	SceneViewer externalViewer;							// Currently only one
+	static SceneViewer[] sceneViewers;					// Array of scene viewers(observers)
 	int externalViewIdx = -1;							// Index of external viewer, if one
 	SceneControler sceneControler;						// Control of the scene
 	private Scene scene;								// One instance of our scene(model)
@@ -56,7 +68,7 @@ public class ExtendedModeler implements ActionListener {
 	private static String[] mainArgs;						// Args array
 	private static int mainArgsLength;					// Number of args
 	private static String logName ="emt_";				// Default log prefix
-	private static boolean displayExternalControl = true;
+	private static boolean displayExternalView = true;
 	public enum AutoAddType {	// Auto add block type
 		NONE,					// none added
 		PLACEMENT_COMPUTE,		// Block placement
@@ -111,7 +123,7 @@ public class ExtendedModeler implements ActionListener {
 	JButton traceSelectionButton;
 	JPanel traceSelectionCkBoxPanel;
 	JButton resetCameraButton;
-	JCheckBox displayExternalControlCheckBox;
+	JCheckBox displayExternalViewCheckBox;
 	JCheckBox displayAddControlCheckBox;
 	JCheckBox displayPlacementControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
@@ -227,10 +239,18 @@ public class ExtendedModeler implements ActionListener {
 			sceneControler.currentViewerCamera().reset();
 			sceneControler.repaint();
 		}
-		else if ( source == displayExternalControlCheckBox ) {
-			displayExternalControl = !displayExternalControl;
-			sceneControler.displayExternalControl = ! sceneControler.displayExternalControl;
-			sceneControler.repaint();
+		else if ( source == displayExternalViewCheckBox ) {
+			displayExternalView = !displayExternalView;
+			if (displayExternalView) {
+				try {
+					setExternalView(localViewer);
+				} catch (EMBlockError e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			} else {
+				clearExternalView();
+			}
 		}
 		else if ( source == displayAddControlCheckBox ) {
 			sceneControler.displayAddControl = ! sceneControler.displayAddControl;
@@ -378,11 +398,6 @@ public class ExtendedModeler implements ActionListener {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
-		sceneControler.setControl("component", sceneControler.displayAddControl);
-		sceneControler.setControl("placement", sceneControler.displayPlacementControl);
-		sceneControler.setControl("color", sceneControler.displayColorControl);
-		sceneControler.setControl("text", sceneControler.displayTextControl);
 		
 
 		String[] viewNames = {"Local_View"};
@@ -393,12 +408,12 @@ public class ExtendedModeler implements ActionListener {
 			String viewName = viewNames[i];
 			String viewTitle = viewName.replace(' ', '_');
 			try {
-				SceneViewer sceneViewer = new SceneViewer(viewTitle, viewName, sceneControler);
-				sceneViewers[i] = sceneViewer;
-				sceneControler.addViewer(sceneViewer);
-				if (displayExternalControl) {
-					int svidx = i +1;
-					modifyExternalView(svidx, sceneViewer, true);
+				localViewer = new SceneViewer(viewTitle, viewName, sceneControler);
+				sceneViewers[i] = localViewer;
+				externalViewIdx = i+1;			// Place holder, if one added now or later
+				sceneControler.addViewer(localViewer);
+				if (displayExternalView) {
+					setExternalView(localViewer);
 				}
 			} catch (EMBlockError e) {
 				SmTrace.lg(String.format("sceneControler %s error %s", viewName, e.getMessage()));
@@ -406,25 +421,40 @@ public class ExtendedModeler implements ActionListener {
 				System.exit(1);
 			}
 		}
+		 /*** An attempt to make scene based button images
+		try {
+			String imc_name = "imageCreation";
+									// Make stub with out controls
+			imageSV = new SceneViewer(imc_name, imc_name, sceneControler, true);
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		***/
+		
+		sceneControler.setControl("component", sceneControler.displayAddControl);
+		sceneControler.setControl("placement", sceneControler.displayPlacementControl);
+		sceneControler.setControl("color", sceneControler.displayColorControl);
+		sceneControler.setControl("text", sceneControler.displayTextControl);
 		
 	}
 
 	/**
-	 * add / remove external view
+	 * add external view
+	 * @return external viewer
 	 * @throws EMBlockError 
 	 */
-	public void modifyExternalView(int svidx, SceneViewer localViewer, boolean addView) throws EMBlockError {
-		if (addView) {
-			SceneViewer extv = localViewer.externalView(
-					"External View", null);
-			externalViewIdx = svidx;
-			sceneControler.addViewer(extv);
-			sceneViewers[svidx] = extv;
-			sceneControler.externalViewer = extv;
-		} else {
-			SceneViewer extv = sceneControler.removeViewer(externalViewIdx);
-			///TBD - cleanup add/remove
-		}
+	public void setExternalView(SceneViewer localViewer) throws EMBlockError {
+		externalViewer = localViewer.externalView(
+				"External View", ExternalViewerName);
+		sceneControler.setExternalViewer(localViewer, externalViewer);
+		sceneControler.display();
+	}
+	
+	public void clearExternalView() {
+		sceneControler.removeExternalViewer();
+		externalViewer = null;
+		sceneControler.display();
 	}
 
 	
@@ -619,7 +649,7 @@ public class ExtendedModeler implements ActionListener {
 					
 						case "dextcontrol":
 						case "dec":
-							displayExternalControl = booleanArg(true);		// change external display value
+							displayExternalView = booleanArg(true);		// change external display value
 							break;
 							
 						case "imask":
@@ -855,9 +885,83 @@ public class ExtendedModeler implements ActionListener {
 		}
 		return em_base;
 	}
+
+	
+	/**
+	 * Create stub drawable and return GL2
+	 * to support generating image structures
+	 * Default - use imageSV, setup early
+	 *         else create from scratch - not working
+	 */
+	public static GL2 getGL() {
+		return getGL(null);
+	}
+	
+	
+	public static GL2 getGL(SceneControler sceneControler) {
+		SceneViewer sceneViewer = imageSV;		// Default image viewer
+		if (sceneControler != null) {
+			sceneViewer = sceneControler.sceneViewers.get(0);
+			if (sceneViewer == null) {
+				SmTrace.lg("getGL sceneControler - null sceneViewer");
+				System.exit(1);		
+			}
+		}
+		if (sceneViewer != null) {
+			GLCanvas canvas = sceneViewer.getCanvas();
+			if (canvas == null) {
+				SmTrace.lg("getGL sceneControler - null canvas");
+				System.exit(1);		
+			}
+			GL gl = canvas.getGL();
+			if (gl == null) {
+				SmTrace.lg("getGL sceneControler canvas.getGL - null gl");
+				sceneViewer = sceneViewers[0];
+				canvas = sceneViewer.getCanvas();
+				if (canvas == null) {
+					SmTrace.lg("getGL sceneControler - null canvas");
+					System.exit(1);		
+				}
+				gl = canvas.getGL();
+			}
 			
+			GL2 gl2 = (GL2)gl;
+			if (gl2 == null) {
+				SmTrace.lg("getGL sceneControler sceneViewer - null gl2");
+				System.exit(1);		
+			}
+			return gl2;
+		}
+		SceneViewer sv = imageSV;
+		if (sv != null) {
+			
+		}
+		JFrame frame = new JFrame();
+		GLCanvas canvas; // Our canvas
+		GLCapabilities caps; // Main set of capabilities
 
+		caps = new GLCapabilities(null);
+		caps.setDoubleBuffered(true);
+		caps.setHardwareAccelerated(true);
 
+		canvas = new GLCanvas(caps);
+		frame.setVisible(true);
+		canvas.getContext().makeCurrent(); /// Hack to avoid no GLContext
+
+		//this.getContentPane().add(canvas);
+		GL gl = canvas.getGL();
+		if (gl == null) {
+			SmTrace.lg("getGL - null gl");
+			System.exit(1);		
+		}
+		GL2 gl2 = (GL2)gl;
+		if (gl2 == null) {
+			SmTrace.lg("getGL - null gl2");
+			System.exit(1);		
+		}
+		return gl2;
+	}
+	
 	
 	/**
 	 * Setup Testing
@@ -896,10 +1000,10 @@ public class ExtendedModeler implements ActionListener {
 		resetCameraButton.addActionListener(this);
 		toolPanel.add( resetCameraButton );
 
-		displayExternalControlCheckBox = new JCheckBox("Display External View", displayExternalControl);
-		displayExternalControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayExternalControlCheckBox.addActionListener(this);
-		toolPanel.add(displayExternalControlCheckBox);
+		displayExternalViewCheckBox = new JCheckBox("Display External View", displayExternalView);
+		displayExternalViewCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayExternalViewCheckBox.addActionListener(this);
+		toolPanel.add(displayExternalViewCheckBox);
 
 		displayAddControlCheckBox = new JCheckBox("Display Add Control");
 		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );

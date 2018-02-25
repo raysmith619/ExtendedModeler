@@ -176,11 +176,9 @@ public class ColoredEye extends EMBlockBase {
 		float ay = Vector3D.computeSignedAngle(coneup, eye_dir, yaxis ) * rad2deg; 
 		float az = Vector3D.computeSignedAngle(coneup, eye_dir, zaxis ) * rad2deg; 
 		SmTrace.lg(String.format("eye_dir(%s) angle ax=%.1f, ay=%.1f, az=%.1f coneup=%s",
-				eye_dir, ax, ay, az, coneup));
+				eye_dir, ax, ay, az, coneup), "eye_dir");
 		float r = getWidth();
 		float h = 2*r;
-		int nLongitudes = 10;
-		int nLatitudes = nLongitudes;
 		gl.glPushAttrib(GL2.GL_TRANSFORM_BIT);
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glPushMatrix();
@@ -198,8 +196,8 @@ public class ColoredEye extends EMBlockBase {
 		gl.glPopMatrix();
 		gl.glPopAttrib();
 
-		gl.glColor3d(.8,.8,.8);
-		ColoredBall.drawBall(drawable, box, expand, drawAsWireframe, cornersOnly);
+		Color color = new Color(.8f,.8f,.8f);
+		ColoredBall.drawBall(drawable, box, color, expand, drawAsWireframe, cornersOnly);
 		if (rayDisplayed != null) {
 			gl.glColor3d(0,.5, 0);
 			gl.glBegin(GL2.GL_LINES);
@@ -234,8 +232,8 @@ public class ColoredEye extends EMBlockBase {
 		boolean cornersOnly
 	) {
 		GL2 gl = (GL2) drawable.getGL();
-		gl.glColor3d(.8,.8,.8);
-		ColoredBall.drawBall(drawable, box, expand, drawAsWireframe, cornersOnly);
+		Color color = new Color(.8f,.8f,.8f);
+		ColoredBall.drawBall(drawable, box, color, expand, drawAsWireframe, cornersOnly);
 	}
 
 
@@ -245,109 +243,6 @@ public class ColoredEye extends EMBlockBase {
 		Point3D position = getPosition();
 		if (sceneViewer != null) {
 			sceneViewer.eyeAt(position);
-		}
-	}
-
-
-/**
- * drawBall, using gl directly
- * @param gl
- * @param box
- * @param expand
- * @param drawAsWireframe
- * @param cornersOnly
- */
-	static public void drawBallGl(
-		GL2 gl,
-		EMBox3D box,
-		boolean expand,
-		boolean drawAsWireframe,
-		boolean cornersOnly
-	) {
-		///drawable.getContext().makeCurrent(); 	///Hack to avoid no GLContext
-		drawAsWireframe = true;			/// Force frame
-		///drawAsWireframe = false;		/// Force not frame
-		///cornersOnly = false;			/// Force no corners
-		///cornersOnly = true;				/// Force corners
-		if ( expand ) {
-			float diagonal = box.getDiagonal().length();
-			diagonal /= 20;
-			box = new EMBox3D(box.getCenter(), box.getRadius() + diagonal);
-		}
-		if ( drawAsWireframe ) {
-			///***
-			if ( cornersOnly ) {
-				gl.glBegin( GL.GL_LINES );
-				for ( int dim = 0; dim < 3; ++dim ) {
-					Vector3D v = Vector3D.mult( Point3D.diff(box.getCorner(1<<dim),box.getCorner(0)), 0.1f );
-					for ( int a = 0; a < 2; ++a ) {
-						for ( int b = 0; b < 2; ++b ) {
-							int i = (a << ((dim+1)%3)) | (b << ((dim+2)%3));
-							gl.glVertex3fv( box.getCorner(i).get(), 0 );
-							gl.glVertex3fv( Point3D.sum( box.getCorner(i), v ).get(), 0 );
-							i |= 1 << dim;
-							gl.glVertex3fv( box.getCorner(i).get(), 0 );
-							gl.glVertex3fv( Point3D.diff( box.getCorner(i), v ).get(), 0 );
-						}
-					}
-				}
-				gl.glEnd();
-			}
-			/***else {
-				gl.glBegin( GL.GL_LINE_STRIP );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 2 ).get(), 0 );
-				gl.glEnd();
-				gl.glBegin( GL.GL_LINES );
-					gl.glVertex3fv( box.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( box.getCorner( 6 ).get(), 0 );
-				gl.glEnd();
-			}***/
-			///***/
-			Vector3D diagonal = box.getDiagonal();
-			float xlen = Math.abs(diagonal.x());
-			float ylen = Math.abs(diagonal.y());
-			float zlen = Math.abs(diagonal.z());
-			float minlen = Math.min(xlen, ylen);
-			minlen = Math.min(minlen, zlen);
-			float r = minlen/2;
-			Point3D center = box.getCenter();
-			GLU glu = new GLU();
-			GLUT glut = new GLUT();
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
-			gl.glTranslatef(center.x(), center.y(), center.z());
-			glut.glutWireSphere(r, nLongitudes, nLatitudes);
-			gl.glTranslatef(-center.x(), -center.y(), -center.z());
-		}
-		else {
-			int nLongitudes = 20;
-			int nLatitudes = nLongitudes;
-			Vector3D diagonal = box.getDiagonal();
-			float xlen = Math.abs(diagonal.x());
-			float ylen = Math.abs(diagonal.y());
-			float zlen = Math.abs(diagonal.z());
-			float minlen = Math.min(xlen, ylen);
-			minlen = Math.min(minlen, zlen);
-			float r = minlen/2;
-			Point3D center = box.getCenter();
-			GLUT glut = new GLUT();
-			
-			gl.glTranslatef(center.x(), center.y(), center.z());
-			glut.glutSolidSphere(r, nLongitudes, nLatitudes);
-			gl.glTranslatef(-center.x(), -center.y(), -center.z());
 		}
 	}
 
