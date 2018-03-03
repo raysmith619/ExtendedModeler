@@ -21,7 +21,7 @@ public class ColoredImage extends EMBlockBase {
 	 * MUST be overridden to use "obox"
 	 * instead of super.box
 	 */
-	OrientedBox3D obox = new OrientedBox3D();
+	AlignedBox3D abox = new AlignedBox3D();
 	Vector3D size;				// local x,y,z extent
 	public static String defaultImageFileDirName = "C:\\Users\\raysm\\workspace\\ExtendedModeler\\images";
 	public static String defaultImageFileName = "C:\\Users\\raysm\\workspace\\ExtendedModeler\\images\\LionsLions.png";
@@ -57,7 +57,7 @@ public class ColoredImage extends EMBlockBase {
 		if (size == null)
 			size = new Vector3D(0,0,0);
 		this.size = size;
-		this.obox = new OrientedBox3D(center, size, up);
+		this.abox = new AlignedBox3D(center, size);
 		if (imageFileName == null || imageFileName.equals("")) {
 			imageFileName = ColoredImage.defaultImageFileName;
 		}
@@ -427,11 +427,11 @@ public class ColoredImage extends EMBlockBase {
 	
 
 	public Point3D getMin() {
-		return obox.getMin();
+		return abox.getMin();
 	}
 
 	public Point3D getMax() {
-		return obox.getMax();
+		return abox.getMax();
 	}
 	
 
@@ -446,7 +446,7 @@ public class ColoredImage extends EMBlockBase {
 	 * 
 	 */
 	public OrientedBox3D getOBox() {
-		return new OrientedBox3D(obox);
+		return new OrientedBox3D(abox, getUp());
 	}
 
 	/**
@@ -467,7 +467,7 @@ public class ColoredImage extends EMBlockBase {
 	 * 
 	 */
 	public OrientedBox3D orientedBox3D() {
-		return new OrientedBox3D(obox);
+		return new OrientedBox3D(abox, getUp());
 	}
 
 
@@ -477,7 +477,7 @@ public class ColoredImage extends EMBlockBase {
 	 */
 	@Override
 	public void bound(Point3D pt) {
-		this.obox.bound(pt);
+		this.abox.bound(pt);
 	}
 
 
@@ -488,7 +488,7 @@ public class ColoredImage extends EMBlockBase {
 	public void resize(
 		Vector3D size
 	) {
-		obox.resize(size);
+		abox.resize(size);
 		float radius = size2radius(size);
 		setRadius(radius);
 	}
@@ -497,7 +497,8 @@ public class ColoredImage extends EMBlockBase {
 	 * Setup location info
 	 */
 	public void setBox(EMBox3D box) {
-		this.obox = new OrientedBox3D(box);
+		this.abox = new AlignedBox3D(box);
+		setUp(box.getUp());
 	}
 
 
@@ -516,9 +517,12 @@ public class ColoredImage extends EMBlockBase {
 		box.bound( Point3D.sum( oldBox.getCorner( indexOfCornerToResize ), translation ) );
 	}
 
+	
 	// Overridden when necessary
 	public void translate(Vector3D translation ) {
-		box.translate(translation);
+		SmTrace.lg(String.format("ColoredImage.translation(%s)", translation), "image");
+		abox.translate(translation);
+		
 	}
 
 	

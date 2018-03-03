@@ -86,12 +86,22 @@ public class EMBlockBase {
 	}
 
 	/**
+	 * Clear material properties
+	 */
+	public static void clearMaterial(GL2 gl) {
+		gl.glDisable(GL2.GL_LIGHTING);		// Clear it
+	}
+	
+	
+	/**
 	 * Setup material properties
 	 */
 	public static void setMaterial(GL2 gl, Color color) {
 		if (color == null) {
 			color = ControlOfView.nextColor();
 		}
+		SmTrace.lg(String.format("setMaterial color=%s",
+				 color), "drawcolor");
 		gl.glEnable(GL2.GL_LIGHTING);		// Force it
 		float[] colors = color.getComponents(new float[4]);
         float no_mat[] = { 0.0f, 0.0f, 0.0f, 1.0f };

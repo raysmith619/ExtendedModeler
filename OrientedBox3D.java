@@ -24,6 +24,8 @@ public class OrientedBox3D {
 	
 	public OrientedBox3D(AlignedBox3D abox, Vector3D up) {
 		this.abox = new AlignedBox3D(abox);
+		if (up == null)
+			up = EMBox3D.UP;
 		this.up = new Vector3D(up);
 	}
 

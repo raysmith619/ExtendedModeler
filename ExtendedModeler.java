@@ -402,15 +402,14 @@ public class ExtendedModeler implements ActionListener {
 
 		String[] viewNames = {"Local_View"};
 		///String[] viewNames = {"Local_View", "External_View"};
-		int nv = viewNames.length * 2;		// Room for extended viewer
+		int nv = viewNames.length;		// Only local viewer
 		sceneViewers = new SceneViewer[nv];
-		for (int i = 0; i < nv; i += 2) {
+		for (int i = 0; i < nv; i++) {
 			String viewName = viewNames[i];
 			String viewTitle = viewName.replace(' ', '_');
 			try {
 				localViewer = new SceneViewer(viewTitle, viewName, sceneControler);
 				sceneViewers[i] = localViewer;
-				externalViewIdx = i+1;			// Place holder, if one added now or later
 				sceneControler.addViewer(localViewer);
 				if (displayExternalView) {
 					setExternalView(localViewer);

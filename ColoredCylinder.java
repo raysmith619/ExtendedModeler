@@ -156,12 +156,14 @@ public class ColoredCylinder extends EMBlockBase {
 			float bx = center.x();
 			float by = center.y();
 			float bz = center.z();
+			bz -= height/2f;
+			gl.glPushMatrix();
 			gl.glTranslatef(bx, by, bz);
 			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 			ColoredBox.setMaterial(gl, getColor());
 			glu.gluCylinder(cylinder, rBase, rBase, height, nLongitudes, nLatitudes);
 			EMBox3D.rotate2vRet(drawable);
-			gl.glTranslatef(-bx, -by, -bz);
+			gl.glPopMatrix();
 		}
 	}
 

@@ -27,7 +27,7 @@ public class ColoredBox extends EMBlockBase {
 	 * MUST be overridden to use "obox"
 	 * instead of super.box
 	 */
-	OrientedBox3D obox = new OrientedBox3D();
+	AlignedBox3D abox = new AlignedBox3D();
 
 	/**
 	 * Generic object
@@ -53,7 +53,7 @@ public class ColoredBox extends EMBlockBase {
 		if (size == null)
 			size = new Vector3D(0,0,0);
 
-		this.obox = new OrientedBox3D(center, size, up);
+		this.abox = new AlignedBox3D(center, size);
 	}
 	/**
 	 * Create new object, from controls
@@ -226,7 +226,11 @@ public class ColoredBox extends EMBlockBase {
 				SmTrace.lg(String.format("drawLoc %d %s center: %s corner0: %s",
 					iD(), blockType(), getCenter(), getCorner(0)));	
 			}
-			ColoredBox.setMaterial(gl, getColor());
+			Color color = getColor();
+			SmTrace.lg(String.format("drawColor %d %s color=%s",
+					iD(), blockType(), color), "drawcolor");
+			ColoredBox.setMaterial(gl, color);
+			
 			gl.glBegin( GL2.GL_QUAD_STRIP );
 				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
 				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
@@ -251,6 +255,7 @@ public class ColoredBox extends EMBlockBase {
 				gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
 				gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
 			gl_glEnd();
+			ColoredBox.clearMaterial(gl);
 		}
 		EMBox3D.rotate2vRet(drawable);
 	}
@@ -327,10 +332,12 @@ static public void drawBox(
 	
 
 	public Point3D getMin() {
+		OrientedBox3D obox = new OrientedBox3D(abox, getUp());
 		return obox.getMin();
 	}
 
 	public Point3D getMax() {
+		OrientedBox3D obox = new OrientedBox3D(abox, getUp());
 		return obox.getMax();
 	}
 	
@@ -340,6 +347,7 @@ static public void drawBox(
 	 * 
 	 */
 	public OrientedBox3D getOBox() {
+		OrientedBox3D obox = new OrientedBox3D(abox, getUp());
 		return new OrientedBox3D(obox);
 	}
 
@@ -349,7 +357,7 @@ static public void drawBox(
 	 */
 	@Override
 	public void bound(Point3D pt) {
-		this.obox.bound(pt);
+		abox.bound(pt);
 	}
 
 
@@ -360,7 +368,7 @@ static public void drawBox(
 	public void resize(
 		Vector3D size
 	) {
-		obox.resize(size);
+		abox.resize(size);
 		float radius = size2radius(size);
 		setRadius(radius);
 	}
@@ -369,7 +377,7 @@ static public void drawBox(
 	 * Setup location info
 	 */
 	public void setBox(EMBox3D box) {
-		this.obox = new OrientedBox3D(box);
+		this.abox = new AlignedBox3D(box);
 	}
 
 
@@ -391,7 +399,7 @@ static public void drawBox(
 	// Overridden when necessary
 	public void translate(Vector3D translation ) {
 		SmTrace.lg(String.format("ColoredBox.translation(%s)", translation), "boxdebug");
-		obox.translate(translation);
+		abox.translate(translation);
 		
 	}
 

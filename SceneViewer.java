@@ -26,9 +26,16 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTextField;
 import javax.swing.JWindow;
+import javax.swing.ScrollPaneConstants;
+import java.awt.Adjustable;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+
 import javax.swing.SwingUtilities;
 
 import com.jogamp.graph.font.Font;
@@ -38,7 +45,7 @@ import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
-import com.jogamp.opengl.awt.GLCanvas;
+///import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.gl2.GLUT;
 
@@ -59,16 +66,24 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		PLACEMENT_MOVE, PLACEMENT_OK, PLACEMENT_CANCEL,
 	}
 
-	static int viewerLevelBase = 0; // viewers increase in level
-	int viewerLevel; // All blocks >= will be invisible
+	static int viewerLevelBase = 0; 	// viewers increase in level
+	int viewerLevel; 					// All blocks >= will be invisible
 	static int x0 = 0;
 	static int y0 = 0;
-	static int width = 400; // Canvas size
+	static int width = 400; 			// Canvas size
 	static int height = width;
-	String title; // Viewer title
-	String name; // Viewer name - used in data keys
-	boolean isStub = false;			// true -> no controls, not visible
-	GLCanvas canvas; // Our canvas
+	String title; 						// Viewer title
+	String name; 						// Viewer name - used in data keys
+	JMenuBar menuBar;
+	boolean isStub = false;				// true -> no controls, not visible
+	EMCanvas canvas; 					// Our canvas
+	JScrollPane scrollPane;				// Our Scroll pane
+	public static int SCROLL_RANGE = 1000;
+	public static int SCROLL_MIN = -SCROLL_RANGE/2;
+	public static int SCROLL_MAX = SCROLL_RANGE/2;
+	public static int SCROLL_MID = (SCROLL_MIN + SCROLL_MAX)/2;
+	JScrollBar verticalScrollBar;
+	JScrollBar horizontalScrollBar;
 	GLCapabilities caps; 				// Main set of capabilities
 	SceneControler sceneControler; 		// Main class - currently only for check button access
 	SceneDraw sceneDraw; 				// Direct scene drawing control
@@ -132,8 +147,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	public boolean displayBoundingBox = false;
 	public boolean enableCompositing = false;
 
+	// Tools Menu
 	JButton eyeAtSelectionButton;
 	JButton lookAtSelectionButton;
+	JButton backOffButton;
 	JButton resetCameraButton;
 	JCheckBox displayEyeAtControlCheckBox;
 	JCheckBox displayLookAtControlCheckBox;
@@ -146,6 +163,12 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	JCheckBox displayBoundingBoxCheckBox;
 	JCheckBox enableCompositingCheckBox;
 
+	// View Menu
+	JButton viewAllButton;
+	JButton viewCloserButton;
+	JButton viewFartherButton;
+	
+	
 	int mouse_x, mouse_y, old_mouse_x, old_mouse_y;
 
 	/**
@@ -200,11 +223,29 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			viewBox = new ColoredBox();
 		}
 		if (locationSize == null) {
-			locationSize = new Rectangle(x0, y0, width, height);
+			setLocationSize();
 		}
 
 		this.setTitle(title);
-		setupMenu(this);
+		menuBar = new JMenuBar();
+		setJMenuBar(menuBar);
+		JMenu menu = toolMenu();
+		menuBar.add(menu);
+		menuBar.add(new JSeparator());
+
+		menu = viewMenu();
+		menuBar.add(menu);
+		menuBar.add(new JSeparator());
+
+		lookAtSelectionButton = new JButton("Look At Selection");
+		lookAtSelectionButton.addActionListener(this);
+		menuBar.add(lookAtSelectionButton);
+
+		displayCameraTargetCheckBox = new JCheckBox("Display Camera Target", sceneControler.displayCameraTarget);
+		///displayCameraTargetCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+		displayCameraTargetCheckBox.addActionListener(this);
+		menuBar.add(displayCameraTargetCheckBox);
+
 		camera = new Camera3D(eyePosition, eyeTarget, eyeUp);
 
 		SmTrace.lg(String.format("sceneView[%d] %s %s", getViewerLevel(), name, title));
@@ -218,9 +259,52 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		caps.setDoubleBuffered(true);
 		caps.setHardwareAccelerated(true);
 
-		canvas = new GLCanvas(caps);
+		canvas = new EMCanvas(caps);
+		/*** Pre-scrolled
+		 *
 		this.getContentPane().add(canvas);
+		 *
+		 *** Pre-scrolled ***/
+		
+		/***
+		 * Adding ScrollPane
+		 */
+        JScrollPane scrollPane = new JScrollPane(canvas);
+		this.getContentPane().add(scrollPane);
+		scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		verticalScrollBar = scrollPane.getVerticalScrollBar();
+		verticalScrollBar.setMinimum(SCROLL_MIN);
+		verticalScrollBar.setValue(SCROLL_MID);
+		verticalScrollBar.setMaximum(SCROLL_MAX);
+		verticalScrollBar.setVisibleAmount(SCROLL_RANGE/500);
+		scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+		horizontalScrollBar = scrollPane.getHorizontalScrollBar();
+		horizontalScrollBar.setMinimum(SCROLL_MIN);
+		horizontalScrollBar.setValue(SCROLL_MID);
+		horizontalScrollBar.setMaximum(SCROLL_MAX);
+		horizontalScrollBar.setVisibleAmount(SCROLL_RANGE/500);
+		
+		scrollPane.getHorizontalScrollBar().addAdjustmentListener(new AdjustmentListener() {
 
+			@Override
+			public void adjustmentValueChanged(AdjustmentEvent e) {
+				canvas.scrollBarAdjustmentEvent(e);
+				
+			}
+		});
+		
+		scrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+
+			@Override
+			public void adjustmentValueChanged(AdjustmentEvent e) {
+				canvas.scrollBarAdjustmentEvent(e);
+				
+			}
+		});
+		/***
+		 * Adding ScrollPane
+		 */
+		
 		this.controls = new ControlsOfView(this);
 
 		
@@ -278,18 +362,14 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	/**
 	 * Add viewer's menu
 	 */
-	private void setupMenu(JFrame frame) {
-		JMenuBar menuBar = new JMenuBar();
-		frame.setJMenuBar(menuBar);
-
+	private JMenuBar setupMenu(JMenuBar menuBar) {
 		JMenu menu = toolMenu();
 		menuBar.add(menu);
-
-		frame.setJMenuBar(menuBar);
+		return menuBar;
 	}
 
 	/**
-	 * Create display menu drop down
+	 * Create tools menu drop down
 	 * 
 	 * @retun - display menu item
 	 */
@@ -316,11 +396,6 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		eyeAtSelectionButton.addActionListener(this);
 		toolPanel.add(eyeAtSelectionButton);
 
-		lookAtSelectionButton = new JButton("Look At Selection");
-		lookAtSelectionButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-		lookAtSelectionButton.addActionListener(this);
-		toolPanel.add(lookAtSelectionButton);
-
 		resetCameraButton = new JButton("Reset Camera");
 		resetCameraButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		resetCameraButton.addActionListener(this);
@@ -341,11 +416,6 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		displayWorldAxesCheckBox.addActionListener(this);
 		toolPanel.add(displayWorldAxesCheckBox);
 
-		displayCameraTargetCheckBox = new JCheckBox("Display Camera Target", sceneControler.displayCameraTarget);
-		displayCameraTargetCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
-		displayCameraTargetCheckBox.addActionListener(this);
-		toolPanel.add(displayCameraTargetCheckBox);
-
 		displayLocalViewCheckBox = new JCheckBox("Display Local View Bounds", sceneControler.displayBoundingBox);
 		displayLocalViewCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 		displayLocalViewCheckBox.addActionListener(this);
@@ -361,12 +431,47 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		enableCompositingCheckBox.addActionListener(this);
 		toolPanel.add(enableCompositingCheckBox);
 
-		pack();
-		setVisible(true);
 
 		return menu;
 	}
 
+	
+
+	/**
+	 * Create view menu drop down
+	 * 
+	 * @retun - menu item
+	 */
+	private JMenu viewMenu() {
+		JMenu menu = new JMenu("View");
+		JFrame viewFrame = new JFrame();
+
+		Container viewPane = viewFrame.getContentPane();
+		JPanel viewPanel = new JPanel();
+		viewPanel.setLayout(new BoxLayout(viewPanel, BoxLayout.Y_AXIS));
+		viewPane.setLayout(new BorderLayout());
+		viewPane.add(viewPanel, BorderLayout.LINE_START);
+		/// viewPane.add( sceneControler, BorderLayout.CENTER );
+		/// viewPane.add(viewPanel);
+		menu.add(viewPane);
+
+		viewCloserButton = new JButton("Closer");
+		viewCloserButton.addActionListener(this);
+		viewPanel.add(viewCloserButton);
+
+		viewAllButton = new JButton("All");
+		viewAllButton.addActionListener(this);
+		viewPanel.add(viewAllButton);
+
+
+		viewFartherButton = new JButton("Farther");
+		viewFartherButton.addActionListener(this);
+		viewPanel.add(viewFartherButton);
+
+		return menu;
+	}
+
+	
 	/**
 	 * Get current location and size
 	 */
@@ -396,15 +501,30 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	 */
 	public void setLocalViewer(SceneViewer localView) {
 		this.localViewer = localView;
-		ColoredEye eye = new ColoredEye(localView.camera.position, localView.camera.target, localView.camera.up,
-				localView);
-		EMBlock cbEye = new EMBlock(eye);
-		cbEye.setViewerLevel(getViewerLevel());
-		sceneControler.insertBlock(cbEye);
-		this.localViewEye = cbEye;
+		setLocalViewerEye();
 		localView.setExternalViewer(this);
 	}
 
+	/**
+	 * Set /reset eye object for local Viewer camera
+	 */
+	public void setLocalViewerEye() {
+		if (localViewEye == null) {
+			ColoredEye eye = new ColoredEye(localViewer.camera.position,
+					localViewer.camera.target,
+					localViewer.camera.up,
+					localViewer);
+			EMBlock cbEye = new EMBlock(eye);
+			cbEye.setViewerLevel(getViewerLevel());
+			localViewEye = cbEye;
+			sceneControler.insertBlock(cbEye);
+		} else {
+			localViewEye.moveTo(localViewer.camera.position);
+		}
+	}
+
+	
+	
 	/**
 	 * Clear local viewer
 	 */
@@ -607,8 +727,8 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	}
 
 	/**
-	 * Set camera(target) at a point Updates visible controls
-	 * 
+	 * Set camera(eye) at a point Updates visible controls
+	 * NO Update external to avoid recursion
 	 * @param pt
 	 */
 	public void eyeAt(Point3D pt) {
@@ -621,11 +741,17 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		if (localViewEye != null) {
-			localViewEye.setPosition(pt);
-		}
+		///if (localViewEye != null) {
+		///	localViewEye.setPosition(pt);
+		///}
 	}
 
+	
+	public void setUp(Vector3D up) {
+		camera.setUp(up);
+	}
+	
+	
 	/**
 	 * Set camera to look at a point Updates visible controls
 	 * 
@@ -771,6 +897,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			if (EMBlockBase.isLocalViewer())
 				SmTrace.lg("display: tests local");
 		}
+		if (externalViewer != null) {
+			externalViewer.display(); 		// Update external display
+		}
+
 		if (SmTrace.trace("skipimage")) {
 			if (EMBlockBase.isExternalViewer()) {
 				SmTrace.lg(String.format("viewer %s display skipping in External Viewer", getSceneName()));
@@ -779,6 +909,9 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		}
 		
 		GL2 gl = (GL2) canvas.getGL();
+		if (gl == null)
+			return;
+		
 		gl.glMatrixMode(GL2.GL_PROJECTION);
 		gl.glLoadIdentity();
 		camera.transform(gl);
@@ -813,7 +946,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		setControl("color", displayColorControl);
 		setControl("text", displayTextControl);
 		setControl("component", displayAddControl);
-		getControls().display(canvas);
+		///getControls().display(canvas);
 
 		if (displayWorldAxes) {
 			EMViewedText tr3 = new EMViewedText(gl);
@@ -859,9 +992,23 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			
 		}
 		if (displayCameraTarget) {
-			setEmphasis(gl, new Color(0,0,1));
-			gl.glBegin(GL.GL_LINES);
+			int nLongitudes = 10;
+			int nLatitudes = nLongitudes;
+			GLUT glut = new GLUT();
+			float r = .1f;
+			setEmphasis(gl, new Color(1,0,1));
+			gl.glPushAttrib(GL2.GL_TRANSFORM_BIT);
+			gl.glMatrixMode(GL2.GL_MODELVIEW);
+			gl.glPushMatrix();
+			SmTrace.lg(String.format("displayCameraTarget sphere=%s", camera.target));
 			gl.glColor3f(1, 1, 1);
+			gl.glPushMatrix();
+			gl.glTranslatef(camera.target.x(), camera.target.y(), camera.target.z());
+			glut.glutWireSphere(r, nLongitudes, nLatitudes);
+			gl.glPopMatrix();
+			gl.glColor3f(1, 1, 1);
+			SmTrace.lg(String.format("displayCameraTarget axes=%s", camera.target));
+			gl.glBegin(GL.GL_LINES);
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(-0.5f, 0, 0)).get(), 0);
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0.5f, 0, 0)).get(), 0);
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, -0.5f, 0)).get(), 0);
@@ -869,8 +1016,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, 0, -0.5f)).get(), 0);
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0, 0, 0.5f)).get(), 0);
 			gl.glEnd();
+			gl.glPopMatrix();
+			gl.glPopAttrib();
 			clearEmphasis();
-		}
+}
 		if (displayLocalView && localViewer != null) {
 			gl.glColor3f(0f, 0f, 1f);
 			sceneDraw.drawLocalView(canvas);
@@ -940,11 +1089,11 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	}
 	
 	
-	public GLCanvas getCanvas() {
+	public EMCanvas getCanvas() {
 		return canvas;
 	}
 
-	public void setCanvas(GLCanvas canvas) {
+	public void setCanvas(EMCanvas canvas) {
 		this.canvas = canvas;
 	}
 
@@ -1022,6 +1171,27 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		SmTrace.setProperty(size_key_height, String.valueOf(height));
 	}
 
+	
+	/**
+	 * Set/reset location/size
+	 * Update ScrollPane
+	 */
+	public void setLocationSize(Rectangle rec) {
+		setLocation(rec.x, rec.y);
+		setSize(rec.width, rec.height);
+	}
+
+	public void setLocation(int x, int y) {
+		super.setLocation(x, y);
+		recordLocation(x, y);
+	}
+	
+
+	public void setSize(int width, int height) {
+		super.setSize(width, height);
+		recordSize(width, height);
+	}
+
 	/**
 	 * Update location Generally called after move
 	 */
@@ -1067,17 +1237,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			title = "External " + name;
 
 		if (viewBox == null) {
-			/**
-			 * Expand viewing region to show based viewing region plus viewing target
-			 * (lookAt) and camera position (origin)
-			 */
-			ColoredBox lvbox = getViewBox();
-			ColoredBox evbox = new ColoredBox(lvbox);
-			evbox.bound(camera.target);
-			evbox.bound(camera.position);
-			Vector3D adj = Vector3D.mult(evbox.getDiagonal(), .5f);
-			evbox.bound(evbox.getMax().sum(evbox.getMax(), adj));
-			viewBox = evbox;
+			viewBox = eViewBox();
 		}
 		if (eyePosition == null) {
 			eyePosition = viewBox.getMax(); // Place at viewing box upper left corner
@@ -1099,12 +1259,55 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			locationSize = new_locsize;
 		}
 
-		localViewer = new SceneViewer(title, name, sceneControler, viewBox, eyePosition, eyeTarget, eyeUp,
+		externalViewer = new SceneViewer(title, name, sceneControler, viewBox, eyePosition, eyeTarget, eyeUp,
 				locationSize, isStub);
-		localViewer.setLocalViewer(this); // Record local viewer for display/manipulation
-		return localViewer;
+		externalViewer.setLocalViewer(this); // Record local viewer for display/manipulation
+		return externalViewer;
 	}
 
+	
+	/**
+	 * Calculate extended view box
+	 */
+	public ColoredBox eViewBox(float factor) {
+		/**
+		 * Expand viewing region to show based viewing region plus viewing target
+		 * (lookAt) and camera position (origin)
+		 */
+		if (factor == 0)
+			factor  = .5f;
+		ColoredBox lvbox = getViewBox();
+		ColoredBox evbox = new ColoredBox(lvbox);
+		evbox.bound(camera.target);
+		evbox.bound(camera.position);
+		Vector3D adj = Vector3D.mult(evbox.getDiagonal(), factor);
+		evbox.bound(Point3D.sum(evbox.getMax(), adj));
+		return evbox;
+	}
+	public ColoredBox eViewBox() {
+		return eViewBox(0);
+	}
+
+	
+	/**
+	 * Update external view based on localViewer changes
+	 */
+	public void updateFromLocalViewer() {
+		if (localViewer == null)
+			return;					// No local viewer - ignore
+		
+		ColoredBox viewBox = localViewer.eViewBox();
+		Point3D eyePosition = viewBox.getMax(); // Place at viewing box upper left corner
+		Point3D eyeTarget = localViewer.camera.target; // Use same target
+		///eyeTarget = Point3D.average(localViewer.camera.position, localViewer.camera.target);
+		Vector3D eyeUp = localViewer.camera.up; // Use same orientation
+		setUp(eyeUp);
+		eyeAt(eyePosition);
+		lookAt(eyeTarget);
+		setLocalViewerEye();
+	}
+	
+	
 	/**
 	 * Get currently selected block
 	 */
@@ -1195,6 +1398,24 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				sceneControler.selectAdd(bcmd, indexOfHilitedBox, false);
 				bcmd.doCmd();
 			}
+		} else {		// Over nobody - unselect all
+			EMBCommand bcmd;
+			String action = "emc_mouseUnSelect";
+			try {
+				bcmd = new BlkCmdAdd(action);
+			} catch (Exception e2) {
+				e2.printStackTrace();
+				return;
+			}
+							// Unselect all currently selected
+			EMBlock[] cbs = sceneControler.getSelectedBlocks();
+			if (cbs.length == 0)
+				return;
+			
+			bcmd.prevSelect = bcmd.newSelect;
+			bcmd.newSelect = new BlockSelect();
+			bcmd.doCmd();
+			
 		}
 		selectedPoint(hilitedPoint());
 		normalAtSelectedPoint(normalAtHilitedPoint());
@@ -1689,6 +1910,15 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		if (source == eyeAtSelectionButton) {
 			this.eyeAtSelection();
 			this.repaint();
+		} else if (source == viewAllButton) {
+			this.viewAll();
+			this.repaint();
+		} else if (source == viewCloserButton) {
+			this.viewCloser();
+			this.repaint();
+		} else if (source == viewFartherButton) {
+			this.viewFarther();
+			this.repaint();
 		} else if (source == lookAtSelectionButton) {
 			this.lookAtSelection();
 			this.repaint();
@@ -1762,11 +1992,212 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				e.printStackTrace();
 			}
 	}
-
+	
+	
 	public void lookAtSelection() {
 		sceneControler.lookAtSelection();
 	}
+	
+	/**
+	 * Position so as  to see all objects
+	 * target in middle of objects
+	 * eye at distance to see all objects
+	 * Attempt to keep as close as possible to the previous eye
+	 * Algorithm
+	 * 1. Calculate the new maximum(max) and minimum(min) of displayed objects.
+	 * 2. new.target = average(max,min)
+	 * 3. min2max = vector min to max
+	 * 4. target_plane = plane with: normal = min2max, point = new.target
+	 * 5. old_eye_plane = plane with: normal = min2max, point = old.eye
+	 * 6. old_eye_plane_p1 = point on old_eye_plane intersecting with min2max
+	 * 7. vec_oep1_to_new_target = vector(new.target, old_eye_plane_p1)
+	 * 8. new.eye = point(old.eye + vec_oep1_to_new_target)
+	 * 5. Move new.eye on new.line, perpendicular to min2max, till angle(min, new.eye, max) is
+	 *    the desired angle for viewing. 
+	 */
+	public void viewAll() {
+		Point3D max = getMax();
+		Point3D min = getMin();
+		Point3D old_eye = getEyePosition();
+		Point3D new_target = Point3D.average(max, min);
+				/** TBD - rough approximation
+				 * twice as far from max as max is from center
+				 */
+		Vector3D min2max = Point3D.diff(max, min);			// Vector along maximum dimension
+		Plane target_plane = new Plane(min2max, new_target);
+		Plane old_eye_plane = new Plane(min2max, old_eye);
+		Ray3D min2max_ray = new Ray3D(new_target, min2max);
+		Point3D old_eye_plane_p1 = new Point3D();
+		old_eye_plane.intersects(min2max_ray, old_eye_plane_p1, true);
+		Vector3D p1_to_new_target = Point3D.diff(new_target, old_eye_plane_p1);
+		Point3D new_eye_1 = Point3D.sum(old_eye, p1_to_new_target);
+		Vector3D new_target_to_eye_n = Point3D.diff(new_target, new_eye_1).normalized();
+		Vector3D new_target_to_eye = Vector3D.mult(new_target_to_eye_n, min2max.length()*2.0f);
+		Point3D new_eye = Point3D.sum(new_target, new_target_to_eye);
+		eyeAt(new_eye);
+		if (externalViewer != null)
+			externalViewer.updateFromLocalViewer();
+	}
+	
+	/**
+	 * Get closer to target
+	 */
+	public void viewCloser() {
+		Point3D target = camera.target;
+		Point3D eye = camera.position;
+		Point3D new_eye = Point3D.average(target, eye);
+		eyeAt(new_eye);
+		if (externalViewer != null)
+			externalViewer.updateFromLocalViewer();
+	}
+	
+	/**
+	 * 	Move eye further away
+	 *  Double distance between eye and target
+	 */
+	public void viewFarther() {
+		Point3D target = camera.target;
+		Point3D eye = camera.position;
+		Vector3D eye_change = Point3D.diff(eye, target);
+		Point3D new_eye = Point3D.sum(eye, eye_change);
+		eyeAt(new_eye);
+		if (externalViewer != null)
+			externalViewer.updateFromLocalViewer();
+	}
 
+	
+
+
+	public Point3D getMin() {
+		float xmin = getMinX();
+		float ymin = getMinY();
+		float zmin = getMinZ();
+		return new Point3D(xmin, ymin, zmin);
+	}
+
+	
+	public float getMinX() {
+		EMBlockGroup group = getDisplayedBlocks();
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMinX();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+
+	
+	public float getMinY() {
+		EMBlockGroup group = getDisplayedBlocks();
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMinY();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+
+	
+	public float getMinZ() {
+		EMBlockGroup group = getDisplayedBlocks();
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMinZ();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value < limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+	
+	
+	public Point3D getMax() {
+		float xmax = getMaxX();
+		float ymax = getMaxY();
+		float zmax = getMaxZ();
+		return new Point3D(xmax, ymax, zmax);
+	}
+
+	
+	public float getMaxX() {
+		EMBlockGroup group = getDisplayedBlocks();
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMaxX();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value > limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+
+	
+	public float getMaxY() {
+		EMBlockGroup group = getDisplayedBlocks();
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMaxY();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value > limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+
+	
+	public float getMaxZ() {
+		EMBlockGroup group = getDisplayedBlocks();
+		Iterator<EMBlock> itr = group.getIterator();
+		float limit = 0;
+		boolean first = true;
+		while (itr.hasNext()) {
+			EMBlock cb = itr.next();		// NOTE - NO Checking for recursive groups
+			float value = cb.getMaxZ();
+			if (first) {
+				limit = value;
+				first = false;
+			} else if (value > limit){
+				limit = value; 
+			}
+		}
+		return limit;		
+	}
+	
+	
 	/**
 	 * Add component control
 	 * 

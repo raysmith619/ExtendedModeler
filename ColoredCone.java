@@ -140,7 +140,7 @@ public class ColoredCone extends EMBlockBase {
 		if ( drawAsWireframe ) {
 			setEmphasis(gl);
 			AlignedBox3D abox = obox.getAlignedBox();
-			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
+			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obox.getUp());
 			if ( cornersOnly ) {
 				gl_glBegin( GL.GL_LINES, "drawAsWireframe cornersOnly GL.GL_LINES" );
 				for ( int dim = 0; dim < 3; ++dim ) {
@@ -190,13 +190,16 @@ public class ColoredCone extends EMBlockBase {
 			float bx = center.x();
 			float by = center.y();
 			float bz = center.z();
+			bz -= height/2f;
+			gl.glPushMatrix();
 			gl.glTranslatef(bx, by, bz);
-			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
+			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obox.getUp());
 			gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
 			ColoredCone.setMaterial(gl, getColor());
 			GLU glu = new GLU();
 			GLUquadric cylinder = glu.gluNewQuadric();
-			glu.gluCylinder(cylinder, r, 0, h, nLongitudes, nLatitudes);
+			glu.gluCylinder(cylinder, rBase, 0, h, nLongitudes, nLatitudes);
+			gl.glPopAttrib();
 
 			/***
 			gl_glBegin(GL.GL_LINES, "cone single line in z-axis");
@@ -210,9 +213,8 @@ public class ColoredCone extends EMBlockBase {
 			gl_glEnd("cone single line in z-axis");
 			gl.glPopAttrib();
 			***/
-			gl.glPopAttrib();
 			EMBox3D.rotate2vRet(drawable);
-			gl.glTranslatef(-bx, -by, -bz);
+			gl.glPopMatrix();
 		}
 	}
 

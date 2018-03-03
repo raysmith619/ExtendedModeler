@@ -82,6 +82,12 @@ public class Camera3D {
 		up = initialUp;
 	}
 
+	/**
+	 * set up
+	 */
+	public void setUp(Vector3D up) {
+		this.up = up;
+	}
 	
 	/**
 	 * Setup view

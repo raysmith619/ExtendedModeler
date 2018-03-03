@@ -114,7 +114,7 @@ public class ControlOfScene extends JDialog implements java.awt.event.WindowList
 		Point pt = e.getComponent().getLocation();
 		recordLocation(pt.x, pt.y);
 		SmTrace.lg(String.format(String.format("updateLocation(%s: %d, %d)"
-				,  name, pt.x, pt.y)));
+				,  name, pt.x, pt.y)), "updateLocation");
 		
 	}
 	

@@ -144,8 +144,12 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	public void removeExternalViewer() {
 		if (externalViewer != null) {
 			externalViewer.dropViewer();
+			externalViewer = null;
 		}
 		externalViewer = null;
+		if (localViewer != null) {
+			localViewer.externalViewer = null;
+		}
 	}
 	
 	
