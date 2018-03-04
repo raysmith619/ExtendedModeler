@@ -5,24 +5,37 @@ package ExtendedModeler;
  */
 
 import java.awt.Container;
+import java.awt.List;
+import java.awt.Panel;
 import java.awt.Component;
 import java.awt.event.ActionListener;
+import java.util.Arrays;
 import java.awt.event.ActionEvent;
 import java.awt.BorderLayout;
+import java.awt.Color;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
+import javax.swing.JTextField;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.BoxLayout;
 
+import com.jogamp.nativewindow.util.Dimension;
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLProfile;
+import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.awt.GLJPanel;
 
 import smTrace.SmTrace;		// Execution Trace support
 
@@ -36,18 +49,26 @@ import smTrace.SmTrace;		// Execution Trace support
 public class ExtendedModeler implements ActionListener {
 
 	static final String applicationName = "Extended Modeler";
+	public static final String ExternalViewerName = "ExternalViewer";		// Only one allowed
 	public static SmTrace smTrace;
-
 	JFrame frame;
 	Container toolPanel;
-	SceneViewer sceneViewer;
+	JDialog traceControl;
+	private static SceneViewer imageSV;					// image construction
+	SceneViewer localViewer;							// Currently only one
+	SceneViewer externalViewer;							// Currently only one
+	static SceneViewer[] sceneViewers;					// Array of scene viewers(observers)
+	int externalViewIdx = -1;							// Index of external viewer, if one
+	SceneControler sceneControler;						// Control of the scene
+	private Scene scene;								// One instance of our scene(model)
+	
 	private static ExtendedModeler em_base = null;		// Used internally		
 	private static ExtendedModelerTest emt = null;		// Set if testing setup
 	private static int mainArgIndex;					// current Arg index
 	private static String[] mainArgs;						// Args array
 	private static int mainArgsLength;					// Number of args
 	private static String logName ="emt_";				// Default log prefix
-
+	private static boolean displayExternalView = true;
 	public enum AutoAddType {	// Auto add block type
 		NONE,					// none added
 		PLACEMENT_COMPUTE,		// Block placement
@@ -64,12 +85,16 @@ public class ExtendedModeler implements ActionListener {
 	
 	JMenuItem deleteAllMenuItem, quitMenuItem, aboutMenuItem;
 	
+	JMenuItem traceMenuItem;		// Command trace
 	JMenuItem undoMenuItem;			// Command undo
 	JMenuItem redoMenuItem;			// Command redo
 	JMenuItem repeatMenuItem;		// Command repeat
+	JMenuItem resetMenuItem;		// Command reset
+	JButton traceButton;			// Trace control
 	JButton undoButton;				// Command undo
 	JButton redoButton;				// Command redo
 	JButton repeatButton;			// Command repeat
+	JButton resetButton;			// Reset to initial settings
 	
 	JMenuItem placementMenuItem;
 	JMenuItem placementComputeMenuItem;
@@ -91,32 +116,53 @@ public class ExtendedModeler implements ActionListener {
 	JButton createConeButton;
 	JButton createCylinderButton;
 	JButton deleteSelectionButton;
-	JButton eyeAtSelectionButton;
-	JButton lookAtSelectionButton;
+	JButton traceAllButton;
+	JButton traceNoneButton;
+	JButton traceSpecifyButton;
+	JTextField traceSpecifyField;
+	JButton traceSelectionButton;
+	JPanel traceSelectionCkBoxPanel;
 	JButton resetCameraButton;
+	JCheckBox displayExternalViewCheckBox;
 	JCheckBox displayAddControlCheckBox;
-	JCheckBox displayEyeAtControlCheckBox;
-	JCheckBox displayLookAtControlCheckBox;
 	JCheckBox displayPlacementControlCheckBox;
 	JCheckBox displayColorControlCheckBox;
 	JCheckBox displayTextControlCheckBox;
 	JCheckBox displayWorldAxesCheckBox;
 	JCheckBox displayCameraTargetCheckBox;
+	JCheckBox displayLocalViewCheckBox;
 	JCheckBox displayBoundingBoxCheckBox;
 	JCheckBox enableCompositingCheckBox;
 
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
-		if (source == undoButton || source == undoMenuItem) {
-			sceneViewer.cmdUndo();
+		if (source == traceButton || source == traceMenuItem) {
+			traceControl = new TraceControl(frame);
+		}
+		else if (source == undoButton || source == undoMenuItem) {
+			sceneControler.cmdUndo();
 			return;
 		}
 		else if (source == redoButton || source == redoMenuItem) {
-			sceneViewer.cmdRedo();
+			sceneControler.cmdRedo();
 			return;
 		}
 		else if (source == repeatButton || source == repeatMenuItem) {
-			sceneViewer.cmdRepeat();
+			sceneControler.cmdRepeat();
+			return;
+		}
+		else if (source == resetButton || source == resetMenuItem) {
+			int response = JOptionPane.showConfirmDialog(
+				frame,
+				"Really Reset to initial state",
+				"Confirm Reset",
+				JOptionPane.YES_NO_OPTION
+			);
+
+			if (response == JOptionPane.YES_OPTION) {
+				///sceneControler.reset();
+				reset();
+			}
 			return;
 		}
 		if ( source == deleteAllMenuItem ) {
@@ -136,7 +182,7 @@ public class ExtendedModeler implements ActionListener {
 					e1.printStackTrace();
 					return;
 				}
-				sceneViewer.deleteAll(bcmd);
+				sceneControler.deleteAll(bcmd);
 				bcmd.doCmd();
 			}
 		}
@@ -170,66 +216,81 @@ public class ExtendedModeler implements ActionListener {
 				e1.printStackTrace();
 				return;
 			}
-			sceneViewer.deleteSelection(bcmd);
+			sceneControler.deleteSelection(bcmd);
 			bcmd.doCmd();
 		}
-		else if ( source == eyeAtSelectionButton ) {
-			sceneViewer.eyeAtSelection();
-			sceneViewer.repaint();
+		else if ( source == traceAllButton ) {
+			sceneControler.traceSet("ALL");
+			sceneControler.repaint();
 		}
-		else if ( source == lookAtSelectionButton ) {
-			sceneViewer.lookAtSelection();
-			sceneViewer.repaint();
+		else if ( source == traceNoneButton ) {
+			sceneControler.traceSet("");
+			sceneControler.repaint();
+		}
+		else if ( source == traceSpecifyButton ) {
+			sceneControler.traceSet(traceSpecifyField.getText());
+			sceneControler.repaint();
+		}
+		else if ( source == traceSelectionButton ) {
+			sceneControler.traceSelection();
+			sceneControler.repaint();
 		}
 		else if ( source == resetCameraButton ) {
-			sceneViewer.resetCamera();
-			sceneViewer.repaint();
+			sceneControler.currentViewerCamera().reset();
+			sceneControler.repaint();
+		}
+		else if ( source == displayExternalViewCheckBox ) {
+			displayExternalView = !displayExternalView;
+			if (displayExternalView) {
+				try {
+					setExternalView(localViewer);
+				} catch (EMBlockError e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			} else {
+				clearExternalView();
+			}
 		}
 		else if ( source == displayAddControlCheckBox ) {
-			sceneViewer.displayAddControl = ! sceneViewer.displayAddControl;
-			sceneViewer.setControl("component", sceneViewer.displayAddControl);
-			sceneViewer.repaint();
-		}
-		else if ( source == displayEyeAtControlCheckBox ) {
-			sceneViewer.displayEyeAtControl = ! sceneViewer.displayEyeAtControl;
-			sceneViewer.setControl("eyeAt", sceneViewer.displayEyeAtControl);
-			sceneViewer.repaint();
-		}
-		else if ( source == displayLookAtControlCheckBox ) {
-			sceneViewer.displayLookAtControl = ! sceneViewer.displayLookAtControl;
-			sceneViewer.setControl("lookat", sceneViewer.displayLookAtControl);
-			sceneViewer.repaint();
+			sceneControler.displayAddControl = ! sceneControler.displayAddControl;
+			sceneControler.setControl("component", sceneControler.displayAddControl);
+			sceneControler.repaint();
 		}
 		else if ( source == displayPlacementControlCheckBox ) {
-			sceneViewer.displayPlacementControl = ! sceneViewer.displayPlacementControl;
-			sceneViewer.setControl("placement", sceneViewer.displayPlacementControl);
-			sceneViewer.repaint();
+			sceneControler.displayPlacementControl = ! sceneControler.displayPlacementControl;
+			sceneControler.setControl("placement", sceneControler.displayPlacementControl);
+			sceneControler.repaint();
 		}
 		else if ( source == displayColorControlCheckBox ) {
-			sceneViewer.displayColorControl = ! sceneViewer.displayColorControl;
-			sceneViewer.setControl("color", sceneViewer.displayColorControl);
-			sceneViewer.repaint();
+			sceneControler.displayColorControl = ! sceneControler.displayColorControl;
+			sceneControler.setControl("color", sceneControler.displayColorControl);
+			sceneControler.repaint();
 		}
 		else if ( source == displayTextControlCheckBox ) {
-			sceneViewer.displayTextControl = ! sceneViewer.displayTextControl;
-			sceneViewer.setControl("text", sceneViewer.displayTextControl);
-			sceneViewer.repaint();
+			sceneControler.displayTextControl = ! sceneControler.displayTextControl;
+			sceneControler.setControl("text", sceneControler.displayTextControl);
+			sceneControler.repaint();
 		}
 		else if ( source == displayWorldAxesCheckBox ) {
-			sceneViewer.displayWorldAxes = ! sceneViewer.displayWorldAxes;
-			sceneViewer.repaint();
+			sceneControler.displayWorldAxes = ! sceneControler.displayWorldAxes;
+			sceneControler.repaint();
 		}
 		else if ( source == displayCameraTargetCheckBox ) {
-			sceneViewer.displayCameraTarget = ! sceneViewer.displayCameraTarget;
-			sceneViewer.repaint();
+			sceneControler.displayCameraTarget = ! sceneControler.displayCameraTarget;
+			sceneControler.repaint();
+		}
+		else if ( source == displayLocalViewCheckBox ) {
+			sceneControler.displayLocalView = ! sceneControler.displayLocalView;
+			sceneControler.repaint();
 		}
 		else if ( source == displayBoundingBoxCheckBox ) {
-			sceneViewer.displayBoundingBox = ! sceneViewer.displayBoundingBox;
-			sceneViewer.repaint();
+			sceneControler.displayBoundingBox = ! sceneControler.displayBoundingBox;
+			sceneControler.repaint();
 		}
 		else if ( source == enableCompositingCheckBox ) {
-			sceneViewer.enableCompositing = ! sceneViewer.enableCompositing;
-			sceneViewer.repaint();
+			sceneControler.enableCompositing = ! sceneControler.enableCompositing;
+			sceneControler.repaint();
 		}
 	}
 
@@ -253,19 +314,7 @@ public class ExtendedModeler implements ActionListener {
 		// to a bug in JOGL. See JOGL Issue #54 for more information on this
 		// https://jogl.dev.java.net/issues/show_bug.cgi?id=54
 		frame.setVisible(true);
-
-		GLCapabilities caps = new GLCapabilities(null);
-		caps.setDoubleBuffered(true);
-		caps.setHardwareAccelerated(true);
-		try {
-			sceneViewer = new SceneViewer(caps, this, frame, smTrace);
-		} catch (EMBlockError e) {
-			SmTrace.lg(String.format("SceneViewer error %s", e.getMessage()));
-			e.printStackTrace();
-			System.exit(1);
-		}
 		
-
 		JMenu menu = new JMenu("File");
 			deleteAllMenuItem = new JMenuItem("Delete All");
 			deleteAllMenuItem.addActionListener(this);
@@ -279,6 +328,9 @@ public class ExtendedModeler implements ActionListener {
 		menuBar.add(menu);
 		
 		menu =  toolMenu();
+		menuBar.add(menu);
+		
+		menu =  traceMenu();
 		menuBar.add(menu);
 
 		menu = new JMenu("Help");
@@ -300,116 +352,179 @@ public class ExtendedModeler implements ActionListener {
 		repeatButton.addActionListener(this);
 		menuBar.add(repeatButton);
 		frame.setJMenuBar(menuBar);
-					
+		
+		resetButton = new JButton("Reset");
+		resetButton.addActionListener(this);
+		menuBar.add(resetButton);
+		frame.setJMenuBar(menuBar);
+		
+		menuBar.add(new JSeparator());
+		traceButton = new JButton("Trace");
+		traceButton.addActionListener(this);
+		menuBar.add(traceButton);
+
+		/***
 		Container pane = frame.getContentPane();
 		// We used to use a BoxLayout as the layout manager here,
 		// but it caused problems with resizing behavior due to
 		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
 		pane.setLayout( new BorderLayout() );
-		pane.add( sceneViewer, BorderLayout.CENTER );
-		frame.setSize(800, 600);
-		///sceneViewer.setSize(300,400);
-		///pane.setVisible(true);
-		///sceneViewer.setVisible(true);
-		sceneViewer.setControl("component", sceneViewer.displayAddControl);
-		sceneViewer.setControl("placement", sceneViewer.displayPlacementControl);
-		sceneViewer.setControl("color", sceneViewer.displayColorControl);
-		sceneViewer.setControl("text", sceneViewer.displayTextControl);
+		pane.add( sceneControler, BorderLayout.CENTER );
+		***/
+		int height = 100;
+		int width = 500;
+		frame.setSize(width, height);
+		setScene();			// Setup scene and controller(s)
+	}
 
+	
+	/**
+	 * Setup / re-setup scene
+	 */
+	private void setScene() {
+		scene = new Scene();			// The one instance of scene
+		
+		try {
+			sceneControler = new SceneControler(this);
+		} catch (EMBlockError e) {
+			SmTrace.lg(String.format("externalsceneControler error %s", e.getMessage()));
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
+		try {
+			EMBlockBase.setDefaults("box", new EMBox3D(), Color.WHITE);
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 
+		String[] viewNames = {"Local_View"};
+		///String[] viewNames = {"Local_View", "External_View"};
+		int nv = viewNames.length;		// Only local viewer
+		sceneViewers = new SceneViewer[nv];
+		for (int i = 0; i < nv; i++) {
+			String viewName = viewNames[i];
+			String viewTitle = viewName.replace(' ', '_');
+			try {
+				localViewer = new SceneViewer(viewTitle, viewName, sceneControler);
+				sceneViewers[i] = localViewer;
+				sceneControler.addViewer(localViewer);
+				if (displayExternalView) {
+					setExternalView(localViewer);
+				}
+			} catch (EMBlockError e) {
+				SmTrace.lg(String.format("sceneControler %s error %s", viewName, e.getMessage()));
+				e.printStackTrace();
+				System.exit(1);
+			}
+		}
+		 /*** An attempt to make scene based button images
+		try {
+			String imc_name = "imageCreation";
+									// Make stub with out controls
+			imageSV = new SceneViewer(imc_name, imc_name, sceneControler, true);
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		***/
+		
+		sceneControler.setControl("component", sceneControler.displayAddControl);
+		sceneControler.setControl("placement", sceneControler.displayPlacementControl);
+		sceneControler.setControl("color", sceneControler.displayColorControl);
+		sceneControler.setControl("text", sceneControler.displayTextControl);
+		
 	}
 
 	/**
-	 * Create display menu drop down
-	 * @retun - display menu item
+	 * add external view
+	 * @return external viewer
+	 * @throws EMBlockError 
 	 */
-	private JMenu toolMenu() {
-		JMenu menu = new JMenu("Tools");
-		JFrame toolFrame = new JFrame();
+	public void setExternalView(SceneViewer localViewer) throws EMBlockError {
+		externalViewer = localViewer.externalView(
+				"External View", ExternalViewerName);
+		sceneControler.setExternalViewer(localViewer, externalViewer);
+		sceneControler.display();
+	}
+	
+	public void clearExternalView() {
+		sceneControler.removeExternalViewer();
+		externalViewer = null;
+		sceneControler.display();
+	}
 
-		Container toolPane = toolFrame.getContentPane();
-		JPanel toolPanel = new JPanel();
-		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
-		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
-		///menu.add(pane);
-		// We used to use a BoxLayout as the layout manager here,
-		// but it caused problems with resizing behavior due to
-		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
-		toolPane.setLayout( new BorderLayout() );
-		toolPane.add( toolPanel, BorderLayout.LINE_START );
-		toolPane.add( sceneViewer, BorderLayout.CENTER );
-		///toolPane.add(toolPanel);
-		menu.add(toolPane);
+	
+	/**
+	 * Get access to scene
+	 */
+	Scene getScene() {
+		return scene;
+	}
+
+	/**
+	 * Access to controler
+	 */
+	SceneControler getSceneControler() {
+		return sceneControler;
+	}
+
+
+	/**
+	 * Create trace menu drop down
+	 * Adapted from toolMenu
+	 * @return - display menu item
+	 */
+	private JMenu traceMenu() {
+		JMenu menu = new JMenu("Trace");
+		JFrame traceFrame = new JFrame();
+
+		Container tracePane = traceFrame.getContentPane();
+		JPanel tracePanel = new JPanel();
+		///tracePanel.setLayout( new BoxLayout( tracePanel, BoxLayout.Y_AXIS ) );
+		///tracePanel.setLayout( new BoxLayout( tracePanel, BoxLayout.Y_AXIS ) );
+		///tracePane.setLayout( new BorderLayout() );
+		tracePane.add( tracePanel, BorderLayout.LINE_START );
+		///tracePane.add( sceneControler, BorderLayout.CENTER );
+		///tracePane.add(tracePanel);
+		menu.add(tracePane);
 		
-		eyeAtSelectionButton = new JButton("EyeAt Selection");
-		eyeAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		eyeAtSelectionButton.addActionListener(this);
-		toolPanel.add( eyeAtSelectionButton );
+		traceAllButton = new JButton("ALL");
+		traceAllButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		traceAllButton.addActionListener(this);
+		tracePanel.add( traceAllButton );
 		
-		lookAtSelectionButton = new JButton("Look At Selection");
-		lookAtSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		lookAtSelectionButton.addActionListener(this);
-		toolPanel.add( lookAtSelectionButton );
-
-		resetCameraButton = new JButton("Reset Camera");
-		resetCameraButton.setAlignmentX( Component.LEFT_ALIGNMENT );
-		resetCameraButton.addActionListener(this);
-		toolPanel.add( resetCameraButton );
-
-		displayAddControlCheckBox = new JCheckBox("Display Add Control");
-		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayAddControlCheckBox.addActionListener(this);
-		toolPanel.add(displayAddControlCheckBox);
-
-		displayEyeAtControlCheckBox = new JCheckBox("Display EyeAt Control");
-		displayEyeAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayEyeAtControlCheckBox.addActionListener(this);
-		toolPanel.add(displayEyeAtControlCheckBox);
-
-		displayLookAtControlCheckBox = new JCheckBox("Display LookAt Control");
-		displayLookAtControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayLookAtControlCheckBox.addActionListener(this);
-		toolPanel.add(displayLookAtControlCheckBox);
-
-		displayPlacementControlCheckBox = new JCheckBox("Display Placement Control");
-		displayPlacementControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayPlacementControlCheckBox.addActionListener(this);
-		toolPanel.add(displayPlacementControlCheckBox);
-
-		displayColorControlCheckBox = new JCheckBox("Display Color Control");
-		displayColorControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayColorControlCheckBox.addActionListener(this);
-		toolPanel.add(displayColorControlCheckBox);
-
-		displayTextControlCheckBox = new JCheckBox("Display Text Control");
-		displayTextControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayTextControlCheckBox.addActionListener(this);
-		toolPanel.add(displayTextControlCheckBox);
-
-		displayWorldAxesCheckBox = new JCheckBox("Display World Axes", sceneViewer.displayWorldAxes );
-		displayWorldAxesCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayWorldAxesCheckBox.addActionListener(this);
-		toolPanel.add( displayWorldAxesCheckBox );
-
-		displayCameraTargetCheckBox = new JCheckBox("Display Camera Target", sceneViewer.displayCameraTarget );
-		displayCameraTargetCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayCameraTargetCheckBox.addActionListener(this);
-		toolPanel.add( displayCameraTargetCheckBox );
-
-		displayBoundingBoxCheckBox = new JCheckBox("Display Bounding Box", sceneViewer.displayBoundingBox );
-		displayBoundingBoxCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		displayBoundingBoxCheckBox.addActionListener(this);
-		toolPanel.add( displayBoundingBoxCheckBox );
-
-		enableCompositingCheckBox = new JCheckBox("Enable Compositing", sceneViewer.enableCompositing );
-		enableCompositingCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
-		enableCompositingCheckBox.addActionListener(this);
-		toolPanel.add( enableCompositingCheckBox );
-
+		traceNoneButton = new JButton("None");
+		traceNoneButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		traceNoneButton.addActionListener(this);
+		tracePanel.add( traceNoneButton );
+		
+		traceSpecifyButton = new JButton("Specify:");
+		traceSpecifyButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		traceSpecifyButton.addActionListener(this);
+		tracePanel.add( traceSpecifyButton );
+		traceSpecifyField = new JTextField(String.format("%15s", ""));
+		tracePanel.add( traceSpecifyField );
+		
+		traceSelectionButton = new JButton("Select:");
+		traceSelectionButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		traceSelectionButton.addActionListener(this);
+		tracePanel.add( traceSelectionButton );
 		frame.pack();
 		frame.setVisible( true );
 
 		return menu;
+	}
+
+	/**
+	 * Reset program running
+	 */
+	public void reset() {
+		ColoredText.reset();
+		ControlOfColor.reset();
+		setScene();
 	}
 	
 	
@@ -421,37 +536,27 @@ public class ExtendedModeler implements ActionListener {
 	public void setCheckBox(String name, boolean checked) {
 		if (SmTrace.tr("checkbox")) {
 			SmTrace.lg(String.format("setCheckBox(%s, %b)", name, checked), "checkbox");
-			sceneViewer.selectPrint(String.format("modeler.setCheckBox(%s): selected;", name), "select");
+			sceneControler.selectPrint(String.format("modeler.setCheckBox(%s): selected;", name), "select");
 		}
 		switch (name) {
 			case "component":
 				displayAddControlCheckBox.setSelected(checked);
-				sceneViewer.displayAddControl = checked;
-				break;
-				
-			case "eyeat":
-				displayEyeAtControlCheckBox.setSelected(checked);
-				sceneViewer.displayEyeAtControl = checked;
-				break;
-				
-			case "lookat":
-				displayLookAtControlCheckBox.setSelected(checked);
-				sceneViewer.displayLookAtControl = checked;
+				sceneControler.displayAddControl = checked;
 				break;
 					
 			case "placement":
 				displayPlacementControlCheckBox.setSelected(checked);
-				sceneViewer.displayPlacementControl = checked;
+				sceneControler.displayPlacementControl = checked;
 				break;
 				
 			case "color":
 				displayColorControlCheckBox.setSelected(checked);
-				sceneViewer.displayColorControl = checked;
+				sceneControler.displayColorControl = checked;
 				break;
 				
 			case "text":
 				displayTextControlCheckBox.setSelected(checked);
-				sceneViewer.displayTextControl = checked;
+				sceneControler.displayTextControl = checked;
 				break;
 			
 			default:
@@ -486,6 +591,7 @@ public class ExtendedModeler implements ActionListener {
 				+ "Options:\n"
 				+ "    help(he)  - print this message and quit\n"
 				+ "    trace [str(value)] - values e.g. \"select\" ]\n"
+				+ "    imask comma-separated list of image file masks] - values e.g. \".png,.jif\"\n"
 				+ "    test [str(test-tag)] - test to perform\n"
 				+ "    testafterSetup(tas) [float(delay)] - delay(seconds) after setup\n"
 				+ "    testrun(tr) [int(nrun)] - number of times to run test\n"
@@ -540,7 +646,16 @@ public class ExtendedModeler implements ActionListener {
 							SmTrace.setLogStdTs(boolean_val);
 							break;
 					
-					
+						case "dextcontrol":
+						case "dec":
+							displayExternalView = booleanArg(true);		// change external display value
+							break;
+							
+						case "imask":
+						case "im":
+							makeImageMasks(strArg(":NONE:"));
+							break;
+							
 						case "help":
 						case "h":
 							if (npass < 2)		// Let logging options be processed
@@ -636,11 +751,11 @@ public class ExtendedModeler implements ActionListener {
 	 * @param def - default value
 	 */
 	private static boolean booleanArg(boolean def) {
-		if (mainArgIndex >= mainArgsLength)
-			return def;		// No more args
-		if (mainArgs[mainArgIndex].startsWith("--"))
-			return def;		// Next is an option name
-		String val_str = mainArgs[mainArgIndex++];
+		String argstr = nextArg();
+		if (argstr == null)
+			return def;
+		
+		String val_str = argstr;
 		boolean val = false;
 		if (val_str.equalsIgnoreCase("true")
 				|| val_str.equalsIgnoreCase("on")
@@ -677,6 +792,26 @@ public class ExtendedModeler implements ActionListener {
 		return val_int;
 	}
 
+	/**
+	 * next arg string
+	 * null if end of list or next starts with "--"
+	 * ignore "="
+	 */
+	private static String nextArg() {
+		if (mainArgIndex >= mainArgsLength)
+			return null;		// No more args
+		
+		if (mainArgs[mainArgIndex].equals("=")) {
+			mainArgIndex++;		// Skip = to support flag = value
+		}
+		if (mainArgIndex >= mainArgsLength)
+			return null;		// No more args
+		
+		if (mainArgs[mainArgIndex].startsWith("--"))
+			return null;		// Next is an option name
+		String val_str = mainArgs[mainArgIndex++];
+		return val_str;
+	}
 	
 	/**
 	 * Get next arg if exists, or default
@@ -691,6 +826,17 @@ public class ExtendedModeler implements ActionListener {
 		return val_str;
 	}
 
+	
+	/**
+	 * Setup image masks
+	 * for component control
+	 */
+	static void makeImageMasks(String masksStr) {
+		java.util.List<String> items = Arrays.asList(masksStr.split("\\s*,\\s*"));
+		String[] stockArr = new String[items.size()];
+		stockArr = items.toArray(stockArr);
+		ControlOfComponent.setImageMasks(stockArr);
+	}
 	
 	/**
 	 * Used to allow testing
@@ -715,8 +861,9 @@ public class ExtendedModeler implements ActionListener {
 			}
 		);
 		int inctime = 1000;				// milliseconds
-		int maxtime = 10000;			// Max wait in milliseconds
-		///maxtime = 1000000;				/// lengthen for debugging
+		int showTime = 10000;			// Start showing time
+		///int maxtime = 10000;			// Max wait in milliseconds
+		int maxtime = 10000000;			/// lengthen for debugging
 		int dur = 0;					// Current duration
 		while (em_base == null) {
 			try {
@@ -726,6 +873,10 @@ public class ExtendedModeler implements ActionListener {
 				e.printStackTrace();
 			}
 			dur += inctime;
+			if (dur > showTime) {
+				System.out.print(String.format("wait time: %d\r", dur));
+				showTime *= 2;			// Reduce printout
+			}
 			if (dur > maxtime) {
 				SmTrace.lg(String.format("Wait time(%d) exceeded, time=%d", maxtime, dur));
 				break;
@@ -733,9 +884,83 @@ public class ExtendedModeler implements ActionListener {
 		}
 		return em_base;
 	}
+
+	
+	/**
+	 * Create stub drawable and return GL2
+	 * to support generating image structures
+	 * Default - use imageSV, setup early
+	 *         else create from scratch - not working
+	 */
+	public static GL2 getGL() {
+		return getGL(null);
+	}
+	
+	
+	public static GL2 getGL(SceneControler sceneControler) {
+		SceneViewer sceneViewer = imageSV;		// Default image viewer
+		if (sceneControler != null) {
+			sceneViewer = sceneControler.sceneViewers.get(0);
+			if (sceneViewer == null) {
+				SmTrace.lg("getGL sceneControler - null sceneViewer");
+				System.exit(1);		
+			}
+		}
+		if (sceneViewer != null) {
+			GLCanvas canvas = sceneViewer.getCanvas();
+			if (canvas == null) {
+				SmTrace.lg("getGL sceneControler - null canvas");
+				System.exit(1);		
+			}
+			GL gl = canvas.getGL();
+			if (gl == null) {
+				SmTrace.lg("getGL sceneControler canvas.getGL - null gl");
+				sceneViewer = sceneViewers[0];
+				canvas = sceneViewer.getCanvas();
+				if (canvas == null) {
+					SmTrace.lg("getGL sceneControler - null canvas");
+					System.exit(1);		
+				}
+				gl = canvas.getGL();
+			}
 			
+			GL2 gl2 = (GL2)gl;
+			if (gl2 == null) {
+				SmTrace.lg("getGL sceneControler sceneViewer - null gl2");
+				System.exit(1);		
+			}
+			return gl2;
+		}
+		SceneViewer sv = imageSV;
+		if (sv != null) {
+			
+		}
+		JFrame frame = new JFrame();
+		GLCanvas canvas; // Our canvas
+		GLCapabilities caps; // Main set of capabilities
 
+		caps = new GLCapabilities(null);
+		caps.setDoubleBuffered(true);
+		caps.setHardwareAccelerated(true);
 
+		canvas = new GLCanvas(caps);
+		frame.setVisible(true);
+		canvas.getContext().makeCurrent(); /// Hack to avoid no GLContext
+
+		//this.getContentPane().add(canvas);
+		GL gl = canvas.getGL();
+		if (gl == null) {
+			SmTrace.lg("getGL - null gl");
+			System.exit(1);		
+		}
+		GL2 gl2 = (GL2)gl;
+		if (gl2 == null) {
+			SmTrace.lg("getGL - null gl2");
+			System.exit(1);		
+		}
+		return gl2;
+	}
+	
 	
 	/**
 	 * Setup Testing
@@ -747,6 +972,62 @@ public class ExtendedModeler implements ActionListener {
 		
 		
 		emt = new ExtendedModelerTest();
+	}
+
+	/**
+	 * Create display menu drop down
+	 * @retun - display menu item
+	 */
+	private JMenu toolMenu() {
+		JMenu menu = new JMenu("Tools");
+		JFrame toolFrame = new JFrame();
+
+		Container toolPane = toolFrame.getContentPane();
+		JPanel toolPanel = new JPanel();
+		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
+		toolPanel.setLayout( new BoxLayout( toolPanel, BoxLayout.Y_AXIS ) );
+		///menu.add(pane);
+		// We used to use a BoxLayout as the layout manager here,
+		// but it caused problems with resizing behavior due to
+		// a JOGL bug https://jogl.dev.java.net/issues/show_bug.cgi?id=135
+		toolPane.setLayout( new BorderLayout() );
+		toolPane.add( toolPanel, BorderLayout.LINE_START );
+		menu.add(toolPane);
+
+		resetCameraButton = new JButton("Reset Camera");
+		resetCameraButton.setAlignmentX( Component.LEFT_ALIGNMENT );
+		resetCameraButton.addActionListener(this);
+		toolPanel.add( resetCameraButton );
+
+		displayExternalViewCheckBox = new JCheckBox("Display External View", displayExternalView);
+		displayExternalViewCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayExternalViewCheckBox.addActionListener(this);
+		toolPanel.add(displayExternalViewCheckBox);
+
+		displayAddControlCheckBox = new JCheckBox("Display Add Control");
+		displayAddControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayAddControlCheckBox.addActionListener(this);
+		toolPanel.add(displayAddControlCheckBox);
+
+		displayPlacementControlCheckBox = new JCheckBox("Display Placement Control");
+		displayPlacementControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayPlacementControlCheckBox.addActionListener(this);
+		toolPanel.add(displayPlacementControlCheckBox);
+
+		displayColorControlCheckBox = new JCheckBox("Display Color Control");
+		displayColorControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayColorControlCheckBox.addActionListener(this);
+		toolPanel.add(displayColorControlCheckBox);
+
+		displayTextControlCheckBox = new JCheckBox("Display Text Control");
+		displayTextControlCheckBox.setAlignmentX( Component.LEFT_ALIGNMENT );
+		displayTextControlCheckBox.addActionListener(this);
+		toolPanel.add(displayTextControlCheckBox);
+
+		frame.pack();
+		frame.setVisible( true );
+
+		return menu;
 	}
 	
 	/**

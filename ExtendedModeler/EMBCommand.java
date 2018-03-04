@@ -1,6 +1,7 @@
 package ExtendedModeler;
 import java.util.ArrayList;
 
+import smTrace.SmMem;
 import smTrace.SmTrace;
 
 /**
@@ -11,8 +12,11 @@ import smTrace.SmTrace;
 public abstract class EMBCommand {
 	static EMBCommandManager commandManager;
 	String action;				// Unique action name
+	boolean canUndo;			// Command can be undone
+	SceneViewer prevViewer;		// Previous viewer
+	SceneViewer newViewer;		// New viewer
 	Point3D prevEyeAt;			// Previous eyeAt point
-	Point3D newEyeAt;				// New eyeAt point
+	Point3D newEyeAt;			// New eyeAt point
 	Point3D prevLookAt;			// Previous viewing point
 	Point3D newLookAt;			// New viewing point
 	BlockSelect prevSelect;		// Previously selected
@@ -23,35 +27,42 @@ public abstract class EMBCommand {
 	public EMBCommand(String action) throws EMBlockError {
 		this.action = action;
 		if (commandManager == null) {
-			throw new EMBlockError("No EMBCommandManager");
-			
+			throw new EMBlockError("No EMBCommandManager");			
 		}
-		prevEyeAt = commandManager.scene.camera.position;	// refs by default
+		canUndo = true;
+		prevViewer = commandManager.sceneControler.currentViewer();
+		newViewer = prevViewer;
+		prevEyeAt = commandManager.sceneControler.currentViewerCamera().position;	// refs by default
 		newLookAt = prevEyeAt;			// refs by default - Don't modify
-		prevLookAt = commandManager.scene.camera.target;	// refs by default
+		prevLookAt = commandManager.sceneControler.currentViewerCamera().target;	// refs by default
 		newLookAt = prevLookAt;			// refs by default - Don't modify
-		prevSelect = new BlockSelect(commandManager.scene.getSelected());
+		prevSelect = new BlockSelect(commandManager.sceneControler.getSelected());
 		newSelect = new BlockSelect(prevSelect);	// Default  - no change
 		prevBlocks = new EMBlockGroup();
 		newBlocks = new EMBlockGroup();
 	}
 
-	public EMBCommand(EMBCommand cmd) throws Exception  {
+	public EMBCommand(EMBCommand cmd) throws Exception, EMBlockError   {
 		this(cmd.action);
 		prevSelect = cmd.prevSelect;
 		newSelect = cmd.newSelect;
 		prevBlocks = cmd.prevBlocks;
 		newBlocks = cmd.newBlocks;
-		setManager(commandManager);
 	}
-	
+
+	/**
+	 * Set canUndo
+	 */
+	public void setCanUndo(boolean can) {
+		canUndo = can;
+	}
 	
 	/**
 	 * Setup command manager
 	 * @param mgr
 	 */
-	public static void setManager(SceneViewer scene) {
-		setManager(new EMBCommandManager(scene));
+	public static void setManager(SceneControler sceneControler) {
+		setManager(new EMBCommandManager(sceneControler));
 	}
 
 	/**
@@ -71,24 +82,26 @@ public abstract class EMBCommand {
 	 * without storing it for redo
 	 */
 	public boolean execute() {
+		SmMem.ck("execute", SmMem.Type.Begin);
 		commandManager.currentCmd = this;
-		if (newLookAt != prevLookAt) {
-			if (newLookAt != null)
-				commandManager.scene.camera.lookAt(newLookAt);
+		if (newViewer != prevViewer || newLookAt != prevLookAt) {
+			if (newViewer != null && newLookAt != null)
+				newViewer.lookAt(newLookAt);
 		}
-		if (newEyeAt != prevEyeAt) {
-			if (newEyeAt != null)
-				commandManager.scene.camera.eyeAt(newEyeAt);
+		if (newViewer != prevViewer || newEyeAt != prevEyeAt) {
+			if (newViewer != null && newEyeAt != null)
+				newViewer.eyeAt(newEyeAt);
 		}
 		int[] prev_ids = prevBlocks.getIds();
-		commandManager.scene.removeBlocks(prev_ids);
+		commandManager.sceneControler.removeBlocks(prev_ids);
 		if (newBlocks == null)
 			SmTrace.lg("execute - null newBlocks");
-		commandManager.scene.insertBlocks(newBlocks);
+		commandManager.sceneControler.insertBlocks(newBlocks);
 		commandManager.displayUpdate(newSelect, prevSelect);
 		commandManager.displayPrint(String.format("execute(%s) AFTER", this.action), "execute");
 		commandManager.selectPrint(String.format("execute(%s) AFTER", this.action), "execute");
 		commandManager.cmdStackPrint(String.format("execute(%s) AFTER", this.action), "execute");
+		SmMem.ck("execute", SmMem.Type.End);
 		return true;
 	}
 
@@ -110,6 +123,10 @@ public abstract class EMBCommand {
 			e.printStackTrace();
 			return false;
 		}
+		SceneViewer temp_viewer = cmd.newViewer;
+		cmd.newViewer = cmd.prevViewer;
+		cmd.prevViewer = temp_viewer;
+		
 		Point3D temp_eyeAt = cmd.newEyeAt;
 		cmd.newEyeAt = cmd.prevEyeAt;
 		cmd.prevEyeAt = temp_eyeAt;
@@ -131,6 +148,21 @@ public abstract class EMBCommand {
 			commandManager.undoStack.push(this);
 		return res;
 	}
+	
+	
+	/**
+	 * Create checkpoint command, which when "undone", will
+	 * recreate current command state
+	 * @throws EMBlockError 
+	 */
+	public static EMBCommand checkPointCmd() throws EMBlockError {
+		EMBCommand cmd;
+		cmd = new BlkCmdAdd("emc checkpoint");	// Create "disposable" copy of command
+		cmd.prevBlocks  = commandManager.sceneControler.getDisplay().getBlocks();
+		return cmd;
+	}
+	
+	
 	/**
 	 * Redo last undo - reverse the effects of the latest  undo
 	 * The commandManager has already popped command from undo stack
@@ -190,6 +222,11 @@ public abstract class EMBCommand {
 		newSelect = new BlockSelect(select);
 		return newSelect;
 	}
+
+	public void setView(SceneViewer viewer) {
+		this.newViewer = viewer;
+	}
+	
 	
 	public boolean removeSelect(int id) {
 		if (!newSelect.hasIndex(id)) {
@@ -246,11 +283,14 @@ public abstract class EMBCommand {
 		commandManager.cmdStackPrint(String.format("doCmd(%s)", this.action), "execute");
 		boolean res = execute();
 		if (res) {
-			if (canUndo() || canRepeat()) {
-				SmTrace.lg("add to commandStack", "execute");
-				commandManager.commandStack.add(this);
-			} else {
-				SmTrace.lg(String.format("doCmd(%s) can't undo/repeat", this.action), "execute");
+							/* Disable cmd pushing if mouse pressed */
+			if (!commandManager.sceneControler.isMousePressed()) {
+				if (canUndo() || canRepeat()) {
+					SmTrace.lg("add to commandStack", "execute");
+					commandManager.commandStack.add(this);
+				} else {
+					SmTrace.lg(String.format("doCmd(%s) can't undo/repeat", this.action), "execute");
+				}
 			}
 		}
 		commandManager.cmdStackPrint(String.format("doCmd(%s) AFTER", this.action), "execute");
@@ -316,7 +356,7 @@ public abstract class EMBCommand {
 
 
 	public boolean canUndo() {
-		return true;
+		return canUndo;
 	}
 
 
@@ -338,6 +378,10 @@ public abstract class EMBCommand {
 
 	public void addPrevBlock(EMBlock cb) {
 		prevBlocks.putBlock(cb.copy());
+	}
+
+	public void checkPoint() {
+		commandManager.checkPoint();
 	}
 		
 

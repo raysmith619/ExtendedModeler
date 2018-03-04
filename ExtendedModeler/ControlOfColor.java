@@ -4,6 +4,7 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.GridLayout;
 import java.awt.Point;
+import java.awt.color.ColorSpace;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
@@ -12,6 +13,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -27,12 +29,13 @@ import com.jogamp.opengl.GLAutoDrawable;
 import smTrace.SmTrace;
 
 
-public class ControlOfColor extends ControlOf implements ChangeListener {
+public class ControlOfColor extends ControlOfScene implements ChangeListener {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 	boolean color_move_duplicate = true; // Move/Duplicate choice
+	JCheckBox autoPickCkBox; 	// Automatically Pick colors for new blocks
 	JTextField colorRedField;
 	JTextField colorGreenField;
 	JTextField colorBlueField;
@@ -52,9 +55,17 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 	ColorTriangle  triangle;	// triangle object
 	JColorChooser colorChooser;	// Dynamic color chooser if not null
 	
-	ControlOfColor(SceneViewer scene, String name) {
-		super(scene, name);
+	ControlOfColor(SceneControler sceneControler, String name) {
+		super(sceneControler, name);
 	}
+
+	/**
+	 * reset to default setting
+	 */
+	public static void reset() {
+		nextColor = 0;		// Reset generated colors
+	}
+	
 	
 	/**
 	 * Setup Control of object adding
@@ -68,7 +79,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		
 		SmTrace.lg("ControlOfColor.setup()-2c", "setup");
 		setTitle("Color - Adjust/Report ");
-		scene.selectPrint("ControlOfColor.setup".concat("select"), "select");
+		sceneControler.selectPrint("ControlOfColor.setup".concat("select"), "select");
 		JPanel colorPanel = new JPanel(new GridLayout(0, 1));
 		add(colorPanel);
 		pack();
@@ -79,16 +90,19 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		colorPanel.add(mdChoicePanel);
 		pack();
 
+		autoPickCkBox = new JCheckBox("Auto Pick", true);
+		mdChoicePanel.add(autoPickCkBox);
+
 		JRadioButton md_move_color_button = new JRadioButton("Move");
 		md_move_color_button.setMnemonic(KeyEvent.VK_M);
 		md_move_color_button.setActionCommand("emc_md_color_move");
 		md_move_color_button.setSelected(true);
-		md_move_color_button.addActionListener(scene);
+		md_move_color_button.addActionListener(sceneControler);
 
 		JRadioButton md_dup_color_button = new JRadioButton("Duplicate");
 		md_dup_color_button.setMnemonic(KeyEvent.VK_D);
 		md_dup_color_button.setActionCommand("emc_md_color_duplicate");
-		md_dup_color_button.addActionListener(scene);
+		md_dup_color_button.addActionListener(sceneControler);
 
 		JPanel move_dup_color_panel = new JPanel();
 		ButtonGroup move_dup_color_group = new ButtonGroup();
@@ -115,31 +129,32 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		panel.add(colorTo_panel);
 		pack();
 		
-		EMBlock cb = scene.getSelectedBlock();
+		EMBlock cb = sceneControler.getSelectedBlock();
 		if (cb == null) {
-			AlignedBox3D box = new AlignedBox3D(new Point3D(0,0,0), new Point3D(1,1,1));
+			EMBox3D box = new EMBox3D(new Point3D(0,0,0), 1);
 			Color color = new Color(1f, 0f, 1f);
 			SmTrace.lg(String.format("addDigital: red=%d", color.getRed()));
-			cb = EMBlock.newBlock("box", box, color);
+			EMBlockBase cb_base = new ColoredBox(box, color);
+			cb = new EMBlock(cb_base);
 		}
 		colorRedField = new JTextField(String.format("%.2f", cb.getRed()));
 		colorRedField.setActionCommand("emc_ENTER");
-		colorRedField.addActionListener(scene);
+		colorRedField.addActionListener(sceneControler);
 		colorGreenField = new JTextField(String.format("%.2f", cb.getGreen()));
 		colorGreenField.setActionCommand("emc_ENTER");
-		colorGreenField.addActionListener(scene);
+		colorGreenField.addActionListener(sceneControler);
 		colorBlueField = new JTextField(String.format("%.2f", cb.getBlue()));
 		colorBlueField.setActionCommand("emc_ENTER");
-		colorBlueField.addActionListener(scene);
+		colorBlueField.addActionListener(sceneControler);
 		colorAlphaField = new JTextField(String.format("%.2f", cb.getAlpha()));
 		colorAlphaField.setActionCommand("emc_ENTER");
-		colorAlphaField.addActionListener(scene);
+		colorAlphaField.addActionListener(sceneControler);
 		JButton colorToButton = new JButton("ColorTo");
 		colorToButton.setActionCommand("emc_colorToButton");
-		colorToButton.addActionListener(scene);
+		colorToButton.addActionListener(sceneControler);
 		JButton colorToPreviousButton = new JButton("ColorToPrevious");
 		colorToPreviousButton.setActionCommand("emc_colorToPreviousButton");
-		colorToPreviousButton.addActionListener(scene);
+		colorToPreviousButton.addActionListener(sceneControler);
 		/// panel.add(combo);
 		colorToButton.setHorizontalAlignment(SwingConstants.CENTER);
 		colorTo_panel.add(new JLabel("red:"));
@@ -162,22 +177,22 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		adjcolor_panel.add(Box.createVerticalStrut(2)); // a spacer
 		adjcolorRedField = new JTextField(String.format("%.2f", adjamt));
 		adjcolorRedField.setActionCommand("emc_adjcolorENTER");
-		adjcolorRedField.addActionListener(scene);
+		adjcolorRedField.addActionListener(sceneControler);
 		adjcolorGreenField = new JTextField(String.format("%.2f", adjamt));
 		adjcolorGreenField.setActionCommand("emc_adjcolorENTER");
-		adjcolorGreenField.addActionListener(scene);
+		adjcolorGreenField.addActionListener(sceneControler);
 		adjcolorBlueField = new JTextField(String.format("%.2f", adjamt));
 		adjcolorBlueField.setActionCommand("emc_adjcolorENTER");
-		adjcolorBlueField.addActionListener(scene);
+		adjcolorBlueField.addActionListener(sceneControler);
 		adjcolorAlphaField = new JTextField(String.format("%.2f", adjamt));
 		adjcolorAlphaField.setActionCommand("emc_adjcolorENTER");
-		adjcolorAlphaField.addActionListener(scene);
+		adjcolorAlphaField.addActionListener(sceneControler);
 		JButton adjcolorUpButton = new JButton("Up By");
 		adjcolorUpButton.setActionCommand("emc_adjcolorUpButton");
-		adjcolorUpButton.addActionListener(scene);
+		adjcolorUpButton.addActionListener(sceneControler);
 		JButton adjcolorDownButton = new JButton("Down By");
 		adjcolorDownButton.setActionCommand("emc_adjcolorDownButton");
-		adjcolorDownButton.addActionListener(scene);
+		adjcolorDownButton.addActionListener(sceneControler);
 		adjcolor_panel.add(Box.createVerticalStrut(2)); // a spacer
 		adjcolor_panel.add(new JLabel("red-adj:"));
 		adjcolor_panel.add(adjcolorRedField);
@@ -208,7 +223,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		JButton colorMapButton = new JButton("ColorMap");
 		colorMapButton.setActionCommand("emc_colorMapButton");
 		colorMapPanel.add(colorMapButton);
-		colorMapButton.addActionListener(scene);
+		colorMapButton.addActionListener(sceneControler);
 		pack();
 		colorMapPanel.setVisible(true);
 		
@@ -284,7 +299,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 	 * @throws EMBlockError 
 	 */
 	private void adjustColor(EMBCommand bcmd, int direction) throws EMBlockError {
-		if (scene.getSelected() == null)
+		if (sceneControler.getSelected() == null)
 			return;
 		
 		float adjcolor_redval = 0;
@@ -313,7 +328,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 			adjcolor_blueval *= -1;
 			adjcolor_alphaval *= -1;
 		}
-		EMBlock cb = scene.getSelectedBlock();
+		EMBlock cb = sceneControler.getSelectedBlock();
 		if (cb == null)
 			return;
 		
@@ -336,7 +351,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 	 * Adjust control based on selection
 	 */
 	public void adjustControls() {
-		EMBlock cb = scene.getSelectedBlock();
+		EMBlock cb = sceneControler.getSelectedBlock();
 		if (cb == null)
 			return;
 
@@ -357,7 +372,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		
 		
 	private void colorToColor(EMBCommand bcmd) throws EMBlockError {
-		if (scene.getSelected() == null)
+		if (sceneControler.getSelected() == null)
 			return;
 		
 		float redval = 0;
@@ -376,27 +391,27 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 			blueval = Float.valueOf(text);
 		}
 
-		EMBlock cb = scene.getSelectedBlock();
+		EMBlock cb = sceneControler.getSelectedBlock();
 		if (cb == null)
 			return;				// None selected
 		
 		Color new_color = new Color(redval, greenval, blueval);
 		if (!color_move_duplicate) {
 			cb = cb.duplicate();
-			scene.addBlock(bcmd, cb);
+			sceneControler.addBlock(bcmd, cb);
 		}
 		cb.setColor(new_color);
 		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f", redval, greenval, blueval));
-		scene.repaint();
+		sceneControler.repaint();
 	}
 
 	
 	private void colorToPreviousColor(EMBCommand bcmd) throws EMBlockError {
-		EMBlock cb_sel = scene.getSelectedBlock();
+		EMBlock cb_sel = sceneControler.getSelectedBlock();
 		if (cb_sel == null)
 			return;
 
-		EMBlock cb_prev = scene.getPrevSelectedBlock();
+		EMBlock cb_prev = sceneControler.getPrevSelectedBlock();
 		
 		if (cb_prev == null)
 			return;
@@ -404,12 +419,12 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 		Color new_color = cb_prev.getColor();
 		if (!color_move_duplicate) {
 			cb_sel = cb_sel.duplicate();
-			scene.addBlock(bcmd, cb_sel);
+			sceneControler.addBlock(bcmd, cb_sel);
 		}
 		cb_sel.setColor(new_color);
 		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f",
 								cb_sel.getRed(), cb_sel.getGreen(), cb_sel.getBlue()));
-		scene.repaint();
+		sceneControler.repaint();
 	}
 
 
@@ -472,7 +487,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 	 * @throws EMBlockError 
 	 */
 	public void colorMapSelect(EMBCommand bcmd) throws EMBlockError {
-		EMBlock[] cbs = scene.getSelectedBlocks();
+		EMBlock[] cbs = sceneControler.getSelectedBlocks();
 		
         colorChooser = new JColorChooser();
         if (cbs.length > 0)
@@ -597,8 +612,27 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
 	
 	public Color getColor() throws EMBlockError {
 		Color val = null;
+		if (getAutoPick())
+			val = ControlOfColor.nextColor();
+		else
+			val = new Color(getRed(), getGreen(), getBlue(), getAlpha());
+		if (val == null)
+			val = ControlOfColor.nextColor();
+		return val; 
+	}
+	
+	public Color getColor(String string) throws EMBlockError {
+		Color val = null;
 		
 		val = new Color(getRed(), getGreen(), getBlue(), getAlpha());
+		return val;
+	}
+
+	public boolean getAutoPick() throws EMBlockError {
+		boolean val = false;
+		if (autoPickCkBox != null) {
+			val = autoPickCkBox.isSelected();
+		}
 		return val;
 	}
 
@@ -614,7 +648,7 @@ public class ControlOfColor extends ControlOf implements ChangeListener {
         if (c == null)
         	return;
        
-       EMBlock[] cbs = scene.getSelectedBlocks();
+       EMBlock[] cbs = sceneControler.getSelectedBlocks();
        SmTrace.lg(String.format("Chose color: %s", c));
         if (cbs.length == 0) {
             SmTrace.lg(String.format("Nothing selected to color"));

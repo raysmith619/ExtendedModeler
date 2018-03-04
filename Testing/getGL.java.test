@@ -1,0 +1,21 @@
+	public static GL2 getGL() {
+		if (glGl == null) {
+            final GLProfile profile = GLProfile.get( GLProfile.GL2 ); 
+            GLCapabilities capabilities = new GLCapabilities(profile);
+
+            final GLJPanel glpanel = new GLJPanel( capabilities ); 
+            glpanel.setSize( 400, 400 );   
+            JFrame frame = new JFrame();
+            frame.getContentPane().add( glpanel ); 
+            frame.setSize( frame.getContentPane().getPreferredSize()); 
+            frame.setVisible( true ); 
+			glCanvas = new GLCanvas();
+			glCanvas.setSize(100, 100);
+			glGl = (GL2) glCanvas.getGL();
+			if (glGl == null) {
+				SmTrace.lg("getGL: gives null GL2");
+				System.exit(1);
+			}
+		}
+		return glGl;
+	}

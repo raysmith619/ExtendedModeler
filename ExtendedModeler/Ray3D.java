@@ -13,5 +13,11 @@ public class Ray3D {
 	public Point3D point( float t ) {
 		return Point3D.sum(origin, Vector3D.mult(direction,t));
 	}
+	
+	public String toString() {
+		String str = String.format("origin=%s vector=%s",
+				origin, direction);
+		return str;
+	}
 }
 

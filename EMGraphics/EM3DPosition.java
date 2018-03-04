@@ -13,7 +13,8 @@ import javax.swing.SwingUtilities;
 
 import com.jogamp.opengl.GLCapabilities;
 
-import ExtendedModeler.ControlOf;
+import ExtendedModeler.ControlOfView;
+import ExtendedModeler.Point3D;
 import smTrace.SmTrace;
 
 public class EM3DPosition extends JDialog  implements EM3DLocationListner, EM2DLocationListner {
@@ -26,7 +27,7 @@ public class EM3DPosition extends JDialog  implements EM3DLocationListner, EM2DL
 	EM2DDrag emXY;		// x-y pad
 	EM2DDrag emXZ;		// x-z pad
 	EM3DPosition em3DPosition;
-	ControlOf controlOf;			// control if/notification requested
+	ControlOfView controlOfView;			// control if/notification requested
 	
 	static class dflt {
 		static String xLabel = "x-value";
@@ -170,8 +171,8 @@ public class EM3DPosition extends JDialog  implements EM3DLocationListner, EM2DL
 			xCurrent, yCurrent, zCurrent);	
 		if (em3DPosition != null)
 			em3DPosition.location3DEvent(evt);
-		if (controlOf != null)
-			controlOf.location3DEvent(evt);
+		if (controlOfView != null)
+			controlOfView.location3DEvent(evt);
 	}
 
 	public void location2DEvent(EM2DLocationEvent evt) {
@@ -195,8 +196,15 @@ public class EM3DPosition extends JDialog  implements EM3DLocationListner, EM2DL
 		em3DLocationNotify();
 	}
 
-	public void addEM3DEventListener(ControlOf controlOf) {
-		this.controlOf = controlOf;		
+	public void addEM3DEventListener(ControlOfView controlOfView) {
+		this.controlOfView = controlOfView;		
 	}
 
+	public void updatePoint(Point3D pt) {
+		xCurrent = pt.x();
+		yCurrent = pt.y();
+		zCurrent = pt.z();
+		emXY.updateLocation(xCurrent, yCurrent);
+		emXZ.updateLocation(xCurrent, zCurrent);
+	}
 }

@@ -1,8 +1,14 @@
 package ExtendedModeler;
 
+import java.awt.Color;
+
 import com.jogamp.opengl.GL2;
 
 public class Camera3D {
+	private Point3D initialPosition;		// Initial setup
+	private Point3D initialTarget;
+	private Vector3D initialUp;
+	
 	static final public float fieldOfViewInDegrees = 30;
 
 	static final public float orbitingSpeedInDegreesPerRadius = 300;
@@ -32,13 +38,13 @@ public class Camera3D {
 	private float sceneRadius = 10;
 
 	// point of view, or center of camera; the ego-center; the eyeAt-point
-	public Point3D position = new Point3D();
+	public Point3D position;
 
 	// point of interest; what the camera is looking at; the exo-center
-	public Point3D target = new Point3D();
+	public Point3D target;
 
 	// This is the up vector for the (local) camera space
-	public Vector3D up = new Vector3D();
+	public Vector3D up;
 
 	// This is the up vector for the (global) world space;
 	// it is perpendicular to the horizontal (x,z)-plane
@@ -48,14 +54,66 @@ public class Camera3D {
 		reset();
 	}
 
+	public Camera3D(Point3D position, Point3D target, Vector3D up) {
+		initialPosition = position;
+		initialTarget = target;
+		initialUp = up;
+		reset();
+	}
 	public void reset() {
-		float tangent = (float)Math.tan( fieldOfViewInDegrees/2 / 180 * (float)Math.PI );
-		float distanceFromTarget = sceneRadius / tangent;
-		position = new Point3D(0, 0, distanceFromTarget );
-		target = new Point3D(0, 0, 0);
-		up = ground;
+		sceneRadius = 10;			// Default
+		if (initialPosition != null && initialTarget != null) {
+			sceneRadius = Point3D.diff(initialPosition, initialTarget).length();
+		}
+		//float tangent = (float)Math.tan( fieldOfViewInDegrees/2 / 180 * (float)Math.PI );
+		//float distanceFromTarget = sceneRadius / tangent;
+		if (initialPosition == null) {
+			///initialPosition = new Point3D(0, 0, distanceFromTarget );
+			initialPosition = new Point3D(0, 0, sceneRadius);
+		}
+		if (initialTarget == null) {
+			initialTarget = new Point3D(0, 0, 0);			
+		}
+		if (initialUp == null) {
+			initialUp = ground;
+		}
+		position = initialPosition;
+		target = initialTarget;
+		up = initialUp;
 	}
 
+	/**
+	 * set up
+	 */
+	public void setUp(Vector3D up) {
+		this.up = up;
+	}
+	
+	/**
+	 * Setup view
+	 * If parameter(s) are null use current value, default if null
+	 */
+	public void setView(Point3D position, Point3D target, Vector3D up) {
+		if (position == null)
+			position = this.position;
+		else
+			this.position = position;
+		if (target == null)
+			target = this.target;
+		else
+			this.target = target;
+		if (up == null)
+			up = this.up;
+		else
+			this.up = up;
+	}
+
+	/**
+	 * 
+	 * @param widthInPixels
+	 * @param heightInPixels
+	 * Sets radius to .5 * shorter dimension
+	 */
 	public void setViewportDimensions( int widthInPixels, int heightInPixels ) {
 		viewportWidthInPixels = widthInPixels;
 		viewportHeightInPixels = heightInPixels;
@@ -68,6 +126,49 @@ public class Camera3D {
 		sceneRadius = radius;
 	}
 
+	/**
+	 * Get Viewing box, including camera, target area under view
+	 * @return
+	 */
+	public ColoredBox getViewBox() {
+		Vector3D p2target = Point3D.diff(target, position);
+		Point3D oside = Point3D.sum(target, p2target);
+		Vector3D p2up = Vector3D.mult(up, p2target.length());
+		Vector3D p2side = Vector3D.cross(p2target, p2up.normalized());
+		Point3D position_ulc = Point3D.diff(position, p2up);
+		position_ulc = Point3D.diff(position_ulc, p2side);
+		Point3D oside_lrc = Point3D.sum(oside, p2up);
+		oside_lrc = Point3D.sum(oside_lrc, p2side);
+		/**
+		 * Need to bound to ensure p0, p1 values
+		 */
+		
+		ColoredBox vbox = new ColoredBox(
+				target,
+				null,
+				Color.BLUE,
+				up);
+
+		vbox.bound(position_ulc);
+		vbox.bound(oside_lrc);
+		
+		return vbox;
+	}
+
+	
+	/**
+	 * Check if point is in view port
+	 * @param gl
+	 */
+	public boolean isInViewPort(Point3D pt) {
+		ColoredBox vbox = getViewBox();
+		OrientedBox3D obox = vbox.getOBox();
+		if (obox.contains(pt))
+			return true;
+		return false;
+	}
+	
+	
 	public void transform( GL2 gl ) {
 		float tangent = (float)Math.tan( fieldOfViewInDegrees/2 / 180 * (float)Math.PI );
 		float viewportRadius = nearPlane * tangent;

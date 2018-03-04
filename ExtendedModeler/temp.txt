@@ -1,0 +1,29 @@
+			Point3D eye_pt = localView.camera.position;
+			Point3D eye_target = localView.camera.target;
+			Vector3D eye_to_target = Point3D.diff(eye_target, eye_pt);
+			Vector3D eye_dir = eye_to_target.normalized();
+			Vector3D eye_up = localView.camera.up;
+			float eye_radius = .5f;
+			Point3D eye_min = Point3D.diff(eye_pt, Vector3D.mult(eye_dir, eye_radius));
+			if (eye_min.p[0] == 0)				/// HACK
+				eye_min.p[0] = -eye_radius;
+			if (eye_min.p[1] == 0)
+				eye_min.p[1] = -eye_radius;
+			if (eye_min.p[2] == 0)
+				eye_min.p[2] = -eye_radius;
+			Point3D eye_max = Point3D.diff(eye_pt, Vector3D.mult(eye_dir, -eye_radius));
+			if (eye_max.p[0] == 0)				/// HACK
+				eye_max.p[0] = eye_radius;
+			if (eye_max.p[1] == 0)
+				eye_max.p[1] = eye_radius;
+			if (eye_max.p[2] == 0)
+				eye_max.p[2] = eye_radius;
+			AlignedBox3D eye_box = new AlignedBox3D(eye_min, eye_max);
+			gl.glColor3f(1, 1, 1);
+			ColoredBall.drawBallGl(gl, eye_box, false, false, false);
+										/* line from eye to target */
+			gl.glBegin(GL.GL_LINES);
+			gl.glColor3d(.5, .5, .5);
+			gl.glVertex3f(eye_pt.x(), eye_pt.y(), eye_pt.z());
+			gl.glVertex3f(eye_target.x(), eye_target.y(), eye_target.z());
+			gl.glEnd();

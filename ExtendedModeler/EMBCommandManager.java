@@ -1,5 +1,6 @@
 package ExtendedModeler;
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.Stack;
 
 import smTrace.SmTrace;
@@ -10,17 +11,18 @@ import smTrace.SmTrace;
  *
  */
 public class EMBCommandManager {
-	SceneViewer scene;
+	SceneControler sceneControler;
 	EMBCommand currentCmd;				// Currently executing command
 	Stack<EMBCommand> commandStack;		// Commands done
 	Stack<EMBCommand> undoStack;			// Commands undone
 	
-	public EMBCommandManager(SceneViewer scene) {
-		this.scene = scene;
+	public EMBCommandManager(SceneControler sceneControler) {
+		this.sceneControler = sceneControler;
 		commandStack = new Stack<EMBCommand>();
 		undoStack = new Stack<EMBCommand>();
-		if (EMBCommand.commandManager == null)
-			EMBCommand.setManager(this);	// Ensure a manager is in place
+		EMBCommand.setManager(this);	// Ensure a manager is in place
+		///if (EMBCommand.commandManager == null)
+		///	EMBCommand.setManager(this);	// Ensure a manager is in place
 	}
 
 	/**
@@ -49,13 +51,6 @@ public class EMBCommandManager {
 	 */
 	public EMBCommand lastUndoCommand() {
 		return undoStack.peek();
-	}
-	
-	/**
-	 * Push most done command
-	 */
-	public void Command(EMBCommand cmd) {
-		commandStack.push(cmd);
 	}
 	
 
@@ -95,7 +90,7 @@ public class EMBCommandManager {
 	 * Get newest block index
 	 */
 	public int cbIndex() {
-		return scene.cbIndex();
+		return sceneControler.cbIndex();
 	}
 	
 
@@ -103,9 +98,25 @@ public class EMBCommandManager {
 	 * Get block, given index
 	 */
 	public EMBlock cb(int id) {
-		return scene.getCb(id);
+		return sceneControler.getCb(id);
 	}
 
+	
+	/**
+	 * Check point command state
+	 * by pushing command, which upon undo, will create current state
+	 */
+	public void checkPoint() {
+		SmTrace.lg(String.format("checkPoint"), "execute");
+		EMBCommand cmd;
+		try {
+			cmd = EMBCommand.checkPointCmd();
+			undoStack.push(cmd);
+		} catch (EMBlockError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	
 	/**
 	 * Undo if possible
@@ -272,7 +283,7 @@ public class EMBCommandManager {
 	
 	/**
 	public EMBlock cb(int bindex) {
-		return scene.cb(bindex);
+		return sceneControler.cb(bindex);
 	}
 
 	
@@ -281,7 +292,7 @@ public class EMBCommandManager {
 	 * Print displayed blocks
 	 */
 	public void displayPrint(String tag, String trace) {
-		scene.displayPrint(tag, trace);
+		sceneControler.displayPrint(tag, trace);
 	}
 
 	
@@ -290,7 +301,7 @@ public class EMBCommandManager {
 	 * For now we just unselect all previous and select all new
 	 */
 	public boolean displayUpdate(BlockSelect new_select, BlockSelect prev_select) {
-		return (scene.displayUpdate(new_select, prev_select));
+		return (sceneControler.displayUpdate(new_select, prev_select));
 	}
 	
 
@@ -298,20 +309,26 @@ public class EMBCommandManager {
 	 * Print command stack
 	 */
 	public void cmdStackPrint(String tag, String trace) {
+		final int maxPrint = 5;
 		String str = "";
 		if (commandStack.isEmpty() ) {
 			SmTrace.lg(String.format("%s commandStack: Empty", tag), trace);
 			return;
 		}
-		Iterator<EMBCommand> cmd_itr = commandStack.iterator();
-		
-		while (cmd_itr.hasNext()) {
-			EMBCommand cmd = cmd_itr.next();
+		ListIterator<EMBCommand> cmd_itr = commandStack.listIterator();
+		int nprint = maxPrint;
+		if (SmTrace.trace("verbose"))
+			nprint = 9999;
+		while (cmd_itr.hasNext())
+			cmd_itr.next();
+		for (int i = 0; i < nprint && cmd_itr.hasPrevious(); i++) {
+			EMBCommand cmd = cmd_itr.previous();
 			if (!str.equals(""))
 				str += "; ";
 			str += cmd;
 		}
-		SmTrace.lg(String.format("%s commandStack: %s", tag, str), trace);
+		SmTrace.lg(String.format("%s commandStack: (n:%d) %s",
+				tag, commandStack.size(), str), trace);
 	}
 	
 	
@@ -319,7 +336,7 @@ public class EMBCommandManager {
 	 * Print select stack state
 	 */
 	public void selectPrint(String tag, String trace) {
-		scene.selectPrint(tag, trace);
+		sceneControler.selectPrint(tag, trace);
 	}
 
 }

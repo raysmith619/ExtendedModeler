@@ -1,25 +1,19 @@
 package ExtendedModeler;
 import java.awt.Color;
-import java.awt.Image;
-import java.awt.image.BufferedImage;
 import java.io.File;
-
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JPanel;
+import java.io.IOException;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.GLCapabilities;
-import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.awt.GLJPanel;
-import com.jogamp.opengl.util.awt.AWTGLReadBufferUtil;
+import com.jogamp.opengl.GLException;
+import com.jogamp.opengl.util.texture.Texture;
+import com.jogamp.opengl.util.texture.TextureIO;
 
 import smTrace.SmTrace;
 
 
-public class ColoredBox extends EMBlockBase {
+public class ColoredImage extends EMBlockBase {
 	/**
 	 *  Oriented box
 	 * Use this for object size and orientation
@@ -28,18 +22,27 @@ public class ColoredBox extends EMBlockBase {
 	 * instead of super.box
 	 */
 	AlignedBox3D abox = new AlignedBox3D();
+	Vector3D size;				// local x,y,z extent
+	public static String defaultImageFileDirName = "C:\\Users\\raysm\\workspace\\ExtendedModeler\\images";
+	public static String defaultImageFileName = "C:\\Users\\raysm\\workspace\\ExtendedModeler\\images\\LionsLions.png";
+	String imageFileName;
+	private File imageFile;
+	Texture imageTexture;
+	int imageTextureI;
+	GLAutoDrawable drawable;
 
 	/**
 	 * Generic object
 	 */
-	public ColoredBox() {
+	public ColoredImage() {
+		this(null, defaultImageFileName);
 	}
 	
-	public ColoredBox(
+	public ColoredImage(
 		EMBox3D box,
-		Color color
+		String imageFile
 	) {
-		super(box, color);
+		super(box, null);
 		setBox(box);
 		isOk = true;
 	}
@@ -48,34 +51,69 @@ public class ColoredBox extends EMBlockBase {
 	/**
 	 * Base object
 	 */
-	public ColoredBox(Point3D center, Vector3D size, Color color, Vector3D up) {
-		super(center, size2radius(size), color, up);
+	public ColoredImage(Point3D center, Vector3D size, String imageFileName, Vector3D up) {
+		super(center, size2radius(size), Color.WHITE, up);
+		this.drawable = drawable;
 		if (size == null)
 			size = new Vector3D(0,0,0);
-
+		this.size = size;
 		this.abox = new AlignedBox3D(center, size);
+		if (imageFileName == null || imageFileName.equals("")) {
+			imageFileName = ColoredImage.defaultImageFileName;
+		}
+		if (!new File(imageFileName).isAbsolute()) {
+			imageFileName = defaultImageFileDirName + File.separator + imageFileName;
+		}
+		
+		imageFile = new File(imageFileName);
+		try {
+			imageTexture = TextureIO.newTexture(imageFile, true);
+			if (imageTexture == null) {
+				SmTrace.lg("File new imageTexture is null");
+				return;
+			}
+		} catch (GLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			SmTrace.lg(String.format("Texture IO Error File name=\"%s\" %s",
+					imageFileName, e.getMessage()));
+			return;
+		}
 	}
+
+	
 	/**
 	 * Create new object, from controls
 	 * @throws EMBlockError 
 	 **/
-	public static ColoredBox newBlock(ControlsOfScene controlsOfScene) throws EMBlockError {
-		ControlOfColor ctc = (ControlOfColor)controlsOfScene.getControl("color");
-		Color color = ctc.getColor();
+	public static ColoredImage newBlock(ControlsOfScene	controlsOfScene,
+			String name) throws EMBlockError {
 		ControlOfScene ctl = controlsOfScene.getControl("placement");
 		ControlOfPlacement cop = (ControlOfPlacement)ctl;
 		Point3D center = cop.getPosition();
 		Vector3D size = cop.getSizeXYZ();
 		Vector3D up =  cop.getUp();
-		return new ColoredBox(center, size, color, up);
-	}
-	
-	public ColoredBox(ColoredBox cbox) {
-		this(cbox.getCenter(), cbox.getSize(), cbox.color, cbox.getUp());
+		if (name == null) {
+			ControlOfComponent coco = (ControlOfComponent)controlsOfScene.getControl("component");
+			name = coco.getFileName();
+		}
+		return new ColoredImage(center, size, name, up);
 	}
 
 	
-	public ColoredBox(EMBox3D box, Color color, int iD) {
+	/**
+	 * Create new object, from controls
+	 * @throws EMBlockError 
+	 **/
+	public static ColoredImage newBlock(ControlsOfScene	controlsOfScene) throws EMBlockError {
+		return newBlock(controlsOfScene, null);
+	}
+
+	
+	public ColoredImage(EMBox3D box, Color color, int iD) {
 		super(box, color, iD);
 	}
 
@@ -83,10 +121,47 @@ public class ColoredBox extends EMBlockBase {
 	 * Same iD
 	 * @param cb_base
 	 */
-	public ColoredBox(EMBlockBase cb_base) {
+	public ColoredImage(EMBlockBase cb_base) {
 		super(cb_base);
 	}
 
+	/**
+	 * Convert partial file name to full file name
+	 * @param fileName
+	 * @return
+	 */
+	public static String fullFileName(String fileName) {
+		if (fileName == null || fileName.equals("")) {
+			fileName = ColoredImage.defaultImageFileName;
+		}
+		if (!new File(fileName).isAbsolute()) {
+			fileName = defaultImageFileDirName + File.separator + fileName;
+		}
+		return fileName;
+	}
+
+	/**
+	 * Convert partial file name to icon file name
+	 * @param fileName
+	 * @return
+	 */
+	public static String iconFileName(String fileName) {
+		String full_file_name = fullFileName(fileName);
+		File dir = new File(full_file_name);
+		String icon_file_name = full_file_name;		// Default
+		if (dir.isDirectory()) {
+			String files[] = dir.list();
+			for (String name : files) {
+				if (name.startsWith("__ICON")) {
+					icon_file_name = icon_file_name + File.separator + name;
+					break;
+				}
+			}
+		}
+		return icon_file_name;
+	}
+	
+	
 	/**
 	 * Convert xyz size to radius of object, enclosing object
 	 */
@@ -113,14 +188,14 @@ public class ColoredBox extends EMBlockBase {
 	 * "Deep-enough" copy to protect against subsequent modifications
 	 */
 	public EMBlockBase copy() {
-		EMBlockBase cb = new ColoredBox(this.box, this.color);
+		EMBlockBase cb = new ColoredImage(this.box, this.imageFileName);
 		cb = cb.copy();
 		return cb;
 	}
 
 	@Override
 	public String blockType() {
-		return "box";
+		return "image";
 	}
 	
 
@@ -170,7 +245,22 @@ public class ColoredBox extends EMBlockBase {
 			float adj = (float) 1.1;
 			obox.adjSize(adj, adj, adj);
 		}
+		if (SmTrace.trace("drawimage")) {
+			if (isExternalViewer()) {
+				SmTrace.lg(String.format("draw %s in External Viewer", blockType()));
+			}
+			if (isLocalViewer()) {
+				SmTrace.lg(String.format("draw %s in Local Viewer", blockType()));
+			}
+		}
+		if (SmTrace.trace("skipimage")) {
+			if (isExternalViewer()) {
+				SmTrace.lg(String.format("draw %s skipping in External Viewer", blockType()));
+				return;
+			}
+		}
 		AlignedBox3D abox = obox.getAlignedBox();
+
 		EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 		if ( drawAsWireframe ) {
 			setEmphasis(gl);
@@ -217,61 +307,85 @@ public class ColoredBox extends EMBlockBase {
 					gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
 					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
 				gl_glEnd();
+				clearEmphasis();
 			}
-			clearEmphasis();
-
 		}
 		else {
-			if (SmTrace.trace("drawloc")) {
-				SmTrace.lg(String.format("drawLoc %d %s center: %s corner0: %s",
-					iD(), blockType(), getCenter(), getCorner(0)));	
+			gl.glPushMatrix();
+			gl.glTranslatef(obox.getCenter().x(), obox.getCenter().y(), obox.getCenter().z());
+			float minx = -size.x()/2;
+			float maxx = size.x()/2;
+			float miny = -size.y()/2;
+			float maxy = size.y()/2;
+			float minz = -size.z()/2;
+			float maxz = size.z()/2;
+			if (imageTexture == null) {
+				SmTrace.lg("adding imageTexture is null");
+				return;
 			}
-			Color color = getColor();
-			SmTrace.lg(String.format("drawColor %d %s color=%s",
-					iD(), blockType(), color), "drawcolor");
-			ColoredBox.setMaterial(gl, color);
-			
-			gl.glBegin( GL2.GL_QUAD_STRIP );
-				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-			gl_glEnd();
-
-			gl_glBegin( GL2.GL_QUADS, "solid GL2.GL_QUADS" );
-				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-
-				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
-			gl_glEnd();
-			ColoredBox.clearMaterial(gl);
+		SmTrace.lg(String.format("draw: %s body", blockType()), "drawimage");
+		int imageTextureI = imageTexture.getTextureObject(gl);
+		///ColoredBox.setMaterial(gl);
+		imageTexture.enable(gl);
+		gl.glDisable(GL2.GL_LIGHTING);
+		gl.glColor3f(1, 1, 1);		// Force white background
+		gl.glEnable(GL2.GL_TEXTURE_2D);
+		gl.glBindTexture(GL2.GL_TEXTURE_2D, imageTextureI);
+		gl.glBegin(GL2.GL_QUADS);
+		
+		  // Front Face
+		  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(minx, miny, maxz);
+		  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(maxx, miny, maxz);
+		  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(maxx, maxy, maxz);
+		  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(minx, maxy, maxz);
+		
+		  // Back Face
+		  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(minx, miny, minz);
+		  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(minx, maxy, minz);
+		  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(maxx, maxy, minz);
+		  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(maxx, miny, minz);
+		
+		  // Top Face
+		  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(minx, maxy, minz);
+		  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(minx, maxy, maxz);
+		  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(maxx, maxy, maxz);
+		  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(maxx, maxy, minz);
+		
+		  // Bottom Face
+		  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(minx, miny, minz);
+		  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(maxx, miny, minz);
+		  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(maxx, miny, maxz);
+		  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(minx, miny, maxz);
+		
+		  // Right face
+		  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(maxx, miny, minz);
+		  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(maxx, maxy, minz);
+		  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(maxx, maxy, maxz);
+		  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(maxx, miny, maxz);
+		
+		  // Left Face
+		  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(minx, miny, minz);
+		  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(minx, miny, maxz);
+		  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(minx, maxy, maxz);
+		  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(minx, maxy, minz);
+		  gl.glEnd();
+		  imageTexture.disable(gl);
+		  gl.glFlush();
 		}
 		EMBox3D.rotate2vRet(drawable);
+		gl.glPopMatrix();					// Undo translate
 	}
 
-	
 
-static public void drawBox(
-	GLAutoDrawable drawable,
-	ColoredBox cbox,
-	boolean expand,
-	boolean drawAsWireframe,
-	boolean cornersOnly
-	) {
-	cbox.draw(drawable, expand, drawAsWireframe, cornersOnly);
-}
-
+	static public void drawImage(
+		GLAutoDrawable drawable,
+		ColoredImage cimage,
+		boolean expand,
+		boolean drawAsWireframe,
+		boolean cornersOnly
+			) {
+		cimage.draw(drawable, expand, drawAsWireframe, cornersOnly);
+	}
 
 	/**
 	 * Tracking / Debugging 
@@ -310,35 +424,20 @@ static public void drawBox(
 		String desc = traceDesc;
 		gl_glEnd(desc);
 	}
-
-	
-
-	/**
-	 * Generate an image icon for create button
-	 * @param gl
-	 * @param width
-	 * @param height
-	 * @return
-	 */
-	static public ImageIcon imageIcon(int width, int height) {
-		String icon_name = ControlOfComponent.iconFileName("box.png");
-		File file = new File(icon_name);
-		
-		String basename = file.getName();
-		Icon icon = new ImageIcon(icon_name);
-		icon = ControlOfComponent.resizeIcon((ImageIcon)icon, width, height);
-		return (ImageIcon) icon;
-	}
 	
 
 	public Point3D getMin() {
-		OrientedBox3D obox = new OrientedBox3D(abox, getUp());
-		return obox.getMin();
+		return abox.getMin();
 	}
 
 	public Point3D getMax() {
-		OrientedBox3D obox = new OrientedBox3D(abox, getUp());
-		return obox.getMax();
+		return abox.getMax();
+	}
+	
+
+	// Overridden for types with name, eg filename
+	public String getName() {
+		return imageFileName;
 	}
 	
 	
@@ -347,9 +446,30 @@ static public void drawBox(
 	 * 
 	 */
 	public OrientedBox3D getOBox() {
-		OrientedBox3D obox = new OrientedBox3D(abox, getUp());
-		return new OrientedBox3D(obox);
+		return new OrientedBox3D(abox, getUp());
 	}
+
+	/**
+	 * In progress
+	 */
+	public boolean intersects(
+		Ray3D ray, // input
+		Point3D intersection, // output
+		Vector3D normalAtIntersection // output
+	) {
+		OrientedBox3D obox = this.getOBox();
+		return obox.intersects(ray, intersection, normalAtIntersection);
+	}
+	
+	
+	/**
+	 * Return copy of inner box
+	 * 
+	 */
+	public OrientedBox3D orientedBox3D() {
+		return new OrientedBox3D(abox, getUp());
+	}
+
 
 	/**
 	 * Enlarge to contain box
@@ -357,7 +477,7 @@ static public void drawBox(
 	 */
 	@Override
 	public void bound(Point3D pt) {
-		abox.bound(pt);
+		this.abox.bound(pt);
 	}
 
 
@@ -378,6 +498,7 @@ static public void drawBox(
 	 */
 	public void setBox(EMBox3D box) {
 		this.abox = new AlignedBox3D(box);
+		setUp(box.getUp());
 	}
 
 
@@ -396,9 +517,10 @@ static public void drawBox(
 		box.bound( Point3D.sum( oldBox.getCorner( indexOfCornerToResize ), translation ) );
 	}
 
+	
 	// Overridden when necessary
 	public void translate(Vector3D translation ) {
-		SmTrace.lg(String.format("ColoredBox.translation(%s)", translation), "boxdebug");
+		SmTrace.lg(String.format("ColoredImage.translation(%s)", translation), "image");
 		abox.translate(translation);
 		
 	}
@@ -432,17 +554,6 @@ static public void drawBox(
 		Vector3D vm = Point3D.diff(point, oldBox.getMin());
 		translate(vm);
 	}
-
-	/**
-	 * In progress
-	 */
-	public boolean intersects(
-		Ray3D ray, // input
-		Point3D intersection, // output
-		Vector3D normalAtIntersection // output
-	) {
-		OrientedBox3D obox = this.getOBox();
-		return obox.intersects(ray, intersection, normalAtIntersection);
-	}
+	
 	
 }

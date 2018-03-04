@@ -13,7 +13,8 @@ public class ExtendedModelerTest {
 	float testDelay = .010f; // Delay before each test in sec
 	float runDelay = .10f; // Delay before each run in sec
 	ExtendedModeler modeler;
-	SceneViewer sceneViewer;
+	SceneControler sceneControler;
+	SceneViewer[] sceneViewers;
 	ExtendedModeler setupModeler;
 	ControlOfPlacement cpla;
 	ControlOfComponent ccom;
@@ -126,11 +127,11 @@ public class ExtendedModelerTest {
 			SmTrace.lg("Setup modeler");
 			modeler = ExtendedModeler.setupModeler();
 			delay(afterSetupDelay);
-			sceneViewer = modeler.sceneViewer;
+			sceneViewers = modeler.sceneViewers;
 			String control_name = null;
-			ControlOf ctl = null;
+			ControlOfScene ctl = null;
 			control_name = "component";
-			ctl = sceneViewer.controls.getControl(control_name);
+			ctl = sceneControler.controls.getControl(control_name);
 			if (ctl == null) {
 				SmTrace.lg(String.format("Control %s not setup", control_name));
 				System.exit(1);
@@ -138,7 +139,7 @@ public class ExtendedModelerTest {
 			ccom = (ControlOfComponent) ctl;
 
 			control_name = "placement";
-			ctl = sceneViewer.controls.getControl(control_name);
+			ctl = sceneControler.controls.getControl(control_name);
 			if (ctl == null) {
 				SmTrace.lg(String.format("Control %s not setup", control_name));
 				System.exit(1);
@@ -146,7 +147,7 @@ public class ExtendedModelerTest {
 			cpla = (ControlOfPlacement) ctl;
 
 			control_name = "color";
-			ctl = sceneViewer.controls.getControl(control_name);
+			ctl = sceneControler.controls.getControl(control_name);
 			if (ctl == null) {
 				throw new EMTFail(String.format("Control %s not setup", control_name));
 			}
@@ -162,7 +163,7 @@ public class ExtendedModelerTest {
 	 */
 	public EMDisplay ssD(String tag) {
 		SmTrace.lg(String.format("Snapshot display: %s", tag));
-		EMDisplay disp = new EMDisplay(tag, sceneViewer.getDisplay());
+		EMDisplay disp = new EMDisplay(tag, sceneControler.getDisplay());
 		return disp;
 	}
 
@@ -175,7 +176,7 @@ public class ExtendedModelerTest {
 	public EMDisplay ssD() {
 		tagno++;
 		String tag = String.format("Snapshot_%02d", tagno);
-		EMDisplay disp = new EMDisplay(tag, sceneViewer.getDisplay());
+		EMDisplay disp = new EMDisplay(tag, sceneControler.getDisplay());
 		return disp;
 	}
 
@@ -301,7 +302,7 @@ public class ExtendedModelerTest {
 		if (!cpla.ckDoAction(action_pla)) {
 			throw new EMTFail(String.format("%s failed", action_pla));
 		}
-		sceneViewer.repaint();
+		sceneControler.repaint();
 
 		String action_col = "adjcolorUpButton";
 		if (!ccol.ckDoAction(action_col)) {
@@ -312,7 +313,7 @@ public class ExtendedModelerTest {
 			throw new EMTFail(String.format("%s failed", action));
 		}
 
-		if (!sceneViewer.cmdUndo()) {
+		if (!sceneControler.cmdUndo()) {
 			throw new EMTFail("sceneViewer.cmdUndo() failed");
 		}
 	}
@@ -366,7 +367,7 @@ public class ExtendedModelerTest {
 		}
 		EMDisplay d1 = ssD("before move");
 		ckDispDiff(d0, d1, 0, 1, "box");
-		cpla = (ControlOfPlacement) sceneViewer.controls.getControl("placement");
+		cpla = (ControlOfPlacement) sceneControler.controls.getControl("placement");
 		delay(.1);
 
 		//EMBlock cb1 = d1.getNewestBlock();
@@ -526,7 +527,7 @@ public class ExtendedModelerTest {
 	 */
 	public void undos(int ntime) {
 		for (int i = 0; i < ntime; i++) {
-			sceneViewer.cmdUndo();
+			sceneControler.cmdUndo();
 		}
 	}
 
@@ -535,7 +536,7 @@ public class ExtendedModelerTest {
 	 */
 	public void redos(int ntime) {
 		for (int i = 0; i < ntime; i++) {
-			sceneViewer.cmdRedo();
+			sceneControler.cmdRedo();
 		}
 	}
 	

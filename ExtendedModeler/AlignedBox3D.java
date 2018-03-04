@@ -1,5 +1,6 @@
 package ExtendedModeler;
 
+import smTrace.SmTrace;
 
 // This class is for storing axis-aligned boxes.
 public class AlignedBox3D {
@@ -12,6 +13,19 @@ public class AlignedBox3D {
 
 	public AlignedBox3D() {
 	}
+
+	/**
+	 * Create box with standard dimension specifications
+	 */
+	public AlignedBox3D(float width, float height, float depth, Point3D center) {
+		this(center, new Vector3D(width, height, depth));
+	}
+	
+	
+	public AlignedBox3D(float width, float height, float depth) {
+		this(width, height, depth, new Point3D(0,0,0));
+	}
+
 	
 	/**
 	 * Deep copy, allowing modifications
@@ -21,15 +35,53 @@ public class AlignedBox3D {
 		this.p0 = new Point3D(box.p0.x(), box.p0.y(), box.p0.z());
 		this.p1 = new Point3D(box.p1.x(), box.p1.y(), box.p1.z()); 
 	}
-	
+
+	/**
+	 * Box from size and center
+	 */
+	public AlignedBox3D(Point3D center, Vector3D size) {
+		this.p0 = new Point3D(center.x()-size.x()/2, center.y()-size.y()/2, center.z()-size.z()/2);
+		this.p1 = new Point3D(center.x()+size.x()/2, center.y()+size.y()/2, center.z()+size.z()/2);
+	}
 	
 	public AlignedBox3D( Point3D min, Point3D max ) {
+		/*** If assert is not enabled
 		assert min.x() <= max.x() : "bounds error";
 		assert min.y() <= max.y() : "bounds error";
 		assert min.z() <= max.z() : "bounds error";
+		***/
+		if (min.x() > max.x())
+			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
+				min.x(), max.x()));
+		if (min.y() > max.y())
+			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
+				min.y(), max.x()));
+		if (min.z() > max.z())
+			SmTrace.lg(String.format("AlignedBox3D min.x(%f) > max.x(%f)",
+				min.z(), max.z()));
 		p0.copy( min );
 		p1.copy( max );
 		isEmpty = false;
+	}
+
+	public AlignedBox3D(Vector3D size) {
+		this(new Point3D(0, 0, 0), new Point3D(size.x(), size.y(), size.z()));
+	}
+
+	/**
+	 * Get standard dimensions
+	 */
+	public float getDepth() {
+		Vector3D size = getSize();		// May want to optimize TBD
+		return size.z();
+	}
+	public float getHeight() {
+		Vector3D size = getSize();
+		return size.y();
+	}
+	public float getWidth() {
+		Vector3D size = getSize();
+		return size.z();
 	}
 
 	public boolean isEmpty() { return isEmpty; }
@@ -37,11 +89,35 @@ public class AlignedBox3D {
 
 	public Point3D getMin() { return p0; }
 	public Point3D getMax() { return p1; }
+
+	/**
+	 * Get size (non zero) xyz dimensions
+	 * @return
+	 */
+	public Vector3D getSize() {
+		Vector3D diag = getDiagonal();
+		return new Vector3D(Math.abs(diag.x()), Math.abs(diag.y()), Math.abs(diag.z()));
+	}
+	
+	
 	public Vector3D getDiagonal() { return Point3D.diff(p1,p0); }
 	public Point3D getCenter() {
 		return Point3D.average( p0, p1 );
 	}
 
+	
+	/**
+	 * Box enclosing sphere
+	 * @param p
+	 */
+	public AlignedBox3D(EMBox3D sphere) {
+		Point3D center = sphere.getCenter();
+		float radius = sphere.getRadius();
+		p0 = new Point3D(center.x()-radius, center.y()-radius, center.z()-radius);
+		p1 = new Point3D(center.x()+radius, center.y()+radius, center.z()+radius);
+	}
+	
+	
 	// Enlarge the box as necessary to contain the given point
 	public void bound( Point3D p ) {
 		if ( isEmpty ) {
@@ -255,5 +331,27 @@ public class AlignedBox3D {
 
 	}
 
+	
+	/**
+	 * Resize with same center
+	 */
+	public void resize(Vector3D size) {
+		Point3D center = getCenter();
+		p0 = new Point3D(center.x()-size.x()/2, center.y()-size.y()/2, center.z()-size.z()/2);
+		p1 = new Point3D(center.x()+size.x()/2, center.y()+size.y()/2, center.z()+size.z()/2);
+	}
+
+	
+	/**
+	 * translate in world's x,y,z
+	 */
+	public void translate(Vector3D translate) {
+		p0 = Point3D.sum(p0, translate);
+		p1 = Point3D.sum(p1, translate);
+	}
+	
+	public String toString() {
+		return String.format("p0: %s  p1: %s", p0, p1);
+	}
 }
 
