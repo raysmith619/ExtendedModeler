@@ -327,24 +327,66 @@ public class EMBox3D {
 			Vector3D v_from,
 			Vector3D v_to) {
 		GL2 gl = (GL2) drawable.getGL();
+		Vector3D cprod = Vector3D.cross( v_from.normalized(), v_to.normalized() );
+
 		final float rad2deg = (float) (180./Math.PI);
-		float ax = Vector3D.computeSignedAngle(v_from, v_to, xaxis ) * rad2deg;
-		float ay = Vector3D.computeSignedAngle(v_from, v_to, yaxis ) * rad2deg; 
-		float az = Vector3D.computeSignedAngle(v_from, v_to, zaxis ) * rad2deg; 
-		SmTrace.lg(String.format("v_from(%s) angle ax=%.1f, ay=%.1f, az=%.1f v_to=%s",
-				v_from, ax, ay, az, v_to), "rotate");
+		float av = Vector3D.computeSignedAngle(v_from, v_to, cprod ) * rad2deg;
+		SmTrace.lg(String.format("axis v_from(%s) angle av=%.1f v_to=%s",
+				v_from, av, v_to), "rotate");
 		gl.glPushAttrib(GL2.GL_TRANSFORM_BIT);
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glPushMatrix();
-		/***
-		gl.glRotatef(ay, v_from.x(), v_from.y(), v_from.z());
-		gl.glRotatef(az, v_from.x(), v_from.y(), v_from.z());
-		gl.glRotatef(ax, v_from.x(), v_from.y(), v_from.z());
-		***/
-		gl.glRotatef(ax, xaxis.x(), xaxis.y(), xaxis.z());
-		gl.glRotatef(ay, yaxis.x(), yaxis.y(), yaxis.z());
-		gl.glRotatef(az, zaxis.x(), zaxis.y(), zaxis.z());
+		gl.glRotatef(av, cprod.x(), cprod.y(), cprod.z());
 	}
+	
+	/**
+	 * Rotate from "up" to vector for
+	 * special case of axis to axis
+	 * Returns true if axis rotation was done
+	 * NOTE: rotate2vRet is required after drawing
+	 */
+	public static boolean axisRotate2v(
+			GLAutoDrawable drawable,
+			Vector3D v_from,
+			Vector3D v_to) {
+		boolean rotate_in_plane = true;	// true - force rotating in plane of
+										// two vectors
+		if (!rotate_in_plane) {
+			int nzero = 0;
+			if (v_from.x() == 0)
+				nzero++;
+			if (v_from.y() == 0)
+				nzero++;
+			if (v_from.z() == 0)
+				nzero++;
+			if (nzero < 2)
+				return false;
+	
+			nzero = 0;
+			if (v_to.x() == 0)
+				nzero++;
+			if (v_to.y() == 0)
+				nzero++;
+			if (v_to.z() == 0)
+				nzero++;
+			if (nzero < 2)
+				return false;
+		}
+
+		GL2 gl = (GL2) drawable.getGL();
+		Vector3D cprod = Vector3D.cross( v_from.normalized(), v_to.normalized() );
+
+		final float rad2deg = (float) (180./Math.PI);
+		float av = Vector3D.computeSignedAngle(v_from, v_to, cprod ) * rad2deg;
+		SmTrace.lg(String.format("axis v_from(%s) angle av=%.1f v_to=%s",
+				v_from, av, v_to), "rotate");
+		gl.glPushAttrib(GL2.GL_TRANSFORM_BIT);
+		gl.glMatrixMode(GL2.GL_MODELVIEW);
+		gl.glPushMatrix();
+		gl.glRotatef(av, cprod.x(), cprod.y(), cprod.z());
+		return true;
+	}
+
 	
 	
 	/**

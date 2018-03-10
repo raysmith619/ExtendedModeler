@@ -1,5 +1,4 @@
 package ExtendedModeler;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -30,6 +29,7 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.JWindow;
 import javax.swing.ScrollPaneConstants;
 import java.awt.Adjustable;
@@ -104,6 +104,26 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	int viewport[] = new int[4];
 	double mvmatrix[] = new double[16];
 	double projmatrix[] = new double[16];
+	
+										// Grid Display settings
+	float gridSpacing = 1.f;
+	float labelSpacing = 5*gridSpacing;
+	Color gridColor = new Color(1.f, 1.f, 1.f, 0.1f);
+	float[] gridColorArray = new float[4];
+	float gridBound = 10.f;
+	Vector3D gridUp = new Vector3D(0,1,0);	// y
+	//float gridXMin = -10.f;
+	float gridXMin = -10.f;
+	float gridXMax = -gridXMin;
+	float gridYMin = gridXMin;
+	float gridYMax = gridXMax;
+	float gridZMin = gridXMin;
+	float gridZMax = gridXMax;
+	float gridTickLen = .3f;			// Axes tick length in world coord
+	
+
+	ColoredBox gridViewBox = new ColoredBox(new Point3D(-gridBound, -gridBound, -gridBound),
+			new Vector3D(gridBound, gridBound, gridBound), null, gridUp);
 
 	/// public int indexOfSelectedBlock = -1; // -1 for none
 	/**
@@ -149,6 +169,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 
 	// Tools Menu
 	JButton eyeAtSelectionButton;
+	JToggleButton displayAxesButton;
 	JButton lookAtSelectionButton;
 	JButton backOffButton;
 	JButton resetCameraButton;
@@ -167,7 +188,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	JButton viewAllButton;
 	JButton viewCloserButton;
 	JButton viewFartherButton;
-	
+	JToggleButton viewGridButton;
 	
 	int mouse_x, mouse_y, old_mouse_x, old_mouse_y;
 
@@ -237,6 +258,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		menuBar.add(menu);
 		menuBar.add(new JSeparator());
 
+		displayAxesButton = new JToggleButton("Axes");
+		displayAxesButton.addActionListener(this);
+		menuBar.add(displayAxesButton);
+
 		lookAtSelectionButton = new JButton("Look At Selection");
 		lookAtSelectionButton.addActionListener(this);
 		menuBar.add(lookAtSelectionButton);
@@ -283,6 +308,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		horizontalScrollBar.setValue(SCROLL_MID);
 		horizontalScrollBar.setMaximum(SCROLL_MAX);
 		horizontalScrollBar.setVisibleAmount(SCROLL_RANGE/500);
+		gridColor.getColorComponents(gridColorArray);		// Can't be done in class def
 		
 		scrollPane.getHorizontalScrollBar().addAdjustmentListener(new AdjustmentListener() {
 
@@ -467,6 +493,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		viewFartherButton = new JButton("Farther");
 		viewFartherButton.addActionListener(this);
 		viewPanel.add(viewFartherButton);
+
+		viewGridButton = new JToggleButton("Grid");
+		viewGridButton.addActionListener(this);
+		viewPanel.add(viewGridButton);
 
 		return menu;
 	}
@@ -948,6 +978,14 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		setControl("component", displayAddControl);
 		///getControls().display(canvas);
 
+		if (viewGridButton.isSelected()) {
+			displayGrid(gl);
+		}
+
+		if (displayAxesButton.isSelected()) {
+			displayGridAxes(gl);
+		}
+		
 		if (displayWorldAxes) {
 			EMViewedText tr3 = new EMViewedText(gl);
 			float tx = 1;
@@ -1037,6 +1075,342 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		repaint();
 	}
 
+	/**
+	 * Display a grid to show 3D space coordinates
+	 * Use World axes
+	 * @param gl
+	 */
+	public void displayGrid(GL2 gl) {
+		SmTrace.lg("displayGrid", "drawGrid");
+		setGridLighting(gl);
+		float gridSpacing = 1.f;
+		float label_spacing = 5*gridSpacing;
+		gl_set(gl);			// Setup for trace
+		/**
+		 * Create grid with tree sets planes
+		 * one set orthogonal to x axis, x = 0, 1*gridSpacing,... n*gridSpacing
+		 * 										-1*gridSpacing,...
+		 * one set orthogonal to y axis, y = 0, 1*gridSpacing,... n*gridSpacing
+		 * 										-1*gridSpacing,... n*gridSpacing
+		 * 
+		 * The planes are translucent
+		 */
+		int niter = 0;
+		int nmin = (int)(gridXMin/gridSpacing);
+		int nmax = (int)(gridXMax/gridSpacing);
+		for (int i = nmin; i <= nmax; i++) {
+			float x = i*gridSpacing;
+			if (x < gridXMin || x > gridXMax)
+				continue;		// Out of view
+			niter++;
+			displayGridXPlane(gl, x);
+		}
+		if (niter == 0) {
+			SmTrace.lg(String.format("displayGrid x niter=%d", niter));
+		}
+		
+		niter = 0;
+		nmin = (int)(gridYMin/gridSpacing);
+		nmax = (int)(gridYMax/gridSpacing);
+		for (int i = nmin; i <= nmax; i++) {
+			float y = i*gridSpacing;
+			if (y < gridYMin || y > gridYMax)
+				continue;		// Out of view
+			niter++;
+			displayGridYPlane(gl, y);
+		}
+		if (niter == 0) {
+			SmTrace.lg(String.format("displayGrid niter=%d", niter));
+		}
+		displayGridAxes(gl);
+	}
+
+	
+	public void displayGridAxes(GL2 gl) {
+		gl_set(gl);
+		Color xcolor = new Color(1f,0f,0f,.1f);	// color in that direction
+		Color ycolor = new Color(0f,1f,0f,.1f);
+		Color zcolor = new Color(0.2f,0.2f,1f, .1f);
+		displayGridLine(gl, new Point3D(gridXMin, 0, 0),
+		new Point3D(gridXMax, 0,0), xcolor);
+										// X-axis tics
+										// Tics in direction of other axes
+		for (float x = gridSpacing; x <= gridXMax; x += gridSpacing) {
+			Point3D p1 = new Point3D(x, 0, 0);
+			Point3D py = new Point3D(x, gridTickLen, 0);		// In y direction
+			displayGridLine(gl, p1, py, ycolor);
+			Point3D pz = new Point3D(x, 0, gridTickLen);
+			displayGridLine(gl, p1, pz, zcolor);
+		}
+		for (float x = -gridSpacing; x >= gridXMin; x -= gridSpacing) {
+			Point3D p1 = new Point3D(x, 0, 0);
+			Point3D py = new Point3D(x, gridTickLen, 0);		// In y direction
+			displayGridLine(gl, p1, py, ycolor);
+			Point3D pz = new Point3D(x, 0, gridTickLen);
+			displayGridLine(gl, p1, pz, zcolor);
+		}
+
+		// Y-axis tics
+		
+		displayGridLine(gl, new Point3D(0, gridYMin, 0),
+						new Point3D(0, gridYMax,0), ycolor);
+		// Tics in direction of other axes
+		for (float y = gridSpacing; y <= gridYMax; y += gridSpacing) {
+			Point3D p1 = new Point3D(0, y, 0);
+			Point3D px = new Point3D(gridTickLen, y, 0);		// In x direction
+			displayGridLine(gl, p1, px, xcolor);
+			Point3D pz = new Point3D(0, y, gridTickLen);
+			displayGridLine(gl, p1, pz, zcolor);
+		}
+		for (float y = -gridSpacing; y >= gridYMin; y -= gridSpacing) {
+			Point3D p1 = new Point3D(0, y, 0);
+			Point3D px = new Point3D(gridTickLen, y, 0);		// In x direction
+			displayGridLine(gl, p1, px, xcolor);
+			Point3D pz = new Point3D(0, y, gridTickLen);
+			displayGridLine(gl, p1, pz, zcolor);
+		}
+		
+		displayGridLine(gl, new Point3D(0, gridYMin, 0),
+		new Point3D(0, gridYMax,0), ycolor);
+		displayGridLine(gl, new Point3D(0, 0, gridZMin),
+		new Point3D(0, 0, gridZMax), zcolor);
+		setLighting(gl);
+
+		// Z-axis tics
+		displayGridLine(gl, new Point3D(0, 0, gridZMin),
+						new Point3D(0, 0, gridZMax), zcolor);
+		// Tics in direction of other axes
+		for (float z = gridSpacing; z <= gridYMax; z += gridSpacing) {
+			Point3D p1 = new Point3D(0, 0, z);
+			Point3D px = new Point3D(gridTickLen, 0, z);		// In x direction
+			displayGridLine(gl, p1, px, xcolor);
+			Point3D py = new Point3D(0, gridTickLen, z);
+			displayGridLine(gl, p1, py, ycolor);
+		}
+		for (float z = -gridSpacing; z >= gridYMin; z -= gridSpacing) {
+			Point3D p1 = new Point3D(0, 0, z);
+			Point3D px = new Point3D(gridTickLen, 0, z);		// In x direction
+			displayGridLine(gl, p1, px, xcolor);
+			Point3D py = new Point3D(0, gridTickLen, z);
+			displayGridLine(gl, p1, py, ycolor);
+		}
+		
+		setLighting(gl);
+	}
+
+	
+	private boolean doDisplayGridByComp = true;
+	public void displayGridXPlane(GL2 gl, float x) {
+		SmTrace.lg("displayGridXPlane", "drawGridPlane");
+		if (doDisplayGridByComp) {
+			displayGridXPlaneByComp(gl, x);
+			return;
+		}
+		gl.glPushAttrib(PROPERTIES);
+		///gl.glEnable(GL.GL_BLEND);
+		///gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+		setEmphasis(gl, gridColor);
+		///EMBlockBase.setMaterial(gl, gridColor);
+		gl.glColor4fv(gridColorArray, 0);
+		gl_glBegin(GL2.GL_QUADS, String.format("displayGridXPlane x=%.2f", x));
+		gl_glVertex3f(x, gridYMin, gridZMin);
+		gl_glVertex3f(x, gridYMax, gridZMin);
+		gl_glVertex3f(x, gridYMax, gridZMax);
+		gl_glVertex3f(x, gridYMin, gridZMax);
+		gl_glEnd();
+		///EMBlockBase.clearMaterial(gl);
+		clearEmphasis();
+		gl.glPopAttrib();
+
+	}
+
+	
+	public void displayGridYPlane(GL2 gl, float y) {
+		if (doDisplayGridByComp) {
+			displayGridYPlaneByComp(gl, y);
+			return;
+		}
+		Color gridColor = new Color(0.f, 0.f, 1.f, 0);
+		float[] colorarray = new float[4];
+		gl.glColor4fv(gridColor.getColorComponents(colorarray), 0);
+		gl.glBegin(GL2.GL_QUADS);
+		gl_glVertex3f(gridXMin, y, 0);
+		gl_glVertex3f(0, y, gridZMin);
+		gl_glVertex3f(gridXMax, y,  0);
+		gl_glVertex3f(0, y, gridZMax);
+		gl_glEnd();
+
+	}
+	
+	public void setGridLighting(GL2 gl) {
+		float light_ambient[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float light_position[] = { 1.0f, 1.0f, 1.0f, 0.0f };
+
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_AMBIENT, light_ambient, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, light_diffuse, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, light_specular, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, light_position, 0);
+
+		gl.glEnable(GL2.GL_LIGHTING);
+		gl.glEnable(GL2.GL_LIGHT0);
+		gl.glDepthFunc(GL.GL_LESS);
+		gl.glEnable(GL.GL_DEPTH_TEST);
+	}
+
+	
+	/**
+	 * Create grid plane using balls+lines
+	 * because I can't get planes(QUADS) to work (transparency, view from all sides
+	 */
+	private void displayGridXPlaneByComp(GL2 gl, float x) {
+		int niter = 0;
+		int nmin = (int)(gridYMin/gridSpacing);
+		int nmax = (int)(gridYMax/gridSpacing);
+		for (int i = nmin; i <= nmax; i++) {
+			float y = i*gridSpacing;
+			if (y < gridYMin || y > gridYMax)
+				continue;		// Out of view
+			niter++;
+			displayGridZLine(gl, x, y);
+		}
+		if (niter == 0) {
+			SmTrace.lg(String.format("displayGridXPlaneByComp niter=%d", niter));
+		}
+	}
+
+	
+	/**
+	 * Create grid plane using balls+lines
+	 * because I can't get planes(QUADS) to work (transparency, view from all sides
+	 */
+	private void displayGridYPlaneByComp(GL2 gl, float y) {
+		int niter = 0;
+		int nmin = (int)(gridXMin/gridSpacing);
+		int nmax = (int)(gridXMax/gridSpacing);
+		for (int i = nmin; i <= nmax; i++) {
+			float x = i*gridSpacing;
+			if (x < gridXMin || x > gridXMax)
+				continue;		// Out of view
+			niter++;
+			displayGridZLine(gl, x, y);
+		}
+		if (niter == 0) {
+			SmTrace.lg(String.format("displayGridYPlaneByComp niter=%d", niter));
+		}
+	}
+	
+	/**
+	 * Display Z line at (xn,yn) for grid display
+	 * 
+	 */
+	private void displayGridZLine(GL2 gl, float x, float y) {
+		displayGridLine(gl, new Point3D(x,y,gridZMin), new Point3D(x,y,gridZMax));
+		Color gridColor = new Color(0.f, 0.f, 1.f, 0.1f);
+		float[] colorarray = new float[4];
+		int niter = 0;
+		int nmin = (int)(gridZMin/gridSpacing);
+		int nmax = (int)(gridZMax/gridSpacing);
+		for (int i = nmin; i <= nmax; i++) {
+			float z = i*gridSpacing;
+			if (z < gridZMin || z > gridZMax)
+				continue;		// Out of view
+			niter++;
+			displayGridPoint(gl, x, y, z);
+		}
+		if (niter == 0) {
+			SmTrace.lg(String.format("displayGridXPlaneByComp niter=%d", niter));
+		}
+	}
+
+	/**
+	 * Display grid line
+	 */
+	private void displayGridLine(GL2 gl, Point3D p1, Point3D p2, Color color) {
+		if (color == null)
+			color = gridColor;
+		gl.glPushAttrib(PROPERTIES);
+		///gl.glEnable(GL.GL_BLEND);
+		///gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+		setEmphasis(gl, color);
+		///EMBlockBase.setMaterial(gl, gridColor);
+		float color_array[] = {0,0,0,0};
+		gl.glColor4fv(color.getColorComponents(color_array), 0);
+		gl_glBegin(GL2.GL_LINES, String.format("displayGridLine p1=%s p2=%s", p1, p2));
+		gl_glVertex3f(p1.x(), p1.y(), p1.z());
+		gl_glVertex3f(p2.x(), p2.y(), p2.z());
+		gl_glEnd();
+		///EMBlockBase.clearMaterial(gl);
+		clearEmphasis();
+		gl.glPopAttrib();
+	}
+	
+	private void displayGridLine(GL2 gl, Point3D p1, Point3D p2) {
+		displayGridLine(gl, p1, p2, null);
+	}
+	/**
+	 * Display grid point (intersection)
+	 */
+	private void displayGridPoint(GL2 gl, float x, float y, float z, Color color) {
+		if (color == null) {
+			color = gridColor;
+		}
+		GLUT glut = new GLUT();
+		float gridPointRadius = .02f;	// May be based on location
+		gl.glPushMatrix();
+		gl.glTranslatef(x, y, z);
+		int ng = 10;
+		
+		ColoredBall.setMaterial(gl, color);
+		glut.glutWireSphere(gridPointRadius, ng, ng);
+		ColoredBall.clearMaterial(gl);
+		gl.glPopMatrix();
+	}
+
+	private void displayGridPoint(GL2 gl, float x, float y, float z) {
+		displayGridPoint(gl, x, y, z, null);
+	}
+
+	/**
+	 * Tracking / Debugging 
+	 * @param v
+	 * @param offset
+	 */
+	private static GL2 glp;				// for tracking routine
+	private static String block = "grid";
+	private static void gl_glVertex3f(float x, float y, float z) {
+		String desc = traceDesc;
+		glp.glVertex3f(x, y, z);
+		SmTrace.lg(String.format("%s glVertex3f %.2f %.2f %.2f", block, x, y, z, desc), "draw");
+	}
+	private static String traceDesc = "trace description";
+	private static void gl_set(GL2 gl) {
+		glp = gl;
+	}
+	private static void gl_glBegin(int mode, String desc) {
+		traceDesc = desc;
+		if (glp == null) {
+			SmTrace.lg(String.format("gl_set - not called %s", desc));
+			System.exit(1);
+		}
+		glp.glBegin(mode);
+		SmTrace.lg(String.format("%s gl_glBegin(%s)", block, desc), "draw");
+	}
+	private static void gl_glBegin(int mode) {
+		String desc = String.format("mode(%d)", mode);
+		gl_glBegin(mode, desc);
+	}
+	
+	private static void gl_glEnd(String desc) {
+		glp.glEnd();
+		SmTrace.lg(String.format("%s gl_glEnd %s", block, desc), "draw");
+	}
+	private static void gl_glEnd() {
+		String desc = traceDesc;
+		gl_glEnd(desc);
+	}
+	
 	public void setLighting(GL2 gl) {
 		float light_ambient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		float light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -1051,7 +1425,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		gl.glEnable(GL2.GL_LIGHTING);
 		gl.glEnable(GL2.GL_LIGHT0);
 		gl.glDepthFunc(GL.GL_LESS);
-		gl.glEnable(GL.GL_DEPTH_TEST);		
+		gl.glEnable(GL.GL_DEPTH_TEST);
 	}
 
 	/**
@@ -1368,6 +1742,10 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 
 	public void mouseClicked(MouseEvent e) {
 		SmTrace.lg("mouseClick", "mouse");
+		if (!e.isControlDown() && isAddAtMouse() ) {
+			addAtMouse(e);
+			return;
+		}
 		if (e.isControlDown())
 			SmTrace.lg("isControlDown", "mouse");
 		if (indexOfHilitedBox >= 0) {
@@ -1398,7 +1776,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				sceneControler.selectAdd(bcmd, indexOfHilitedBox, false);
 				bcmd.doCmd();
 			}
-		} else {		// Over nobody - unselect all
+		} else {
 			EMBCommand bcmd;
 			String action = "emc_mouseUnSelect";
 			try {
@@ -1415,11 +1793,27 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			bcmd.prevSelect = bcmd.newSelect;
 			bcmd.newSelect = new BlockSelect();
 			bcmd.doCmd();
-			
 		}
 		selectedPoint(hilitedPoint());
 		normalAtSelectedPoint(normalAtHilitedPoint());
 		repaint();
+	}
+
+	
+	private void addAtMouse(MouseEvent e) {
+		ControlOfComponent coco = (ControlOfComponent)sceneControler.controls.getControl("component");
+		if (coco == null) {
+			return;
+		}
+		coco.addAtMouse(e);
+	}
+
+	public boolean isAddAtMouse() {
+		ControlOfComponent coco = (ControlOfComponent)sceneControler.controls.getControl("component");
+		if (coco == null) {
+			return false;
+		}
+		return coco.isAddAtMouse();
 	}
 
 	public void mouseEntered(MouseEvent e) {
@@ -1919,6 +2313,12 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		} else if (source == viewFartherButton) {
 			this.viewFarther();
 			this.repaint();
+		} else if (source == viewGridButton) {
+			this.modViewGrid();
+			this.repaint();
+		} else if (source == displayAxesButton) {
+			this.modDisplayAxes();
+			this.repaint();
 		} else if (source == lookAtSelectionButton) {
 			this.lookAtSelection();
 			this.repaint();
@@ -2063,6 +2463,28 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		eyeAt(new_eye);
 		if (externalViewer != null)
 			externalViewer.updateFromLocalViewer();
+	}
+	
+	/**
+	 * 	Toggle grid display
+	 */
+	public void modViewGrid() {
+		if (viewGridButton.isSelected()) {
+			viewGridButton.setText("No Grid");
+		} else {
+			viewGridButton.setText("Grid");
+		}
+	}
+	
+	/**
+	 * 	Toggle axes display
+	 */
+	public void modDisplayAxes() {
+		if (displayAxesButton.isSelected()) {
+			displayAxesButton.setText("No Axes");
+		} else {
+			displayAxesButton.setText("Axes");
+		}
 	}
 
 	

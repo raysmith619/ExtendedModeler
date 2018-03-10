@@ -10,6 +10,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
+import java.awt.event.MouseEvent;
 import java.io.File;
 
 import javax.swing.AbstractAction;
@@ -18,6 +19,7 @@ import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -38,6 +40,8 @@ public class ControlOfComponent extends ControlOfScene {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	JCheckBox addAtMouseCkBox;
+	
 	JTextField imageFileStringTxFld;
 	JComboBox imageCBox;
 	String[] imageNames;
@@ -88,7 +92,28 @@ public class ControlOfComponent extends ControlOfScene {
 		addSelectAllButton.setActionCommand("emc_selectAllButton");
 		addSelectAllButton.addActionListener(sceneControler);
 		selectPanel.add(addSelectAllButton);
+
+		JButton addSelectNoneButton = new JButton("Select None");
+		addSelectNoneButton.setActionCommand("emc_selectNoneButton");
+		addSelectNoneButton.addActionListener(sceneControler);
+		selectPanel.add(addSelectNoneButton);
+
+		JButton addSelectNextButton = new JButton("Select Next");
+		addSelectNextButton.setActionCommand("emc_selectNextButton");
+		addSelectNextButton.addActionListener(sceneControler);
+		selectPanel.add(addSelectNextButton);
 		
+		addAtMouseCkBox = new JCheckBox("Add At Mouse");
+		addAtMouseCkBox.addActionListener(
+				new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						if (isAddAtMouse()) {
+							if (addAtMouse_action == null)
+								addAtMouse_action = "emc_newColoredImage";
+						}
+					}
+				});
+		selectPanel.add(addAtMouseCkBox);
 		
 		JPanel modPanel = new JPanel();		// Dup, Delete, Delete All
 		///modPanel.setLayout(new BoxLayout(blockPanel, BoxLayout.Y_AXIS));
@@ -160,6 +185,11 @@ public class ControlOfComponent extends ControlOfScene {
 		addEyeButton.setActionCommand("emc_addEyeButton");
 		addEyeButton.addActionListener(sceneControler);
 		compPanel.add(addEyeButton);
+		
+		JButton addPointerButton = new JButton("Pointer");
+		addPointerButton.setActionCommand("emc_addPointerButton");
+		addPointerButton.addActionListener(sceneControler);
+		compPanel.add(addPointerButton);
 
 		JPanel imagePanel = new JPanel();		// Image File, AddImage
 		blockPanel.add(imagePanel);
@@ -223,23 +253,18 @@ public class ControlOfComponent extends ControlOfScene {
 	 * Setup image panel
 	 */
 	private void setupImageArray(JPanel arrayPanel, int ctl_w, int ctl_h) {
-		int ib_w = ctl_w/nicon_wide - 20;
+		int ib_w = ctl_w/nicon_wide - 10;
 		int ib_h = 100;
-		int isp_w = ctl_w;
-		int isp_h = nicon_high*ib_h;
-		arrayPanel.setPreferredSize(new Dimension(100, 600));
+		int isp_w = (ib_w+2) * nicon_wide + 5;
+		int nh = 3;
+		int isp_h = (nh+2)*ib_h;
+		arrayPanel.setPreferredSize(new Dimension(ctl_w, ctl_h));
 		JPanel imageIconPanel = new JPanel(new GridLayout(0, nicon_wide));		// Icons in 5 columns
-		imageIconPanel.setBounds(3, 3, isp_w, isp_h/2);
-		arrayPanel.add(imageIconPanel, Box.TOP_ALIGNMENT);
-		///imageIconPanel.setPreferredSize(new Dimension(100, 400));
-		//imageIconPanel.setPreferredSize(null);
         imageScrollPane = new JScrollPane(imageIconPanel);
         imageScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         imageScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        imageScrollPane.setPreferredSize(new Dimension(ctl_w, ctl_h));
-        imageScrollPane.setBounds(3, 3, isp_w, isp_h/2);
         //JPanel contentPane = new JPanel(null);
-        //imageScrollPane.setPreferredSize(null);
+        imageScrollPane.setPreferredSize(null);
         arrayPanel.add(imageScrollPane);
 		
 		for (String iname : imageNames) {
@@ -279,6 +304,7 @@ public class ControlOfComponent extends ControlOfScene {
 			ibutton.setHorizontalTextPosition(JButton.CENTER);
 			ibutton.setVerticalTextPosition(JButton.TOP);
 			imageIconPanel.add(ibutton);
+			pack();
 	        ibutton.addActionListener(new AbstractAction() {
 	        	/**
 				 * 
@@ -288,7 +314,7 @@ public class ControlOfComponent extends ControlOfScene {
 				@Override
 	        	public void actionPerformed(ActionEvent e) {
 	        		try {
-						newColoredImage(ibutton, ifile);
+						newColoredImage(ibutton, ifile, isAddAtMouse());		// just setup if at Mouse
 					} catch (EMBlockError e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -296,40 +322,8 @@ public class ControlOfComponent extends ControlOfScene {
 	        	}
 	        });
 		}
-        imageScrollPane.setPreferredSize(null);
-        addComponentListener(new ComponentListener() {
-
-			@Override
-			public void componentResized(ComponentEvent e) {
-				SmTrace.lg("ControlOfComponent resized", "component");
-				ControlOfComponent component = (ControlOfComponent) e.getSource();
-		        Dimension windowSize = component.getContentPane().getSize();
-		        int ctl_w = windowSize.width;
-				int ctl_h = windowSize.height;
-				int isp_w = ctl_w;
-				int isp_h = ctl_h;
-		        ///resizeIconsPanel(isp_w, isp_h);
-				
-			}
- 			@Override
-			public void componentMoved(ComponentEvent e) {
-				SmTrace.lg("ControlOfComponent moved", "component");
-			}
-
-			@Override
-			public void componentShown(ComponentEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			public void componentHidden(ComponentEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-	} );
+        imageScrollPane.setPreferredSize(new Dimension(isp_w, isp_h));
         resizeIconsPanel(isp_w, isp_h);
-
 	}
 
 	/**
@@ -346,8 +340,8 @@ public class ControlOfComponent extends ControlOfScene {
 	}
 
 	
-	private void resizeIconsPanel(int isp_w, int isp_h) {
-		imageScrollPane.setSize(new Dimension(isp_w, isp_h));
+	private void resizeIconsPanel(int w, int h) {
+		imageScrollPane.setSize(new Dimension(w, h));
 	}
 	
 	
@@ -355,8 +349,26 @@ public class ControlOfComponent extends ControlOfScene {
 	 * Add new image from panel
 	 * @throws EMBlockError 
 	 */
-	public void newColoredImage(JButton ibutton, String ifile) throws EMBlockError {
+	public void newColoredImage(JButton ibutton, String ifile, boolean justSetup) throws EMBlockError {
+		if (justSetup) {
+			if (isAddAtMouse()) {
+				addAtMouse_action = "emc_newColoredImage";
+			}
+			addAtMouse_ibutton = ibutton;		// Just record settings for later
+			addAtMouse_file = ifile;
+			return;
+		} else {
+			if (isAddAtMouse()) {
+				ibutton = addAtMouse_ibutton;		// Use prerecorded settings
+				ifile = addAtMouse_file;			// Use prerecorded settings
+			}
+		}
+		
+												// Add block at current location
+		addAtMouse_ibutton = ibutton;			// Record settings for later
+		addAtMouse_file = ifile;
 		sceneControler.selectPrint(String.format("newColoredImage(%s)", ifile), "component");
+			
 		String action = "emc_newColoredImage";
 		EMBCommand bcmd;
 		SmMem.ck("newColoredImage", SmMem.Type.Begin);
@@ -367,12 +379,21 @@ public class ControlOfComponent extends ControlOfScene {
 			return;
 		}
 
-		EMBlock cb_sel = sceneControler.getSelectedBlock();
-		boolean from_selected = false;			// Positioned from selected
-		if (cb_sel != null) {
-			cb_sel.setControls(sceneControler.controls);
-			ControlOfPlacement cop = (ControlOfPlacement) sceneControler.controls.getControl("placement");
-			cop.adjPos();
+									/**
+									 * Place at mouse, if isAddAtMouse() is true
+									 * based on selected block, if one is selected
+									 * else on current controls
+									 */
+		if (isAddAtMouse()) {
+								// controls are all ready updated
+		} else {
+			EMBlock cb_sel = sceneControler.getSelectedBlock();
+			boolean from_selected = false;			// Positioned from selected
+			if (cb_sel != null) {
+				cb_sel.setControls(sceneControler.controls);
+				ControlOfPlacement cop = (ControlOfPlacement) sceneControler.controls.getControl("placement");
+				cop.adjPos();
+			}
 		}
 		EMBlock cb = null;
 		String blockType = "image";
@@ -420,16 +441,32 @@ public class ControlOfComponent extends ControlOfScene {
 		SmMem.ck("action");
 		switch (action) {
 			case "emc_selectAllButton":
+			case "emc_selectNoneButton":
+			case "emc_selectNextButton":
 			case "emc_toggleSelectButton":
 			case "emc_deleteBlockButton":
 			case "emc_deleteBlockAllButton":
 			case "emc_duplicateBlockButton":
+				sceneControler.addBlockButton(bcmd, action);
+				if (bcmd != null) {
+					boolean res = bcmd.doCmd();
+					sceneControler.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
+					return res;
+				}
+				break;
+
+			case "emc_newColoredImage":
 			case "emc_addBoxButton":
 			case "emc_addBallButton":
 			case "emc_addConeButton":
 			case "emc_addCylinderButton":
-			case "emc_addTextButton":		// Emulate Text control
+			case "emc_addPointerButton":		// Test Pointer drawing
+			case "emc_addTextButton":			// Emulate Text control
 			case "emc_addImageButton":
+				setAddAtMouse(action);			//  for mouse click
+				if (isAddAtMouse()) {
+					return  true;
+				}
 				sceneControler.addBlockButton(bcmd, action);
 				if (bcmd != null) {
 					boolean res = bcmd.doCmd();
@@ -455,7 +492,7 @@ public class ControlOfComponent extends ControlOfScene {
 					return res;
 				}
 				break;
-			
+				
 				default:
 					break;
 		}
@@ -463,6 +500,117 @@ public class ControlOfComponent extends ControlOfScene {
 	}
 
 
+	/**
+	 * Add component at mouse location
+	 * 1. Adjust controls to reflect current mouse screen location
+	 * 2. Add component saved in addAtMouse_... settings
+	 * @param e
+	 */
+	public void addAtMouse(MouseEvent e) {
+		ControlOfComponent coco = (ControlOfComponent)sceneControler.controls.getControl("component");
+		if (coco == null) {
+			return;
+		}
+		int mouse_x = e.getX();
+		int mouse_y = e.getY();
+						/**
+						 * Location is the camera.ray(mousex, mousey)
+						 * intersecting the current z depth
+						 */
+		Camera3D camera = sceneControler.currentViewerCamera();
+		Ray3D target_ray = camera.computeRay(mouse_x, mouse_y);
+		ControlOfPlacement cop = (ControlOfPlacement) sceneControler.controls.getControl("placement");
+		if (cop == null)
+			return;
+		float zval = 0;
+		try {
+			zval = cop.getPosZ();
+		} catch (EMBlockError e1) {
+			SmTrace.lg("Set zval to 0");
+		}
+		Plane zplane = new Plane(EMBox3D.zaxis, new Point3D(0, 0, zval));
+		Point3D add_target = new Point3D();
+		if (!zplane.intersects(target_ray, add_target, true)) {
+			return;
+		}
+		if (SmTrace.trace("atMouse")) {
+			SmTrace.lg(String.format("atMouse: mouse x:%d y: %d point: %s",
+					mouse_x, mouse_y, add_target));
+		}
+		cop.setPos(add_target);
+		String action = addAtMouse_action;
+		if (action == null) {
+			return;
+		}
+		EMBCommand bcmd = null;
+		try {
+			bcmd = new BlkCmdAdd(action);
+		} catch (Exception ev) {
+			ev.printStackTrace();
+			return;
+		}
+		switch (action) {
+			case "emc_newColoredImage":
+				try {
+					newColoredImage(null, null, false);
+				} catch (EMBlockError e2) {
+					// TODO Auto-generated catch block
+					e2.printStackTrace();
+				}
+				break;
+				
+			case "emc_addBoxButton":
+			case "emc_addBallButton":
+			case "emc_addConeButton":
+			case "emc_addCylinderButton":
+			case "emc_addPointerButton":		// Test Pointer drawing
+			case "emc_addTextButton":			// Emulate Text control
+			case "emc_addImageButton":
+				try {
+					sceneControler.addBlockButton(bcmd, action);
+				} catch (EMBlockError e1) {
+					e1.printStackTrace();
+					return;
+				}
+				if (bcmd != null) {
+					boolean res = bcmd.doCmd();
+					sceneControler.selectPrint(String.format("ckDoAction(%s) AFTER", action), "select");
+					return;
+				}
+				break;
+				
+			default:
+				return;			// Ignore if not handled
+		}
+		
+		
+	}
+	
+/**
+// * Check if were in add-at-mouse mode
+ * @return
+ */
+	public boolean isAddAtMouse() {
+		if (addAtMouseCkBox.isSelected())
+			return true;
+		return false;
+	}
+
+									// at mouse info
+	JButton addAtMouse_ibutton;		// button setup
+	String addAtMouse_action;		// action to simulate
+	String addAtMouse_file;			// 
+	public void setAddAtMouse(String action, String file) {
+		addAtMouse_action = action;
+		addAtMouse_file = file;
+	}
+	public void setAddAtMouse(String action) {
+		addAtMouse_action = action;
+		addAtMouse_file = null;
+	}
+	
+	
+	
 	/**
 	 * Convert partial file name to full file name
 	 * @param fileName

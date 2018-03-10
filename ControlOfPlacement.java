@@ -66,6 +66,7 @@ public class ControlOfPlacement extends ControlOfScene {
 		// JPanel panel = new JPanel(new GridLayout(2,7));
 		/// controlDialog = new JDialog();
 		setTitle("Placement - Adjust/Report");
+		
 		JPanel posPanel = new JPanel(new GridLayout(0, 1));
 		add(posPanel);
 

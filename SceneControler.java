@@ -533,8 +533,9 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	 * @param bcmd
 	 */
 	public void clearSelections(EMBCommand bcmd) {
-		while (!selectStack.isEmpty())
-			clearSelection(bcmd);
+		BlockSelect selected = getSelected();
+		int[] selids = selected.getIds();
+		unSelect(selids);
 	}
 
 /**
@@ -571,9 +572,6 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	 * @param id - index to unselect, -1 => all
 	 */
 	public void unSelect(int id) {
-		if (selectStack.isEmpty())
-			return;						// None selected
-		
 		if (scene.displayedBlocks.isEmpty()) {
 			return;
 		}
@@ -591,7 +589,8 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 			}
 		}
 		if (select.isEmpty()) {				// Pop selected entry if empty
-			selectStack.pop();
+			if (!selectStack.isEmpty())
+				selectStack.pop();
 		}
 	}
 
@@ -603,6 +602,16 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		Iterator<Integer> bit = bins.iterator();
 		for (Integer bii = bit.next(); bit.hasNext(); ) {
 			unSelect(bii.intValue());
+		}
+	}
+
+	
+	/**
+	 * Unselect those specified
+	 */
+	public void unSelect(int[] ids) {
+		for (int id : ids) {
+			unSelect(id);
 		}
 	}
 	
@@ -664,11 +673,14 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 
 	
 	public int createNewBlock(EMBCommand bcmd, String blockType, String name) throws EMBlockError  {
-		EMBlock cb_sel = getSelectedBlock();
-		if (cb_sel != null) {
-			cb_sel.setControls(controls);
-			ControlOfPlacement cop = (ControlOfPlacement) controls.getControl("placement");
-			cop.adjPos();
+		if (isAddAtMouse()) {
+		} else {
+			EMBlock cb_sel = getSelectedBlock();
+			if (cb_sel != null) {
+				cb_sel.setControls(controls);
+				ControlOfPlacement cop = (ControlOfPlacement) controls.getControl("placement");
+				cop.adjPos();
+			}
 		}
 		EMBlock cb = null;
 		try {
@@ -848,6 +860,31 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		selectBlocks(bcmd, allids);
 		indexOfHilitedBox = -1;
 	}
+
+	public void selectNone(EMBCommand bcmd) {
+		clearSelections(bcmd);
+		indexOfHilitedBox = -1;
+	}
+
+	/**
+	 * select next available (from first)
+	 * @param bcmd
+	 */
+	public void selectNext(EMBCommand bcmd) {
+		BlockSelect selected = getSelected();
+		int[] allids = getDisplayedIds();
+		int[] selids = selected.getIds();
+
+		if (allids.length == selids.length)
+			return;			// None to select
+		for (int i = 0; i < allids.length; i++) {
+			int id = allids[i];
+			if (!isSelected(id)) {
+				selectBlock(bcmd, id);
+				return;
+			}
+		}
+	}
 	
 	/**
 	 * Select block, as part of a command
@@ -931,6 +968,14 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		mousePressed = false;
 		prevEye = null;
 		repaint();
+	}
+
+	public boolean isAddAtMouse() {
+		ControlOfComponent coco = (ControlOfComponent)controls.getControl("component");
+		if (coco == null) {
+			return false;
+		}
+		return coco.isAddAtMouse();
 	}
 
 	/**
@@ -1413,14 +1458,22 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 			return;
 		}
 		switch(action) {
-			case "emc_selectAllButton":
-				selectAll(bcmd);
-				break;
-			
 			case "emc_duplicateBlockButton":
 				duplicateBlock(bcmd); 			// Duplicate selected block
 				break;
 				
+			case "emc_selectAllButton":
+				selectAll(bcmd);
+				break;
+			
+			case "emc_selectNoneButton":
+				selectNone(bcmd);
+				break;
+				
+			case "emc_selectNextButton":
+				selectNext(bcmd);
+				break;
+			
 			case "emc_deleteBlockButton":
 				deleteSelection(bcmd);
 				break;
@@ -1447,6 +1500,10 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 								
 			case "emc_addImageButton":
 				createNewBlock(bcmd, "image");
+				break;
+				
+			case "emc_addPointerButton":
+				createNewBlock(bcmd, "pointer");
 				break;
 				
 			case "emc_addTextButton":
@@ -1520,6 +1577,22 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 		selectPrint(String.format("selectTextButton(%s) select", action), "action");
 	}
 
+	
+	/**
+	 * Add new pointer
+	 * Experiment in pointer(orientation) drawing / debugging
+	 * @throws EMBlockError 
+	 */
+	public void addPointerButton(EMBCommand bcmd, String action) throws EMBlockError {
+		selectPrint(String.format("addPointerButton(%s) select", action), "action");
+		if (bcmd == null) {
+			SmTrace.lg(String.format(
+					"addPointerButton(%s) with no cmd - ignored",
+					action));
+			return;
+		}
+	}
+	
 	
 	/**
 	 * Add new eye

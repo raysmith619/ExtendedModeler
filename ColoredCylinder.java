@@ -98,14 +98,14 @@ public class ColoredCylinder extends EMBlockBase {
 		SmTrace.lg("drawCylinder", "draw");
 		GL2 gl = (GL2) drawable.getGL();
 		OrientedBox3D obox = getOBox();
-		AlignedBox3D abox = obox.getAlignedBox();
 		if ( expand ) {
 			float adj = (float) 1.1;
 			obox.adjSize(adj, adj, adj);
 		}
 		if ( drawAsWireframe ) {
-			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 			setEmphasis(gl);
+			AlignedBox3D abox = obox.getAlignedBox();
+			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obox.getUp());
 			if ( cornersOnly ) {
 				gl.glBegin( GL.GL_LINES );
 				for ( int dim = 0; dim < 3; ++dim ) {
@@ -149,18 +149,19 @@ public class ColoredCylinder extends EMBlockBase {
 			EMBox3D.rotate2vRet(drawable);
 		}
 		else {
-			Point3D center = abox.getCenter();
-			GLU glu = new GLU();
+			Point3D center = obox.getCenter();
 
-			GLUquadric cylinder = glu.gluNewQuadric();
 			float bx = center.x();
 			float by = center.y();
 			float bz = center.z();
 			bz -= height/2f;
 			gl.glPushMatrix();
 			gl.glTranslatef(bx, by, bz);
-			EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
+			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obox.getUp());
+			gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
 			ColoredBox.setMaterial(gl, getColor());
+			GLU glu = new GLU();
+			GLUquadric cylinder = glu.gluNewQuadric();
 			glu.gluCylinder(cylinder, rBase, rBase, height, nLongitudes, nLatitudes);
 			EMBox3D.rotate2vRet(drawable);
 			gl.glPopMatrix();

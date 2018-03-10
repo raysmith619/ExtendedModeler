@@ -301,6 +301,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		if (iD == 0)
 			iD = EMBlock.nextId();
 		this.color = color;
+		loc();
 	}
 
 	/**
@@ -323,7 +324,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 			else
 				color = Color.WHITE;
 		this.color = color;
-		colorCheck(color, "EMBlock");
+		loc();
 	}
 
 	/**
@@ -344,15 +345,29 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 			target = new Point3D(0,0,0);
 		box.setPosition(position);
 		this.box.up = up;
+		loc();
 	}
 
 	
 	public EMBlockBase(Point3D center, float radius, Color color, Vector3D up) {
 		this.box = new EMBox3D(center, radius, up);
 		this.color = color;
+		loc();
 	}
 
-
+	/**
+	 * Log current location
+	 */
+	public void loc() {
+		loc("loc");
+	}
+	
+	public void loc(String trace) {
+		if (SmTrace.trace(trace)) {
+			SmTrace.lg(String.format("%s %d center:%s",
+					blockType(), iD(), box.getCenter()));
+		}
+	}
 
 	/**
 	 * Copy
@@ -401,6 +416,8 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 			cb_new = ColoredCylinder.newBlock(controls);
 		else if (blockType.equals("image"))
 			cb_new = ColoredImage.newBlock(controls, name);
+		else if (blockType.equals("pointer"))
+			cb_new = ColoredPointer.newBlock(controls);
 		else if (blockType.equals("text"))
 			cb_new = ColoredText.newBlock(controls);
 		else {
@@ -736,6 +753,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	// Overridden when necessary
 	public void translate(Vector3D translation ) {
 		box.translate(translation);
+		loc();
 	}
 
 	
@@ -755,6 +773,7 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	 */
 	public void moveTo(Point3D point ) {
 		box.setPosition(point);
+		loc();
 	}
 	
 
