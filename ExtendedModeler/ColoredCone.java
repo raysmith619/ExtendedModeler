@@ -200,19 +200,6 @@ public class ColoredCone extends EMBlockBase {
 			GLUquadric cylinder = glu.gluNewQuadric();
 			glu.gluCylinder(cylinder, rBase, 0, h, nLongitudes, nLatitudes);
 			gl.glPopAttrib();
-
-			/***
-			gl_glBegin(GL.GL_LINES, "cone single line in z-axis");
-			gl.glColor3d(1,1,1);
-			gl_glVertex3fv(new Point3D(0,0,0).get(), 0);
-			gl_glVertex3fv(new Point3D(0,0,1).get(), 0);
-			gl_glVertex3fv(new Point3D(0,0,0).get(), 0);
-			gl_glVertex3fv(new Point3D(.0f,.3f,.0f).get(), 0);
-			gl_glVertex3fv(new Point3D(0,0,0).get(), 0);
-			gl_glVertex3fv(new Point3D(.5f,0.0f,.0f).get(), 0);
-			gl_glEnd("cone single line in z-axis");
-			gl.glPopAttrib();
-			***/
 			EMBox3D.rotate2vRet(drawable);
 			gl.glPopMatrix();
 		}

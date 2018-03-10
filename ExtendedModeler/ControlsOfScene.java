@@ -32,7 +32,7 @@ public class ControlsOfScene {
 	// Controls dictionary
 	SceneControler sceneControler;
 	Map<String, ControlEntry> controlh;
-	LinkedList<String> controls = new LinkedList<String>();			// Ordered set of control names
+	LinkedList<String> controlNames = new LinkedList<String>();			// Ordered set of control names
 	/**
 	 * Setup controls access
 	 */
@@ -62,7 +62,7 @@ public class ControlsOfScene {
 			return;
 		if (!controlh.containsKey(controlName)) {
 			addControl(controlName);
-			controls.add(controlName);			// Add to ordered list of control names
+			controlNames.add(controlName);			// Add to ordered list of control names
 		}
 		ControlEntry ctl_ent = controlh.get(controlName);
 		ControlOfScene control = ctl_ent.control;
@@ -189,7 +189,7 @@ public class ControlsOfScene {
 	 * @param drawable
 	 */
 	public void display(GLAutoDrawable drawable) {
-		for (String name : controls) {
+		for (String name : controlNames) {
 			ControlEntry ctl_entry = controlh.get(name);
 			ControlOfScene control = ctl_entry.control;
 			if (!control.isActive())
@@ -254,7 +254,7 @@ public class ControlsOfScene {
 			xloc = control.getXFromProp();
 			yloc = control.getYFromProp();
 		} else {
-			for (String name : controls) {
+			for (String name : controlNames) {
 				if (name.equals(controlName))
 					continue;
 				ControlEntry ctl_ent = controlh.get(name);

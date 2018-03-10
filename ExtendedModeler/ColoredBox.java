@@ -170,25 +170,28 @@ public class ColoredBox extends EMBlockBase {
 			float adj = (float) 1.1;
 			obox.adjSize(adj, adj, adj);
 		}
-		AlignedBox3D abox = obox.getAlignedBox();
+		Point3D center = getCenter();
+		gl.glPushMatrix();
+		gl.glTranslatef(center.x(), center.y(), center.z());
+		///AlignedBox3D abox = obox.getAlignedBox();
 		EMBox3D.rotate2v(drawable, EMBox3D.UP, obox.getUp());
 		if ( drawAsWireframe ) {
 			setEmphasis(gl);
 			if ( cornersOnly ) {
 				gl_glBegin( GL.GL_LINES, "drawAsWireframe cornersOnly GL.GL_LINES" );
 				for ( int dim = 0; dim < 3; ++dim ) {
-					Point3D pvto = abox.getCorner(1<<dim);
-					Point3D pv0 = abox.getCorner(0);
+					Point3D pvto = obox.getCorner(1<<dim);
+					Point3D pv0 = obox.getCorner(0);
 					Vector3D pdiff = Point3D.diff( pvto, pv0);
 					Vector3D v = Vector3D.mult(pdiff, 0.1f );
 					for ( int a = 0; a < 2; ++a ) {
 						for ( int b = 0; b < 2; ++b ) {
 							int i = (a << ((dim+1)%3)) | (b << ((dim+2)%3));
-							Point3D pvi = abox.getCorner(i);
+							Point3D pvi = obox.getCorner(i);
 							gl_glVertex3fv( pvi.get(), 0 );
 							gl_glVertex3fv( Point3D.sum( pvi, v ).get(), 0 );
 							i |= 1 << dim;
-							Point3D pvi2 = abox.getCorner(i);
+							Point3D pvi2 = obox.getCorner(i);
 							gl_glVertex3fv( pvi2.get(), 0 );
 							gl_glVertex3fv( Point3D.diff( pvi2, v ).get(), 0 );
 						}
@@ -198,24 +201,24 @@ public class ColoredBox extends EMBlockBase {
 			}
 			else {
 				gl_glBegin(GL.GL_LINE_STRIP, "drawAsWireframe GL.GL_LINE_STRIP");
-					gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 0 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 1 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 3 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 2 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 6 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 7 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 5 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 4 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 0 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 2 ).get(), 0 );
 				gl_glEnd();
 				gl_glBegin( GL.GL_LINES, "drawAsWireframe GL.GL_LINE_STRIP" );
-					gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 1 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 5 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 3 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 7 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 4 ).get(), 0 );
+					gl_glVertex3fv( obox.getCorner( 6 ).get(), 0 );
 				gl_glEnd();
 			}
 			clearEmphasis();
@@ -232,32 +235,33 @@ public class ColoredBox extends EMBlockBase {
 			ColoredBox.setMaterial(gl, color);
 			
 			gl.glBegin( GL2.GL_QUAD_STRIP );
-				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 0 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 1 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 4 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 5 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 6 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 7 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 2 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 3 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 0 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 1 ).get(), 0 );
 			gl_glEnd();
 
 			gl_glBegin( GL2.GL_QUADS, "solid GL2.GL_QUADS" );
-				gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 1 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 3 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 7 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 5 ).get(), 0 );
 
-				gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-				gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 0 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 4 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 6 ).get(), 0 );
+				gl_glVertex3fv( obox.getCorner( 2 ).get(), 0 );
 			gl_glEnd();
 			ColoredBox.clearMaterial(gl);
 		}
 		EMBox3D.rotate2vRet(drawable);
+		gl.glPopMatrix();
 	}
 
 	
@@ -336,9 +340,39 @@ static public void drawBox(
 		return obox.getMin();
 	}
 
+	public float getMinX() {
+		Point3D min = getMin();
+		return min.x();
+	}
+
+	public float getMinY() {
+		Point3D min = getMin();
+		return min.y();
+	}
+
+	public float getMinZ() {
+		Point3D min = getMin();
+		return min.z();
+	}
+
 	public Point3D getMax() {
 		OrientedBox3D obox = new OrientedBox3D(abox, getUp());
 		return obox.getMax();
+	}
+
+	public float getMaxX() {
+		Point3D max = getMax();
+		return max.x();
+	}
+
+	public float getMaxY() {
+		Point3D max = getMax();
+		return max.y();
+	}
+
+	public float getMaxZ() {
+		Point3D max = getMax();
+		return max.z();
 	}
 	
 	
@@ -400,7 +434,7 @@ static public void drawBox(
 	public void translate(Vector3D translation ) {
 		SmTrace.lg(String.format("ColoredBox.translation(%s)", translation), "boxdebug");
 		abox.translate(translation);
-		
+		loc();
 	}
 
 	
@@ -420,6 +454,7 @@ static public void drawBox(
 	 */
 	public void moveTo(Point3D point ) {
 		box.setPosition(point);
+		loc();
 	}
 	
 
