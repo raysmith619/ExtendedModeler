@@ -1038,14 +1038,14 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			gl.glPushAttrib(GL2.GL_TRANSFORM_BIT);
 			gl.glMatrixMode(GL2.GL_MODELVIEW);
 			gl.glPushMatrix();
-			SmTrace.lg(String.format("displayCameraTarget sphere=%s", camera.target));
+			SmTrace.lg(String.format("displayCameraTarget sphere=%s", camera.target), "target");
 			gl.glColor3f(1, 1, 1);
 			gl.glPushMatrix();
 			gl.glTranslatef(camera.target.x(), camera.target.y(), camera.target.z());
 			glut.glutWireSphere(r, nLongitudes, nLatitudes);
 			gl.glPopMatrix();
 			gl.glColor3f(1, 1, 1);
-			SmTrace.lg(String.format("displayCameraTarget axes=%s", camera.target));
+			SmTrace.lg(String.format("displayCameraTarget axes=%s", camera.target), "target");
 			gl.glBegin(GL.GL_LINES);
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(-0.5f, 0, 0)).get(), 0);
 			gl.glVertex3fv(Point3D.sum(camera.target, new Vector3D(0.5f, 0, 0)).get(), 0);
@@ -1680,7 +1680,15 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		lookAt(eyeTarget);
 		setLocalViewerEye();
 	}
-	
+
+	/**
+	 * Update external viewer
+	 */
+	public void updateExternalViewer() {
+		if (externalViewer != null) {
+			externalViewer.updateFromLocalViewer();
+		}
+	}
 	
 	/**
 	 * Get currently selected block
@@ -2114,6 +2122,8 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			} else {
 				camera.translateSceneRightAndUp((float) (delta_x), (float) (delta_y));
 			}
+			if (externalViewer != null)
+				externalViewer.updateFromLocalViewer();
 			repaint();
 		} else if (SwingUtilities.isLeftMouseButton(e) && !e.isControlDown() && sceneControler.anySelected()) {
 			if (!e.isShiftDown()) {

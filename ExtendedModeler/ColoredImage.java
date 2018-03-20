@@ -67,7 +67,7 @@ public class ColoredImage extends EMBlockBase {
 		
 		imageFile = new File(imageFileName);
 		try {
-			imageTexture = TextureIO.newTexture(imageFile, true);
+			imageTexture = TextureIO.newTexture(imageFile, true);	/// mipmaps?
 			if (imageTexture == null) {
 				SmTrace.lg("File new imageTexture is null");
 				return;
@@ -311,6 +311,11 @@ public class ColoredImage extends EMBlockBase {
 			}
 		}
 		else {
+			boolean DBG = true;
+			if (isExternalViewer()) {
+				drawFromFile(drawable);
+				return;
+			}
 			gl.glPushMatrix();
 			gl.glTranslatef(obox.getCenter().x(), obox.getCenter().y(), obox.getCenter().z());
 			float minx = -size.x()/2;
@@ -424,7 +429,102 @@ public class ColoredImage extends EMBlockBase {
 		String desc = traceDesc;
 		gl_glEnd(desc);
 	}
+
+	/**
+	 * Recreate image from file
+	 * Investigatory to investigate
+	 * problem with multiple views
+	 * @param gl
+	 */
+	public void drawFromFile(GLAutoDrawable drawable) {
+		GL2 gl = (GL2) drawable.getGL();
+		glp = gl;					// For tracking
+		Texture imageTexture;
+		
+		try {
+			imageTexture = TextureIO.newTexture(imageFile, true);	/// mipmaps?
+			if (imageTexture == null) {
+				SmTrace.lg("File new imageTexture is null");
+				return;
+			}
+		} catch (GLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			SmTrace.lg(String.format("Texture IO Error File name=\"%s\" %s",
+					imageFileName, e.getMessage()));
+			return;
+		}
+		
+		
+		gl.glPushMatrix();
+		OrientedBox3D obox = getOBox();
+		gl.glTranslatef(obox.getCenter().x(), obox.getCenter().y(), obox.getCenter().z());
+		float minx = -size.x()/2;
+		float maxx = size.x()/2;
+		float miny = -size.y()/2;
+		float maxy = size.y()/2;
+		float minz = -size.z()/2;
+		float maxz = size.z()/2;
+		if (imageTexture == null) {
+			SmTrace.lg("adding imageTexture is null");
+			return;
+		}
+	SmTrace.lg(String.format("draw: %s body", blockType()), "drawimage");
+	int imageTextureI = imageTexture.getTextureObject(gl);
+	///ColoredBox.setMaterial(gl);
+	imageTexture.enable(gl);
+	gl.glDisable(GL2.GL_LIGHTING);
+	gl.glColor3f(1, 1, 1);		// Force white background
+	gl.glEnable(GL2.GL_TEXTURE_2D);
+	gl.glBindTexture(GL2.GL_TEXTURE_2D, imageTextureI);
+	gl.glBegin(GL2.GL_QUADS);
 	
+	  // Front Face
+	  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(minx, miny, maxz);
+	  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(maxx, miny, maxz);
+	  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(maxx, maxy, maxz);
+	  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(minx, maxy, maxz);
+	
+	  // Back Face
+	  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(minx, miny, minz);
+	  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(minx, maxy, minz);
+	  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(maxx, maxy, minz);
+	  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(maxx, miny, minz);
+	
+	  // Top Face
+	  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(minx, maxy, minz);
+	  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(minx, maxy, maxz);
+	  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(maxx, maxy, maxz);
+	  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(maxx, maxy, minz);
+	
+	  // Bottom Face
+	  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(minx, miny, minz);
+	  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(maxx, miny, minz);
+	  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(maxx, miny, maxz);
+	  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(minx, miny, maxz);
+	
+	  // Right face
+	  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(maxx, miny, minz);
+	  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(maxx, maxy, minz);
+	  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(maxx, maxy, maxz);
+	  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(maxx, miny, maxz);
+	
+	  // Left Face
+	  gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(minx, miny, minz);
+	  gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(minx, miny, maxz);
+	  gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(minx, maxy, maxz);
+	  gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(minx, maxy, minz);
+	  gl.glEnd();
+	  imageTexture.disable(gl);
+	  gl.glFlush();
+
+	EMBox3D.rotate2vRet(drawable);
+	gl.glPopMatrix();					// Undo translate
+		
+	}
 
 	public Point3D getMin() {
 		return abox.getMin();
