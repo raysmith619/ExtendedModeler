@@ -97,59 +97,12 @@ public class ColoredCylinder extends EMBlockBase {
 
 		SmTrace.lg("drawCylinder", "draw");
 		GL2 gl = (GL2) drawable.getGL();
-		OrientedBox3D obox = getOBox();
-		if ( expand ) {
-			float adj = (float) 1.1;
-			obox.adjSize(adj, adj, adj);
-		}
 		if ( drawAsWireframe ) {
-			setEmphasis(gl);
-			AlignedBox3D abox = obox.getAlignedBox();
-			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obox.getUp());
-			if ( cornersOnly ) {
-				gl.glBegin( GL.GL_LINES );
-				for ( int dim = 0; dim < 3; ++dim ) {
-					Vector3D v = Vector3D.mult( Point3D.diff(abox.getCorner(1<<dim),abox.getCorner(0)), 0.1f );
-					for ( int a = 0; a < 2; ++a ) {
-						for ( int b = 0; b < 2; ++b ) {
-							int i = (a << ((dim+1)%3)) | (b << ((dim+2)%3));
-							gl.glVertex3fv( abox.getCorner(i).get(), 0 );
-							gl.glVertex3fv( Point3D.sum( abox.getCorner(i), v ).get(), 0 );
-							i |= 1 << dim;
-							gl.glVertex3fv( abox.getCorner(i).get(), 0 );
-							gl.glVertex3fv( Point3D.diff( abox.getCorner(i), v ).get(), 0 );
-						}
-					}
-				}
-				gl.glEnd();
-			}
-			else {
-				gl.glBegin( GL.GL_LINE_STRIP );
-					gl.glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 2 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 2 ).get(), 0 );
-				gl.glEnd();
-				gl.glBegin( GL.GL_LINES );
-					gl.glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-					gl.glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-				gl.glEnd();
-			}
-			clearEmphasis();
-			EMBox3D.rotate2vRet(drawable);
+			drawHilighted(drawable);
+			 return;
 		}
 		else {
-			Point3D center = obox.getCenter();
+			Point3D center = getCenter();
 
 			float bx = center.x();
 			float by = center.y();
@@ -157,7 +110,10 @@ public class ColoredCylinder extends EMBlockBase {
 			bz -= height/2f;
 			gl.glPushMatrix();
 			gl.glTranslatef(bx, by, bz);
-			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obox.getUp());
+			Vector3D obj_up = getUp();
+			Vector3D center_cone = Vector3D.mult(obj_up, -height/2);
+			gl.glTranslatef(center_cone.x(), center_cone.y(), center_cone.z());
+			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, getUp());
 			gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
 			ColoredBox.setMaterial(gl, getColor());
 			GLU glu = new GLU();

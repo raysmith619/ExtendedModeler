@@ -117,7 +117,7 @@ public class EMBlockBase {
         float high_shininess[] = { 100.0f };
         float mat_emission[] = { 0.3f, 0.2f, 0.2f, 0.0f };
         mat_emission = colors;
-        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat_ambient_color, 0);
+        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_AMBIENT, mat_ambient_color, 0);
         gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, mat_diffuse, 0);
         gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, mat_specular, 0);
         gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SHININESS, high_shininess, 0);
@@ -136,11 +136,11 @@ public class EMBlockBase {
 	 * @param gl
 	 * @param color
 	 */
-	private GL2 glEmphasis = null;
-	public void setEmphasis(GL2 gl, Color color) {
+	private static GL2 glEmphasis = null;
+	public static void setEmphasis(GL2 gl, Color color) {
 		glEmphasis = gl;
 		if (color == null) {
-			color = this.color;
+			color = Color.WHITE;
 		}
 		gl.glDisable(GL2.GL_LIGHTING);
 		float cv[] = new float[4];
@@ -149,12 +149,12 @@ public class EMBlockBase {
 		
 	}
 	
-	public void setEmphasis(GL2 gl) {
+	public static void setEmphasis(GL2 gl) {
 		setEmphasis(gl, null);
 	}
 	
 	
-	public void clearEmphasis() {
+	public static void clearEmphasis() {
 		if (glEmphasis == null) {
 			SmTrace.lg("clearEmphasis - lacks matching setEmphasis");
 		}
@@ -271,6 +271,8 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 	}
 
 	public void setControl(ControlOfPlacement ctl) {
+		if (ctl == null)
+			return;
 		ctl.setControl(this);
 	}
 
@@ -629,6 +631,16 @@ public void setFromControl(ControlOfText ctl) throws EMBlockError {
 		return colorAdj(red, green, blue, alpha);
 	}
 	
+	
+	public void drawHilighted(GLAutoDrawable drawable) {
+		SmTrace.lg("drawHilighted", "draw");
+		if (SmTrace.trace("drawloc")) {
+			SmTrace.lg(String.format("drawLoc %d %s center: %s corner0: %s",
+				-1, blockType(), box.getCenter(), box.getCorner(0)));	
+		}
+		ColoredBox.drawHilighted(drawable, color, getCenter(), getUp(), getSize());
+	}
+
 	
 	/**
 	 * @param cb - existing block

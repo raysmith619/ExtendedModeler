@@ -679,7 +679,7 @@ public class ControlOfPlacement extends ControlOfScene {
 			bcmd.addBlock(cb);
 		}
 		bcmd.doCmd();
-		sceneControler.repaint();
+		///x sceneControler.repaint();
 	}
 
 	/**
@@ -709,7 +709,7 @@ public class ControlOfPlacement extends ControlOfScene {
 			bcmd.addBlock(cb);
 		}
 		bcmd.doCmd();
-		sceneControler.repaint();
+		///x sceneControler.repaint();
 	}
 
 	/**
@@ -753,8 +753,8 @@ public class ControlOfPlacement extends ControlOfScene {
 			SmTrace.lg(String.format("set up to %s", cb.getUp()));
 			bcmd.addBlock(cb);
 		}
-		bcmd.doCmd();
-		sceneControler.repaint();
+		///bcmd.doCmd();
+		///x sceneControler.repaint();
 	}
 
 	
@@ -777,7 +777,7 @@ public class ControlOfPlacement extends ControlOfScene {
 			adjYfield.setText(String.format("%.2g", size.y()));
 			adjZfield.setText(String.format("%.2g", size.z()));
 
-			repaint();
+			///x repaint();
 		}
 	}
 

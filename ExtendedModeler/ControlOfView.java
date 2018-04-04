@@ -294,7 +294,7 @@ public class ControlOfView extends JDialog implements java.awt.event.WindowListe
 				Color.MAGENTA,
 				Color.PINK,
 				///Color.BLACK,
-				Color.DARK_GRAY,
+				///Color.DARK_GRAY,
 				Color.GRAY,
 				Color.LIGHT_GRAY,
 				Color.WHITE

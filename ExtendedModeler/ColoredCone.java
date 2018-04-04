@@ -133,67 +133,24 @@ public class ColoredCone extends EMBlockBase {
 		}
 		GL2 gl = (GL2) drawable.getGL();
 		glp = gl;				// For tracking gl.operations
-		OrientedBox3D obox = getOBox();
-		if ( expand ) {
-			obox.adjSize(1.1f, 1.1f, 1.1f);
-		}
 		if ( drawAsWireframe ) {
-			setEmphasis(gl);
-			AlignedBox3D abox = obox.getAlignedBox();
-			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obox.getUp());
-			if ( cornersOnly ) {
-				gl_glBegin( GL.GL_LINES, "drawAsWireframe cornersOnly GL.GL_LINES" );
-				for ( int dim = 0; dim < 3; ++dim ) {
-					Vector3D v = Vector3D.mult( Point3D.diff(abox.getCorner(1<<dim),abox.getCorner(0)), 0.1f );
-					for ( int a = 0; a < 2; ++a ) {
-						for ( int b = 0; b < 2; ++b ) {
-							int i = (a << ((dim+1)%3)) | (b << ((dim+2)%3));
-							gl_glVertex3fv( abox.getCorner(i).get(), 0 );
-							gl_glVertex3fv( Point3D.sum( abox.getCorner(i), v ).get(), 0 );
-							i |= 1 << dim;
-							gl_glVertex3fv( abox.getCorner(i).get(), 0 );
-							gl_glVertex3fv( Point3D.diff( abox.getCorner(i), v ).get(), 0 );
-						}
-					}
-				}
-				gl_glEnd("cornersOnly");
-			}
-			else {
-				gl_glBegin( GL.GL_LINE_STRIP, "drawAsWireframe" );
-					gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 0 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 2 ).get(), 0 );
-				gl_glEnd("GL.GL_LINE_STRIP, \"drawAsWireframe");
-				gl_glBegin( GL.GL_LINES, "drawAsWireframe" );
-					gl_glVertex3fv( abox.getCorner( 1 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 5 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 3 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 7 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 4 ).get(), 0 );
-					gl_glVertex3fv( abox.getCorner( 6 ).get(), 0 );
-				gl_glEnd("GL.GL_LINES, \"drawAsWireframe\"");
-			}
-			clearEmphasis();
-			EMBox3D.rotate2vRet(drawable);
+			drawHilighted(drawable);
+			 return;
 		}
 		else {
 			SmTrace.lg("drawCone body", "draw");
-			Point3D center = obox.getCenter();
+			Point3D center = getCenter();
 
 			float bx = center.x();
-			float by = center.y();
+			///float by = center.y()-h/2;		// gl drawing definition
+			float by = center.y();		// center 
 			float bz = center.z();
-			bz -= height/2f;
 			gl.glPushMatrix();
 			gl.glTranslatef(bx, by, bz);
-			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obox.getUp());
+			Vector3D obj_up = getUp();
+			Vector3D center_cone = Vector3D.mult(obj_up, -h/2);
+			gl.glTranslatef(center_cone.x(), center_cone.y(), center_cone.z());
+			EMBox3D.rotate2v(drawable, EMBox3D.GL_UP, obj_up);
 			gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
 			ColoredCone.setMaterial(gl, getColor());
 			GLU glu = new GLU();
@@ -205,7 +162,11 @@ public class ColoredCone extends EMBlockBase {
 		}
 	}
 
-
+	
+	public Vector3D getSize() {
+		float width = 2*rBase;
+		return new Vector3D(width, height, width);
+	}
 
 
 

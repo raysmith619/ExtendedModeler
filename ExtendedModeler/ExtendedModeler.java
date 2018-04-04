@@ -447,7 +447,7 @@ public class ExtendedModeler implements ActionListener {
 		externalViewer = localViewer.externalView(
 				"External View", ExternalViewerName);
 		sceneControler.setExternalViewer(localViewer, externalViewer);
-		sceneControler.display();
+		///x sceneControler.display();
 	}
 	
 	public void clearExternalView() {

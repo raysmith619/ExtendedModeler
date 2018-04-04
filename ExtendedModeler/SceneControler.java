@@ -483,8 +483,8 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 				}
 			}
 			
-			viewer.display();
-			viewer.repaint();
+			///x viewer.display();
+			///x viewer.repaint();
 		}
 		
 		/*** Reverse order TFD
@@ -862,7 +862,14 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 	}
 
 	public void selectNone(EMBCommand bcmd) {
-		clearSelections(bcmd);
+		BlockSelect selected = getSelected();
+		int[] allids = getDisplayedIds();
+		int[] selids = selected.getIds();
+
+		for (int i = 0; i < selids.length; i++) {
+			int id = selids[i];
+			bcmd.removeSelect(id);
+		}
 		indexOfHilitedBox = -1;
 	}
 
@@ -882,6 +889,25 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 			if (!isSelected(id)) {
 				selectBlock(bcmd, id);
 				return;
+			}
+		}
+	}
+
+	/**
+	 * Change selection to all no-selected, unselect currently selected
+	 * @param bcmd
+	 */
+	public void selectOther(EMBCommand bcmd) {
+		BlockSelect selected = getSelected();
+		int[] allids = getDisplayedIds();
+		int[] selids = selected.getIds();
+
+		for (int i = 0; i < allids.length; i++) {
+			int id = allids[i];
+			if (!isSelected(id)) {
+				bcmd.selectBlock(id, true);
+			} else {
+				bcmd.removeSelect(id);
 			}
 		}
 	}
@@ -1472,6 +1498,10 @@ class SceneControler extends GLCanvas implements MouseListener, MouseMotionListe
 				
 			case "emc_selectNextButton":
 				selectNext(bcmd);
+				break;
+				
+			case "emc_selectOtherButton":
+				selectOther(bcmd);
 				break;
 			
 			case "emc_deleteBlockButton":

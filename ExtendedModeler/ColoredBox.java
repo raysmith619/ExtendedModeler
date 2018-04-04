@@ -234,7 +234,22 @@ public class ColoredBox extends EMBlockBase {
 					iD(), blockType(), color), "drawcolor");
 			ColoredBox.setMaterial(gl, color);
 			
-			gl.glBegin( GL2.GL_QUAD_STRIP );
+			/***
+			gl_glBegin( GL2.GL_POLYGON, "solid GL2.GL_POLYGON" );
+			gl_glVertex3fv( obox.getCorner(0).get(), 0 );
+			gl_glVertex3fv( obox.getCorner(1).get(), 0 );
+			gl_glVertex3fv( obox.getCorner(3).get(), 0 );
+			gl_glVertex3fv( obox.getCorner(2).get(), 0 );
+			gl_glVertex3fv( obox.getCorner(6).get(), 0 );
+			gl_glVertex3fv( obox.getCorner(4).get(), 0 );
+			gl_glVertex3fv( obox.getCorner(5).get(), 0 );
+			gl_glVertex3fv( obox.getCorner(7).get(), 0 );
+			gl_glVertex3fv( obox.getCorner(6).get(), 0 );
+			gl_glEnd();
+			***/
+			
+///***
+			gl_glBegin( GL2.GL_QUAD_STRIP, "solid GL_QUAD_STRIP" );
 				gl_glVertex3fv( obox.getCorner( 0 ).get(), 0 );
 				gl_glVertex3fv( obox.getCorner( 1 ).get(), 0 );
 				gl_glVertex3fv( obox.getCorner( 4 ).get(), 0 );
@@ -258,6 +273,7 @@ public class ColoredBox extends EMBlockBase {
 				gl_glVertex3fv( obox.getCorner( 6 ).get(), 0 );
 				gl_glVertex3fv( obox.getCorner( 2 ).get(), 0 );
 			gl_glEnd();
+//***/
 			ColoredBox.clearMaterial(gl);
 		}
 		EMBox3D.rotate2vRet(drawable);
@@ -265,16 +281,73 @@ public class ColoredBox extends EMBlockBase {
 	}
 
 	
+	static public void drawHilighted(GLAutoDrawable drawable,
+		Color color,
+		Point3D center, Vector3D up, Vector3D size) {
+		size = Vector3D.mult(size, 1.1f);
+		float x0 = -size.x()/2;
+		float x1 = x0 + size.x();
+		float y0 = -size.y()/2;
+		float y1 = y0 + size.y();
+		float z0 = -size.z()/2;
+		float z1 = z0 + size.z();
+		float[] points[] = {
+				{x0, y0, z0},	// A face
+				{x1, y0, z0},
+				{x1, y1, z0},
+				{x0, y1, z0},
+				{x0, y0, z0},	// p5
 
-static public void drawBox(
-	GLAutoDrawable drawable,
-	ColoredBox cbox,
-	boolean expand,
-	boolean drawAsWireframe,
-	boolean cornersOnly
-	) {
-	cbox.draw(drawable, expand, drawAsWireframe, cornersOnly);
-}
+				{x0, y0, z1},	// B face p6
+				{x0, y1, z1},
+				{x0, y1, z0},
+				{x0, y0, z0},	// p9
+				
+				{x1, y0, z0},	// C face p10
+				{x1, y0, z1},	// p11
+				{x0, y0, z1},	// p12
+				
+				{x0, y1, z1},	// D face p13
+				{x1, y1, z1},	// p14
+				{x1, y0, z1},	// p15
+				// line Done
+				
+				{x1, y1, z1},	// E face p16
+				{x1, y1, z0},	//  p17
+
+
+		};
+		GL2 gl = (GL2) drawable.getGL();
+		glp = gl;					// For tracking
+		gl.glPushMatrix();
+		gl.glTranslatef(center.x(), center.y(), center.z());
+		///AlignedBox3D abox = obox.getAlignedBox();
+		EMBox3D.rotate2v(drawable, EMBox3D.UP, up);
+		setEmphasis(gl, color);
+		gl_glBegin( GL2.GL_LINE_STRIP, "drawHilighted" );
+		for (int i = 0; i < points.length; i++) {
+			float px = points[i][0];
+			float py = points[i][1];
+			float pz = points[i][2];
+			gl_glVertex3f(px, py, pz);
+		}
+		clearEmphasis();
+		gl_glEnd();
+		EMBox3D.rotate2vRet(drawable);
+		gl.glPopMatrix();
+	}
+
+	
+
+	static public void drawBox(
+		GLAutoDrawable drawable,
+		ColoredBox cbox,
+		boolean expand,
+		boolean drawAsWireframe,
+		boolean cornersOnly
+		) {
+		cbox.draw(drawable, expand, drawAsWireframe, cornersOnly);
+	}
 
 
 	/**
@@ -293,7 +366,12 @@ static public void drawBox(
 	private static void gl_glVertex3fv(float [] v, int offset) {
 		String desc = traceDesc;
 		glp.glVertex3fv(v, offset);
-		SmTrace.lg(String.format("%s glVertex3fv %.2f %.2f %.2f", block, v[0], v[1], v[2], desc), "draw");
+		SmTrace.lg(String.format("ColoredBox glVertex3fv %.2f %.2f %.2f", v[0], v[1], v[2], desc), "drawbox");
+	}
+	private static void gl_glVertex3f(float x, float y, float z) {
+		String desc = traceDesc;
+		glp.glVertex3f(x, y, z);
+		SmTrace.lg(String.format("%s glVertex3f %.2f %.2f %.2f", block, x, y, z, desc), "draw");
 	}
 	private static String traceDesc = "trace description";
 	private static void gl_glBegin(int mode, String desc) {
@@ -374,7 +452,6 @@ static public void drawBox(
 		Point3D max = getMax();
 		return max.z();
 	}
-	
 	
 	/**
 	 * Return copy of inner box

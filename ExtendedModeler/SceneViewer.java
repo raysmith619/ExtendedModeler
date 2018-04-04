@@ -45,6 +45,7 @@ import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
+import com.jogamp.opengl.awt.GLCanvas;
 ///import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.gl2.GLUT;
@@ -76,7 +77,8 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	String name; 						// Viewer name - used in data keys
 	JMenuBar menuBar;
 	boolean isStub = false;				// true -> no controls, not visible
-	EMCanvas canvas; 					// Our canvas
+	///EMCanvas canvas; 					// Our canvas
+	GLCanvas canvas; 					// Our canvas
 	JScrollPane scrollPane;				// Our Scroll pane
 	public static int SCROLL_RANGE = 1000;
 	public static int SCROLL_MIN = -SCROLL_RANGE/2;
@@ -310,6 +312,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		horizontalScrollBar.setVisibleAmount(SCROLL_RANGE/500);
 		gridColor.getColorComponents(gridColorArray);		// Can't be done in class def
 		
+		/*** Trying to pare back to avoid continuous display() calls
 		scrollPane.getHorizontalScrollBar().addAdjustmentListener(new AdjustmentListener() {
 
 			@Override
@@ -327,6 +330,9 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				
 			}
 		});
+		***/
+		
+		
 		/***
 		 * Adding ScrollPane
 		 */
@@ -918,7 +924,19 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		SmTrace.lg("displayChanged");
 	}
 
-	public void display() {
+	
+	/**
+	 * 
+	 * @param auto - called automatically - don't call repaint
+	 */
+	static int nauto = 0;
+	int nauto_max = 10000;
+	public void display(boolean auto) {
+		if (auto) {
+			///nauto++;
+		} else {
+			nauto = 0;
+		}
 		sceneControler.setDisplayedViewer(this);
 		if (SmTrace.trace("displayviewer")) {
 			SmTrace.lg(String.format("display: viewer=%s", name));
@@ -928,7 +946,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 				SmTrace.lg("display: tests local");
 		}
 		if (externalViewer != null) {
-			externalViewer.display(); 		// Update external display
+			externalViewer.display(auto); 		// Update external display
 		}
 
 		if (SmTrace.trace("skipimage")) {
@@ -1072,9 +1090,20 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			radialMenu.draw(gl, glut, getWidth(), getHeight());
 		}
 
-		repaint();
+		if (!auto || nauto <= nauto_max) {
+			repaint();
+		}
 	}
 
+	
+	/**
+	 * Regular call to display
+	 */
+	public void display() {
+		display(true);		// Not auto
+	}
+	
+	
 	/**
 	 * Display a grid to show 3D space coordinates
 	 * Use World axes
@@ -1463,11 +1492,11 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 	}
 	
 	
-	public EMCanvas getCanvas() {
+	public GLCanvas getCanvas() {
 		return canvas;
 	}
 
-	public void setCanvas(EMCanvas canvas) {
+	public void setCanvas(GLCanvas canvas) {
 		this.canvas = canvas;
 	}
 
@@ -1488,7 +1517,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 					indexOfHilitedBox), "hilite");
 			indexOfHilitedBox = newIndexOfHilitedBox;
 
-			repaint();
+			///x repaint();
 		}
 	}
 
@@ -1804,7 +1833,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		}
 		selectedPoint(hilitedPoint());
 		normalAtSelectedPoint(normalAtHilitedPoint());
-		repaint();
+		///x repaint();
 	}
 
 	
@@ -1932,7 +1961,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 					|| (SwingUtilities.isRightMouseButton(e) && !e.isShiftDown() && !e.isControlDown())) {
 				int returnValue = radialMenu.pressEvent(mouse_x, mouse_y);
 				if (returnValue == CustomWidget.S_REDRAW)
-					repaint();
+					///x repaint();
 				if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
 					return;
 			}
@@ -2068,7 +2097,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 					break;
 				}
 
-				repaint();
+				///x repaint();
 
 				if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
 					return;
@@ -2092,7 +2121,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		if (radialMenu.isVisible()) {
 			int returnValue = radialMenu.moveEvent(mouse_x, mouse_y);
 			if (returnValue == CustomWidget.S_REDRAW)
-				repaint();
+				///x repaint();
 			if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
 				return;
 		}
@@ -2111,7 +2140,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 		if (radialMenu.isVisible()) {
 			int returnValue = radialMenu.dragEvent(mouse_x, mouse_y);
 			if (returnValue == CustomWidget.S_REDRAW)
-				repaint();
+				///x repaint();
 			if (returnValue != CustomWidget.S_EVENT_NOT_CONSUMED)
 				return;
 		} else if (e.isControlDown()) {
@@ -2124,7 +2153,7 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 			}
 			if (externalViewer != null)
 				externalViewer.updateFromLocalViewer();
-			repaint();
+			///x repaint();
 		} else if (SwingUtilities.isLeftMouseButton(e) && !e.isControlDown() && sceneControler.anySelected()) {
 			if (!e.isShiftDown()) {
 				EMBlock[] cbs = sceneControler.getSelectedBlocks();
@@ -2732,7 +2761,18 @@ class SceneViewer extends JFrame implements MouseListener, MouseMotionListener, 
 
 	@Override
 	public void display(GLAutoDrawable drawable) {
-		display();
+		if (SmTrace.trace("displaydrawable")) {
+			StackTraceElement[] stackTraceElements =
+					Thread.currentThread().getStackTrace();
+			int len = stackTraceElements.length;
+			StackTraceElement caller = stackTraceElements[2];		// display's caller, not us
+			SmTrace.lg(String.format("display(drawable) from %s.%s %s:%d",
+					caller.getClassName(),
+					caller.getMethodName(),
+					caller.getFileName(),
+					caller.getLineNumber()));
+		}
+		display(true);		// limit repaints
 
 	}
 

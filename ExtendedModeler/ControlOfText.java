@@ -238,7 +238,7 @@ public class ControlOfText extends ControlOfScene {
 
 		if (setup) {
 
-			repaint();
+			///x repaint();
 		}
 	}
 

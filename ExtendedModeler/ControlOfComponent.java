@@ -102,6 +102,11 @@ public class ControlOfComponent extends ControlOfScene {
 		addSelectNextButton.setActionCommand("emc_selectNextButton");
 		addSelectNextButton.addActionListener(sceneControler);
 		selectPanel.add(addSelectNextButton);
+
+		JButton addSelectOtherButton = new JButton("Select Other");
+		addSelectOtherButton.setActionCommand("emc_selectOtherButton");
+		addSelectOtherButton.addActionListener(sceneControler);
+		selectPanel.add(addSelectOtherButton);
 		
 		addAtMouseCkBox = new JCheckBox("Add At Mouse");
 		addAtMouseCkBox.addActionListener(
@@ -443,6 +448,7 @@ public class ControlOfComponent extends ControlOfScene {
 			case "emc_selectAllButton":
 			case "emc_selectNoneButton":
 			case "emc_selectNextButton":
+			case "emc_selectOtherButton":
 			case "emc_toggleSelectButton":
 			case "emc_deleteBlockButton":
 			case "emc_deleteBlockAllButton":

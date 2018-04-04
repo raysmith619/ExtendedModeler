@@ -364,7 +364,7 @@ public class ControlOfColor extends ControlOfScene implements ChangeListener {
 			adjcolorGreenField.setText(String.format("%.2g",cb.getGreen()/3));
 			adjcolorBlueField.setText(String.format("%.2g", cb.getBlue()/3));
 
-			repaint();
+			///x repaint();
 			
 		}
 	}
@@ -402,7 +402,7 @@ public class ControlOfColor extends ControlOfScene implements ChangeListener {
 		}
 		cb.setColor(new_color);
 		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f", redval, greenval, blueval));
-		sceneControler.repaint();
+		///x sceneControler.repaint();
 	}
 
 	
@@ -424,7 +424,7 @@ public class ControlOfColor extends ControlOfScene implements ChangeListener {
 		cb_sel.setColor(new_color);
 		SmTrace.lg(String.format("move to x=%.2f y=%.2f z=%.2f",
 								cb_sel.getRed(), cb_sel.getGreen(), cb_sel.getBlue()));
-		sceneControler.repaint();
+		///x sceneControler.repaint();
 	}
 
 
