@@ -1,0 +1,10 @@
+demo_file one
+docker run -it --rm  -p 8888:8888 jupyter/all
+pine64  rock64 $54 works with docker
+wordpress
+
+Adam Smith
+https://www.desmos.com/calculator/mdmmgi0xq1
+connectM
+
+mariaDB fork of mySQL
